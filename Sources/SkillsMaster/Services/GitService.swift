@@ -1,5 +1,4 @@
 import Foundation
-import Dispatch
 
 /// `GitService` 封装了仓库内所有 git CLI 操作，是 F10（One-Click Install）和 F12（Update Check）的基础设施。
 ///
@@ -8,10 +7,6 @@ import Dispatch
 ///
 /// 实现上复用了 `AgentDetector` 已验证过的 `Process` 调用模式，用统一方式执行外部命令。
 actor GitService {
-
-    /// 单条 git 命令允许等待的最长时间。
-    /// 用来避免 ssh / git 因交互式提示卡住时，UI 一直处于无响应 loading 状态。
-    private static let gitCommandTimeoutSeconds: TimeInterval = 300
 
     // MARK: - Error Types
 
@@ -548,79 +543,25 @@ actor GitService {
         process.executableURL = URL(fileURLWithPath: gitPath)
         process.arguments = arguments
 
-        // 强制启用 non-interactive 行为，避免 git / ssh 在 GUI app 中等待看不见的交互提示。
-        var env = ProcessInfo.processInfo.environment
-        env["GIT_TERMINAL_PROMPT"] = "0"
-        env["GCM_INTERACTIVE"] = "Never"
-        if env["GIT_SSH_COMMAND"] == nil {
-            env["GIT_SSH_COMMAND"] = "ssh -o BatchMode=yes"
-        }
-        process.environment = env
-
         // 如果传入了工作目录，就在这里设置。
         if let workingDirectory {
             process.currentDirectoryURL = workingDirectory
         }
 
-        // 使用文件而不是 pipe 捕获输出，避免输出过大时出现死锁。
-        let fm = FileManager.default
-        let captureDir = fm.temporaryDirectory
-            .appendingPathComponent("SkillsMaster-git-output-\(UUID().uuidString)")
-        let stdoutURL = captureDir.appendingPathComponent("stdout.log")
-        let stderrURL = captureDir.appendingPathComponent("stderr.log")
-
-        do {
-            try fm.createDirectory(at: captureDir, withIntermediateDirectories: true)
-            fm.createFile(atPath: stdoutURL.path, contents: nil)
-            fm.createFile(atPath: stderrURL.path, contents: nil)
-        } catch {
-            throw GitError.cloneFailed("Failed to prepare git output capture: \(error.localizedDescription)")
-        }
-
-        let stdoutHandle: FileHandle
-        let stderrHandle: FileHandle
-        do {
-            stdoutHandle = try FileHandle(forWritingTo: stdoutURL)
-            stderrHandle = try FileHandle(forWritingTo: stderrURL)
-        } catch {
-            throw GitError.cloneFailed("Failed to open git output capture files: \(error.localizedDescription)")
-        }
-
-        defer {
-            try? stdoutHandle.close()
-            try? stderrHandle.close()
-            try? fm.removeItem(at: captureDir)
-        }
-
-        process.standardOutput = stdoutHandle
-        process.standardError = stderrHandle
+        let stdoutPipe = Pipe()
+        let stderrPipe = Pipe()
+        process.standardOutput = stdoutPipe
+        process.standardError = stderrPipe
 
         do {
             try process.run()
-            let exitedInTime = await waitForProcessExit(
-                process,
-                timeoutSeconds: GitService.gitCommandTimeoutSeconds
-            )
-            if !exitedInTime {
-                process.terminate()
-                _ = await waitForProcessExit(process, timeoutSeconds: 5)
-                let safeArgs = sanitizeArgumentsForLogging(arguments)
-                throw GitError.cloneFailed(
-                    "Git command timed out after \(Int(GitService.gitCommandTimeoutSeconds))s: git \(safeArgs.joined(separator: " "))"
-                )
-            }
-        } catch let gitError as GitError {
-            throw gitError
+            process.waitUntilExit()
         } catch {
             throw GitError.cloneFailed(error.localizedDescription)
         }
 
-        stdoutHandle.synchronizeFile()
-        stderrHandle.synchronizeFile()
-
-        let stdoutData = (try? Data(contentsOf: stdoutURL)) ?? Data()
-        let stderrData = (try? Data(contentsOf: stderrURL)) ?? Data()
-
+        let stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
+        let stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
         let stdout = String(data: stdoutData, encoding: .utf8) ?? ""
         let stderr = String(data: stderrData, encoding: .utf8) ?? ""
 
@@ -639,45 +580,9 @@ actor GitService {
         return stdout
     }
 
-    /// 等待进程退出，同时避免阻塞 async 上下文。
-    /// 如果在超时时间内进程仍未退出，则返回 `false`。
-    private func waitForProcessExit(_ process: Process, timeoutSeconds: TimeInterval) async -> Bool {
-        await withTaskGroup(of: Bool.self) { group in
-            group.addTask {
-                await withCheckedContinuation { continuation in
-                    DispatchQueue.global(qos: .utility).async {
-                        process.waitUntilExit()
-                        continuation.resume(returning: true)
-                    }
-                }
-            }
-
-            group.addTask {
-                let nanos = UInt64(timeoutSeconds * 1_000_000_000)
-                try? await Task.sleep(nanoseconds: nanos)
-                return false
-            }
-
-            let result = await group.next() ?? false
-            group.cancelAll()
-            return result
-        }
-    }
-
-    /// 在拼装可读日志 / 错误信息之前，先对敏感认证参数做脱敏。
-    private func sanitizeArgumentsForLogging(_ arguments: [String]) -> [String] {
-        arguments.map { arg in
-            if arg.hasPrefix("http.extraHeader=Authorization:") {
-                return "http.extraHeader=Authorization: <redacted>"
-            }
-            return arg
-        }
-    }
-
     /// 查找 git 可执行文件的完整路径。
     /// 会先检查常见安装路径，避免每次都额外执行 `which`。
     private func findGitPath() async throws -> String {
-        // 常见的 git 安装路径。
         let commonPaths = [
             "/usr/bin/git",
             "/usr/local/bin/git",
@@ -690,7 +595,6 @@ actor GitService {
             }
         }
 
-        // 如果常见路径都不存在，再退化为执行 `which`。
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/which")
         process.arguments = ["git"]

@@ -382,7 +382,7 @@ final class GitServiceTests: XCTestCase {
 
     private func runGit(arguments: [String], in directory: URL) throws {
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/git")
+        process.executableURL = URL(fileURLWithPath: try gitExecutablePathForTests())
         process.arguments = arguments
         process.currentDirectoryURL = directory
 
@@ -400,6 +400,24 @@ final class GitServiceTests: XCTestCase {
             XCTFail("git \(arguments.joined(separator: " ")) failed: \(message)")
             return
         }
+    }
+
+    private func gitExecutablePathForTests() throws -> String {
+        let candidates = [
+            "/opt/homebrew/bin/git",
+            "/usr/local/bin/git",
+            "/usr/bin/git"
+        ]
+
+        for candidate in candidates where candidate != "/usr/bin/git" {
+            if FileManager.default.isExecutableFile(atPath: candidate) {
+                return candidate
+            }
+        }
+
+        throw XCTSkip(
+            "No functional git binary found outside /usr/bin/git; skipping integration-style GitService tests."
+        )
     }
 
 }
