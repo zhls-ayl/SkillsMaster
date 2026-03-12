@@ -31,6 +31,8 @@ struct ContentView: View {
     /// F09：Registry Browser 对应的 `ViewModel`。
     /// Created alongside other VMs in .task; manages leaderboard browsing and search
     @State private var registryVM: RegistryBrowserViewModel?
+    /// ClawHub 浏览页面的 ViewModel。
+    @State private var clawHubVM: ClawHubBrowserViewModel?
 
     /// Custom repository ViewModels — one per configured repository, keyed by UUID.
     ///
@@ -55,6 +57,11 @@ struct ContentView: View {
                 if let vm = registryVM {
                     RegistryBrowserView(viewModel: vm)
                         // Registry 页面需要更宽的中栏，以容纳 skill 信息和 install 按钮。
+                        .navigationSplitViewColumnWidth(min: 300, ideal: 400, max: 600)
+                }
+            } else if selectedSidebarItem == .clawHub {
+                if let vm = clawHubVM {
+                    ClawHubBrowserView(viewModel: vm)
                         .navigationSplitViewColumnWidth(min: 300, ideal: 400, max: 600)
                 }
             } else if case .customRepo(let repoID) = selectedSidebarItem,
@@ -91,6 +98,22 @@ struct ContentView: View {
                         icon: "globe",
                         title: "请选择 Skill",
                         subtitle: "请从 Registry 中选择一个 Skill 查看详情"
+                    )
+                }
+            } else if selectedSidebarItem == .clawHub {
+                if let vm = clawHubVM, let skill = vm.selectedSkill {
+                    ClawHubSkillDetailView(
+                        skill: skill,
+                        isInstalled: vm.isInstalled(skill),
+                        isInstalling: vm.isInstalling(skill),
+                        onInstall: { vm.installSkill(skill) },
+                        viewModel: vm
+                    )
+                } else {
+                    EmptyStateView(
+                        icon: "shippingbox",
+                        title: "请选择 Skill",
+                        subtitle: "请从 ClawHub 中选择一个 Skill 查看详情"
                     )
                 }
             } else if case .customRepo = selectedSidebarItem {
@@ -138,6 +161,7 @@ struct ContentView: View {
             detailVM = SkillDetailViewModel(skillManager: skillManager)
             // F09: Initialize registry browser ViewModel
             registryVM = RegistryBrowserViewModel(skillManager: skillManager)
+            clawHubVM = ClawHubBrowserViewModel(skillManager: skillManager)
             // 先执行从旧路径（`~/.agents/`）到新路径（`~/.skillsmaster/`）的迁移。
             // 这一步必须发生在 `refresh()` 之前，否则 scanner 看不到新的 canonical 目录。
             MigrationManager.migrateIfNeeded()

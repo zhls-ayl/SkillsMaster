@@ -9,6 +9,8 @@ enum SidebarItem: Hashable {
     case dashboard
     /// F09: Browse skills.sh catalog (leaderboard + search)
     case registry
+    /// Browse ClawHub marketplace
+    case clawHub
     /// Custom repository browser — each configured repo gets its own sidebar row.
     /// The associated UUID is the SkillRepository.id, used to look up the VM in ContentView.
     case customRepo(UUID)
@@ -16,14 +18,14 @@ enum SidebarItem: Hashable {
     case settings
 
     /// Maps sidebar options to Agent filter values
-    /// - .dashboard / .settings / .registry / .customRepo → nil (show all skills or different content)
+    /// - .dashboard / .settings / .registry / .clawHub / .customRepo → nil (show all skills or different content)
     /// - .agent(type) → type (only show skills for this Agent)
     /// This computed property is similar to Java's getter, executes switch calculation on each access
     var agentFilter: AgentType? {
         switch self {
         case .agent(let agentType):
             return agentType
-        case .dashboard, .settings, .registry, .customRepo:
+        case .dashboard, .settings, .registry, .clawHub, .customRepo:
             return nil
         }
     }
@@ -71,6 +73,11 @@ struct SidebarView: View {
                     Label("Registry", systemImage: "globe")
                 }
                 .tag(SidebarItem.registry)
+
+                sidebarRow {
+                    Label("ClawHub", systemImage: "shippingbox")
+                }
+                .tag(SidebarItem.clawHub)
             }
 
             // Custom Repos section: shown only when at least one repository is configured
@@ -175,7 +182,10 @@ struct SidebarView: View {
                                 .controlSize(.small)
                             // Progress count: counts number of skills that have completed checking / total pending check count
                             // Skills in .checking state are still being checked, others (.hasUpdate/.upToDate/.error) indicate completed
-                            let total = skillManager.skills.filter { $0.lockEntry != nil }.count
+                            let total = skillManager.skills.filter { skill in
+                                guard let sourceType = skill.lockEntry?.sourceType else { return false }
+                                return sourceType != "local" && sourceType != "clawhub"
+                            }.count
                             // compactMap is similar to Java Stream's filter+map combination:
                             // first get value from dictionary (may be nil), then filter out .checking state
                             let checked = skillManager.updateStatuses.values.filter {

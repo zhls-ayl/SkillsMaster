@@ -31,6 +31,30 @@ final class SkillManager {
         }
     }
 
+    /// 导入安装相关错误（本地导入 / ClawHub 安装共用）。
+    enum ImportError: Error, LocalizedError {
+        case directoryNotFound(String)
+        case skillMDNotFound(String)
+        case parseFailed(String)
+
+        var errorDescription: String? {
+            switch self {
+            case .directoryNotFound(let path):
+                "Directory not found: \(path)"
+            case .skillMDNotFound(let path):
+                "No SKILL.md found in: \(path)"
+            case .parseFailed(let message):
+                "Failed to parse SKILL.md: \(message)"
+            }
+        }
+    }
+
+    /// ClawHub 安装结果。
+    enum ClawHubInstallResult: Equatable {
+        case installedFromArchive
+        case installedSkillMarkdownOnly
+    }
+
     // MARK: - Published State (UI-bound state)
 
     /// 当前已发现的全部 skills（已去重）。
@@ -325,8 +349,6 @@ final class SkillManager {
         sourceType: String = "github",
         targetAgents: Set<AgentType>
     ) async throws {
-        let fm = FileManager.default
-
         // 1. 获取 tree hash。
         let treeHash = try await gitService.getTreeHash(for: skill.folderPath, in: repoDir)
 
@@ -336,31 +358,7 @@ final class SkillManager {
         await commitHashCache.setHash(for: skill.id, hash: commitHash)
         try await commitHashCache.save()
 
-        // 2. 复制到 canonical 目录。
-        let canonicalDir = SkillScanner.sharedSkillsURL.appendingPathComponent(skill.id)
         let sourceDir = repoDir.appendingPathComponent(skill.folderPath)
-
-        // 如果目标已存在，先删再拷贝，等价于覆盖安装。
-        if fm.fileExists(atPath: canonicalDir.path) {
-            try fm.removeItem(at: canonicalDir)
-        }
-
-        // 确保父目录存在。
-        if !fm.fileExists(atPath: SkillScanner.sharedSkillsURL.path) {
-            try fm.createDirectory(at: SkillScanner.sharedSkillsURL, withIntermediateDirectories: true)
-        }
-
-        // `copyItem` 的效果类似 `cp -r`。
-        try fm.copyItem(at: sourceDir, to: canonicalDir)
-
-        // 3. 为选中的 Agents 创建 symbolic links。
-        for agent in targetAgents {
-            // 这里使用 `try?` 忽略“已存在”类错误，保持幂等。
-            try? SymlinkManager.createSymlink(from: canonicalDir, to: agent)
-        }
-
-        // 4. 更新 lock file；首次安装时需要先确保文件存在。
-        try await lockFileManager.createIfNotExists()
 
         // 使用 ISO 8601 时间戳，保持与 `npx skills` 一致。
         let now = ISO8601DateFormatter().string(from: Date())
@@ -373,10 +371,91 @@ final class SkillManager {
             installedAt: now,
             updatedAt: now
         )
-        try await lockFileManager.updateEntry(skillName: skill.id, entry: entry)
+        try await persistInstalledSkillDirectory(
+            from: sourceDir,
+            skillName: skill.id,
+            targetAgents: targetAgents,
+            lockEntry: entry
+        )
+    }
 
-        // 5. 刷新 UI。
-        await refresh()
+    /// 安装 ClawHub skill 到 canonical 目录，并为目标 Agent（默认 OpenClaw）建立 symbolic link。
+    ///
+    /// - archive 安装成功时返回 `.installedFromArchive`
+    /// - 若 archive 不可用但 `SKILL.md` 可用，则 fallback 为 markdown-only 安装并返回 `.installedSkillMarkdownOnly`
+    func installClawHubSkill(
+        slug: String,
+        version: String,
+        detailPageURL: String,
+        skillContent: String?,
+        archiveData: Data?,
+        targetAgents: Set<AgentType>
+    ) async throws -> ClawHubInstallResult {
+        let fm = FileManager.default
+        let tempRoot = fm.temporaryDirectory.appendingPathComponent("SkillsMaster-ClawHub-\(UUID().uuidString)")
+        try fm.createDirectory(at: tempRoot, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: tempRoot) }
+
+        let now = ISO8601DateFormatter().string(from: Date())
+        let entry = LockEntry(
+            source: slug,
+            sourceType: "clawhub",
+            sourceUrl: detailPageURL,
+            skillPath: "\(slug)/SKILL.md",
+            skillFolderHash: "",
+            installedAt: now,
+            updatedAt: now
+        )
+
+        // 仅用于 future-proof：当前 lock file 不记录 version，但参数用于接口语义对齐。
+        _ = version
+
+        if let archiveData {
+            let archiveURL = tempRoot.appendingPathComponent("\(slug).zip")
+            let extractedRoot = tempRoot.appendingPathComponent("extracted")
+            try archiveData.write(to: archiveURL)
+            try fm.createDirectory(at: extractedRoot, withIntermediateDirectories: true)
+
+            do {
+                try extractZipArchive(at: archiveURL, to: extractedRoot)
+                if let extractedSkillDir = try locateSkillDirectory(in: extractedRoot) {
+                    try await persistInstalledSkillDirectory(
+                        from: extractedSkillDir,
+                        skillName: slug,
+                        targetAgents: targetAgents,
+                        lockEntry: entry
+                    )
+                    return .installedFromArchive
+                }
+            } catch {
+                if skillContent == nil {
+                    throw error
+                }
+            }
+        }
+
+        guard let skillContent else {
+            throw ImportError.skillMDNotFound("ClawHub skill bundle for \(slug)")
+        }
+
+        let markdownOnlyDir = tempRoot.appendingPathComponent(slug)
+        try fm.createDirectory(at: markdownOnlyDir, withIntermediateDirectories: true)
+        let skillMDURL = markdownOnlyDir.appendingPathComponent("SKILL.md")
+        try skillContent.write(to: skillMDURL, atomically: true, encoding: .utf8)
+
+        do {
+            _ = try SkillMDParser.parse(fileURL: skillMDURL)
+        } catch {
+            throw ImportError.parseFailed(error.localizedDescription)
+        }
+
+        try await persistInstalledSkillDirectory(
+            from: markdownOnlyDir,
+            skillName: slug,
+            targetAgents: targetAgents,
+            lockEntry: entry
+        )
+        return .installedSkillMarkdownOnly
     }
 
     // MARK: - F12: Update Check
@@ -389,6 +468,10 @@ final class SkillManager {
     /// - Returns: `(是否有更新, 远端 tree hash, 远端 commit hash)`
     func checkForUpdate(skill: Skill) async throws -> (hasUpdate: Bool, remoteHash: String?, remoteCommitHash: String?) {
         guard let lockEntry = skill.lockEntry else {
+            return (false, nil, nil)
+        }
+        // ClawHub / Local 安装不走 Git 仓库更新检查。
+        guard lockEntry.sourceType != "local", lockEntry.sourceType != "clawhub" else {
             return (false, nil, nil)
         }
 
@@ -447,7 +530,10 @@ final class SkillManager {
 
         // Collect all skills with lockEntry, group by sourceUrl
         // Dictionary(grouping:by:) is similar to Java Stream's Collectors.groupingBy()
-        let skillsWithLock = skills.filter { $0.lockEntry != nil }
+        let skillsWithLock = skills.filter { skill in
+            guard let sourceType = skill.lockEntry?.sourceType else { return false }
+            return sourceType != "local" && sourceType != "clawhub"
+        }
 
         // Set all skills to be checked to .checking state
         // So UI list immediately shows spinner, user knows which skills are being checked
@@ -649,6 +735,74 @@ final class SkillManager {
     func saveRepoHistory(source: String, sourceUrl: String) async {
         await commitHashCache.addRepoHistory(source: source, sourceUrl: sourceUrl)
         try? await commitHashCache.save()
+    }
+
+    /// 统一安装落盘流程：复制到 canonical 目录 -> 建 symbolic link -> 更新 lock file -> refresh。
+    private func persistInstalledSkillDirectory(
+        from sourceURL: URL,
+        skillName: String,
+        targetAgents: Set<AgentType>,
+        lockEntry: LockEntry
+    ) async throws {
+        let fm = FileManager.default
+        let canonicalDir = SkillScanner.sharedSkillsURL.appendingPathComponent(skillName)
+
+        if fm.fileExists(atPath: canonicalDir.path) {
+            try fm.removeItem(at: canonicalDir)
+        }
+
+        if !fm.fileExists(atPath: SkillScanner.sharedSkillsURL.path) {
+            try fm.createDirectory(at: SkillScanner.sharedSkillsURL, withIntermediateDirectories: true)
+        }
+
+        try fm.copyItem(at: sourceURL, to: canonicalDir)
+
+        for agent in targetAgents {
+            try? SymlinkManager.createSymlink(from: canonicalDir, to: agent)
+        }
+
+        try await lockFileManager.createIfNotExists()
+        try await lockFileManager.updateEntry(skillName: skillName, entry: lockEntry)
+        await refresh()
+    }
+
+    /// 使用 macOS 自带 `ditto` 解压 zip 包。
+    private func extractZipArchive(at archiveURL: URL, to destinationURL: URL) throws {
+        let unzipProcess = Process()
+        unzipProcess.executableURL = URL(fileURLWithPath: "/usr/bin/ditto")
+        unzipProcess.arguments = ["-xk", archiveURL.path, destinationURL.path]
+        try unzipProcess.run()
+        unzipProcess.waitUntilExit()
+
+        guard unzipProcess.terminationStatus == 0 else {
+            throw ImportError.parseFailed("Failed to extract ClawHub archive.")
+        }
+    }
+
+    /// 在解压目录中递归定位第一个包含 `SKILL.md` 的目录。
+    private func locateSkillDirectory(in rootURL: URL) throws -> URL? {
+        let fm = FileManager.default
+        if fm.fileExists(atPath: rootURL.appendingPathComponent("SKILL.md").path) {
+            return rootURL
+        }
+
+        guard let enumerator = fm.enumerator(
+            at: rootURL,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        ) else {
+            return nil
+        }
+
+        for case let fileURL as URL in enumerator {
+            let values = try fileURL.resourceValues(forKeys: [.isDirectoryKey])
+            guard values.isDirectory == true else { continue }
+            if fm.fileExists(atPath: fileURL.appendingPathComponent("SKILL.md").path) {
+                return fileURL
+            }
+        }
+
+        return nil
     }
 
     /// Filter skills by Agent

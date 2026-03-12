@@ -282,7 +282,9 @@ struct SkillDetailView: View {
                 Spacer()
 
                 // F12: 更新状态指示和操作按钮
-                updateStatusView(skill)
+                if canCheckGitUpdate(skill) {
+                    updateStatusView(skill)
+                }
             }
 
             // `Grid` 是 macOS 14+ 提供的网格布局，概念上类似 HTML 的 CSS Grid。
@@ -292,7 +294,7 @@ struct SkillDetailView: View {
                     Text(lockEntry.source).textSelection(.enabled)
                 }
                 GridRow {
-                    Text("Repository").foregroundStyle(.secondary)
+                    Text(lockEntry.sourceType == "clawhub" ? "Marketplace" : "Repository").foregroundStyle(.secondary)
                     // 如果 `sourceUrl` 是合法 URL，就展示为可点击链接，并在点击后交给系统默认浏览器打开。
                     if let url = URL(string: lockEntry.sourceUrl),
                        url.scheme != nil {
@@ -304,17 +306,19 @@ struct SkillDetailView: View {
                 }
                 // 优先展示 commit hash（可直接映射到 GitHub commit 页面），
                 // 如果没有 commit hash，再回退到 tree hash（通常表示旧 skill 尚未完成 backfill）。
-                GridRow {
-                    if let commitHash = skill.localCommitHash {
-                        Text("Commit").foregroundStyle(.secondary)
-                        Text(commitHash)
-                            .font(.system(.body, design: .monospaced))
-                            .textSelection(.enabled)
-                    } else {
-                        Text("Tree Hash").foregroundStyle(.secondary)
-                        Text(lockEntry.skillFolderHash)
-                            .font(.system(.body, design: .monospaced))
-                            .textSelection(.enabled)
+                if canCheckGitUpdate(skill) {
+                    GridRow {
+                        if let commitHash = skill.localCommitHash {
+                            Text("Commit").foregroundStyle(.secondary)
+                            Text(commitHash)
+                                .font(.system(.body, design: .monospaced))
+                                .textSelection(.enabled)
+                        } else {
+                            Text("Tree Hash").foregroundStyle(.secondary)
+                            Text(lockEntry.skillFolderHash)
+                                .font(.system(.body, design: .monospaced))
+                                .textSelection(.enabled)
+                        }
                     }
                 }
                 GridRow {
@@ -469,5 +473,11 @@ struct SkillDetailView: View {
 
         // 如果没有本地 commit hash（通常表示 backfill 未成功），就退化为只打开远端 commit 页面。
         return URL(string: "\(baseURL)/commit/\(remoteHash)")
+    }
+
+    /// 仅 Git 来源支持更新检查（custom repository 也属于 Git 语义）。
+    private func canCheckGitUpdate(_ skill: Skill) -> Bool {
+        guard let sourceType = skill.lockEntry?.sourceType else { return false }
+        return sourceType != "local" && sourceType != "clawhub"
     }
 }

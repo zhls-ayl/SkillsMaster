@@ -87,6 +87,11 @@ final class SkillDetailViewModel {
     /// Calls SkillManager.checkForUpdate and updates UI state.
     /// Return value includes remoteCommitHash for generating GitHub compare URL to show diff link.
     func checkForUpdate(skill: Skill) async {
+        if let sourceType = skill.lockEntry?.sourceType,
+           sourceType == "local" || sourceType == "clawhub" {
+            return
+        }
+
         isCheckingUpdate = true
         updateError = nil
         showUpToDate = false
