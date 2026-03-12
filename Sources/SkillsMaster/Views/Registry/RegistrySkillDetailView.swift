@@ -82,9 +82,9 @@ struct RegistrySkillDetailView: View {
                     // .textSelection(.enabled) allows the user to select and copy text
                     .textSelection(.enabled)
 
-                // "安装ed" badge — same visual style as Skill安装View and RegistrySkillRowView
+                // "Installed" badge — same visual style as Skill安装View and RegistrySkillRowView
                 if isInstalled {
-                    Text("安装ed")
+                    Text("Installed")
                         .font(.caption)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)

@@ -306,9 +306,9 @@ private struct RepositorySkillRowView: View {
                         .font(.headline)
                         .lineLimit(1)
 
-                    // "安装ed" badge — same green capsule style as RegistrySkillRowView
+                    // "Installed" badge — same green capsule style as RegistrySkillRowView
                     if isInstalled {
-                        Text("安装ed")
+                        Text("Installed")
                             .font(.caption2)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)

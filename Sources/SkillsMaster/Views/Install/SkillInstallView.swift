@@ -367,7 +367,7 @@ struct SkillInstallView: View {
 
                     // "Already installed" badge
                     if isAlreadyInstalled {
-                        Text("安装ed")
+                        Text("Installed")
                             .font(.caption2)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)

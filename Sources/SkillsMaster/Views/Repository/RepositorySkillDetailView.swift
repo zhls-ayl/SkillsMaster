@@ -61,7 +61,7 @@ struct RepositorySkillDetailView: View {
                     .textSelection(.enabled)
 
                 if isInstalled {
-                    Text("安装ed")
+                    Text("Installed")
                         .font(.caption)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
