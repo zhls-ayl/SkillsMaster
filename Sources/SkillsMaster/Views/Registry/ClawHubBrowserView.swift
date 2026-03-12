@@ -221,14 +221,49 @@ struct ClawHubBrowserView: View {
     }
 
     private var skillList: some View {
-        List(viewModel.displayedSkills, selection: $viewModel.selectedSkillID) { skill in
-            ClawHubSkillRowView(
-                skill: skill,
-                isInstalled: viewModel.isInstalled(skill),
-                isInstalling: viewModel.isInstalling(skill),
-                onInstall: { viewModel.installSkill(skill) }
-            )
-            .tag(skill.id)
+        List(selection: $viewModel.selectedSkillID) {
+            ForEach(viewModel.displayedSkills) { skill in
+                ClawHubSkillRowView(
+                    skill: skill,
+                    isInstalled: viewModel.isInstalled(skill),
+                    isInstalling: viewModel.isInstalling(skill),
+                    onInstall: { viewModel.installSkill(skill) }
+                )
+                .tag(skill.id)
+                .onAppear {
+                    Task { await viewModel.loadMoreIfNeeded(after: skill.id) }
+                }
+            }
+
+            if viewModel.isLoadingMore {
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("正在加载更多...")
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.vertical, 8)
+                .listRowSeparator(.hidden)
+            } else if let loadMoreErrorMessage = viewModel.loadMoreErrorMessage {
+                VStack(spacing: 6) {
+                    Text("加载更多失败")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                    Text(loadMoreErrorMessage)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                    Button("重试") {
+                        Task { await viewModel.retryLoadMore() }
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .listRowSeparator(.hidden)
+            }
         }
         .listStyle(.inset(alternatesRowBackgrounds: true))
     }

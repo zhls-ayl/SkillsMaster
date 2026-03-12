@@ -22,6 +22,10 @@ final class ClawHubBrowserViewModel {
     var isLoading = false
     var errorMessage: String?
 
+    var isLoadingMore = false
+    var loadMoreErrorMessage: String?
+    private(set) var hasMoreResults = true
+
     var selectedSkillID: String?
     var selectedSkillDetail: ClawHubSkillDetail?
     var fetchedContent: SkillMDParser.ParseResult?
@@ -42,15 +46,19 @@ final class ClawHubBrowserViewModel {
         return displayedSkills.first { $0.id == selectedSkillID }
     }
 
-    private let service: ClawHubService
+    private let service: any ClawHubServiceProtocol
     private let skillManager: SkillManager
     private var installedClawHubSlugs = Set<String>()
     private var installedSkillIDsNoSource = Set<String>()
     private var hasLoadedInitialSkills = false
     private var searchTask: Task<Void, Never>?
     private var currentDetailSlug: String?
+    private let pageSize = 50
+    private let loadMoreThreshold = 5
+    private var currentLimit = 50
+    private var listRequestVersion = 0
 
-    init(skillManager: SkillManager, service: ClawHubService = ClawHubService()) {
+    init(skillManager: SkillManager, service: any ClawHubServiceProtocol = ClawHubService()) {
         self.skillManager = skillManager
         self.service = service
     }
@@ -61,16 +69,12 @@ final class ClawHubBrowserViewModel {
         syncInstalledSkills()
         guard !hasLoadedInitialSkills else { return }
         hasLoadedInitialSkills = true
-        await loadFeaturedSkills()
+        await reloadCurrentList()
     }
 
     func refresh() async {
         syncInstalledSkills()
-        if isSearchActive {
-            await performSearch(query: searchText)
-        } else {
-            await loadFeaturedSkills()
-        }
+        await reloadCurrentList()
     }
 
     func onSearchTextChanged() {
@@ -78,15 +82,25 @@ final class ClawHubBrowserViewModel {
 
         let trimmedQuery = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmedQuery.isEmpty {
-            Task { await loadFeaturedSkills() }
+            Task { await reloadCurrentList() }
             return
         }
 
         searchTask = Task {
             try? await Task.sleep(nanoseconds: 350_000_000)
             guard !Task.isCancelled else { return }
-            await performSearch(query: trimmedQuery)
+            await reloadCurrentList()
         }
+    }
+
+    func loadMoreIfNeeded(after skillID: String) async {
+        guard shouldLoadMore(after: skillID) else { return }
+        await loadMore()
+    }
+
+    func retryLoadMore() async {
+        guard !isLoading else { return }
+        await loadMore()
     }
 
     func selectSort(_ sort: ClawHubService.SkillSort) {
@@ -248,50 +262,19 @@ final class ClawHubBrowserViewModel {
 
     // MARK: - Private helpers
 
-    private func loadFeaturedSkills() async {
-        isLoading = true
-        errorMessage = nil
-
-        do {
-            let skills = try await service.fetchSkills(options: browseOptions)
-            displayedSkills = skills
-            updateSelection(afterLoading: skills)
-        } catch {
-            displayedSkills = []
-            errorMessage = error.localizedDescription
-        }
-
-        isLoading = false
-    }
-
-    private func performSearch(query: String) async {
-        isLoading = true
-        errorMessage = nil
-
-        do {
-            let skills = try await service.searchSkills(query: query)
-            displayedSkills = skills
-            selectedSkillID = skills.first?.id
-        } catch {
-            displayedSkills = []
-            errorMessage = error.localizedDescription
-        }
-
-        isLoading = false
-    }
-
     private var browseOptions: ClawHubService.BrowseOptions {
         ClawHubService.BrowseOptions(
             sort: selectedSort,
             direction: selectedDirection,
             highlightedOnly: highlightedOnly,
-            nonSuspiciousOnly: nonSuspiciousOnly
+            nonSuspiciousOnly: nonSuspiciousOnly,
+            limit: currentLimit
         )
     }
 
     private func reloadBrowseListIfNeeded() {
         guard !isSearchActive else { return }
-        Task { await loadFeaturedSkills() }
+        Task { await reloadCurrentList() }
     }
 
     private func updateSelection(afterLoading skills: [ClawHubSkill]) {
@@ -299,5 +282,80 @@ final class ClawHubBrowserViewModel {
             return
         }
         selectedSkillID = skills.first?.id
+    }
+
+    private func reloadCurrentList() async {
+        currentLimit = pageSize
+        hasMoreResults = true
+        isLoadingMore = false
+        loadMoreErrorMessage = nil
+        await fetchCurrentList(reset: true)
+    }
+
+    private func loadMore() async {
+        guard !isLoading, !isLoadingMore, hasMoreResults else { return }
+        currentLimit += pageSize
+        await fetchCurrentList(reset: false)
+    }
+
+    private func fetchCurrentList(reset: Bool) async {
+        listRequestVersion += 1
+        let requestVersion = listRequestVersion
+
+        if reset {
+            isLoading = true
+            errorMessage = nil
+        } else {
+            isLoadingMore = true
+            loadMoreErrorMessage = nil
+        }
+
+        do {
+            let skills: [ClawHubSkill]
+            if let query = normalizedQuery {
+                skills = try await service.searchSkills(query: query, limit: currentLimit)
+            } else {
+                skills = try await service.fetchSkills(options: browseOptions)
+            }
+
+            guard requestVersion == listRequestVersion else { return }
+
+            displayedSkills = skills
+            hasMoreResults = !skills.isEmpty && skills.count >= currentLimit
+            updateSelection(afterLoading: skills)
+        } catch {
+            guard requestVersion == listRequestVersion else { return }
+
+            if reset {
+                displayedSkills = []
+                errorMessage = error.localizedDescription
+            } else {
+                currentLimit = max(pageSize, currentLimit - pageSize)
+                loadMoreErrorMessage = error.localizedDescription
+            }
+        }
+
+        guard requestVersion == listRequestVersion else { return }
+        if reset {
+            isLoading = false
+        } else {
+            isLoadingMore = false
+        }
+    }
+
+    private var normalizedQuery: String? {
+        let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private func shouldLoadMore(after skillID: String) -> Bool {
+        guard hasMoreResults, !isLoading, !isLoadingMore, loadMoreErrorMessage == nil else {
+            return false
+        }
+        guard let index = displayedSkills.firstIndex(where: { $0.id == skillID }) else {
+            return false
+        }
+        let triggerIndex = max(displayedSkills.count - loadMoreThreshold, 0)
+        return index >= triggerIndex
     }
 }

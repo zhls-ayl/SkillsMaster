@@ -27,8 +27,17 @@ final class RegistryBrowserViewModel {
     /// 当前是否处于 loading 状态（用于驱动 UI spinner）。
     var isLoading = false
 
+    /// 触底加载下一批时的 loading 状态。
+    var isLoadingMore = false
+
     /// 需要展示的错误信息（`nil` 表示没有错误）。
     var errorMessage: String?
+
+    /// 仅用于底部分页加载阶段的错误提示。
+    var loadMoreErrorMessage: String?
+
+    /// 当前是否还有更多列表结果可加载。
+    private(set) var hasMoreResults = true
 
     /// leaderboard scraping 是否失败。
     /// 之所以单独保留这个状态，是为了和 `errorMessage` 区分不同的 UI 呈现方式。
@@ -89,13 +98,13 @@ final class RegistryBrowserViewModel {
     /// 当前是否处于 search mode。
     /// 这是一个 computed property，不需要单独存储，直接由 `searchText` 推导。
     var isSearchActive: Bool {
-        !searchText.isEmpty
+        normalizedSearchText != nil
     }
 
     // MARK: - Dependencies
 
     /// 用于 API 调用和 HTML scraping 的 registry service。
-    private let registryService = SkillRegistryService()
+    private let registryService: any SkillRegistryServiceProtocol
 
     /// 用于从 GitHub raw URL 下载 `SKILL.md` 的 content fetcher。
     ///
@@ -114,6 +123,11 @@ final class RegistryBrowserViewModel {
     /// 只有最后一次输入会在 300ms 延迟后真正触发 API 调用。
     /// `Task<Void, Never>` 表示这是一个不返回值、也不会向外抛错的 async task。
     private var searchTask: Task<Void, Never>?
+    private let pageSize = 50
+    private let loadMoreThreshold = 5
+    private var currentLimit = 50
+    private var allLoadedSkills: [RegistrySkill] = []
+    private var listRequestVersion = 0
 
     // MARK: - Init
 
@@ -121,8 +135,12 @@ final class RegistryBrowserViewModel {
     ///
     /// `SkillManager` 来自上层 `View` tree（由 `ContentView` 继续向下传递），
     /// `ViewModel` 自己不会新建一份实例。
-    init(skillManager: SkillManager) {
+    init(
+        skillManager: SkillManager,
+        registryService: any SkillRegistryServiceProtocol = SkillRegistryService()
+    ) {
         self.skillManager = skillManager
+        self.registryService = registryService
     }
 
     // MARK: - Lifecycle
@@ -132,7 +150,7 @@ final class RegistryBrowserViewModel {
     /// 可以把它理解成“页面首次展示时执行的 async 初始化逻辑”。
     func onAppear() async {
         syncInstalledSkills()
-        await loadLeaderboard()
+        await reloadCurrentList()
     }
 
     /// 从 `SkillManager` 同步已安装 skill 数据，用于 source-aware 的 “Installed” 标记。
@@ -167,25 +185,8 @@ final class RegistryBrowserViewModel {
     /// 数据通过 `SkillRegistryService` 从 `skills.sh` 页面抓取。
     /// 如果失败，会设置 `leaderboardUnavailable`，让界面退化为搜索提示。
     func loadLeaderboard() async {
-        // 用户处于搜索状态时，不再加载 leaderboard。
         guard !isSearchActive else { return }
-
-        isLoading = true
-        errorMessage = nil
-        leaderboardUnavailable = false
-
-        do {
-            let skills = try await registryService.fetchLeaderboard(category: selectedCategory)
-            displayedSkills = skills
-        } catch {
-            // leaderboard 抓取失败时，走温和降级。
-            // 不显示过于“报错感”的提示，而是引导用户改用搜索。
-            errorMessage = "无法加载排行榜，请改用搜索。"
-            leaderboardUnavailable = true
-            displayedSkills = []
-        }
-
-        isLoading = false
+        await reloadCurrentList()
     }
 
     /// 切换 leaderboard category tab，并重新加载数据。
@@ -194,7 +195,7 @@ final class RegistryBrowserViewModel {
     /// 由于 service 层带有 5 分钟 cache，因此首轮加载之后切换 tab 会比较快。
     func selectCategory(_ category: SkillRegistryService.LeaderboardCategory) async {
         selectedCategory = category
-        await loadLeaderboard()
+        await reloadCurrentList()
     }
 
     /// 刷新当前数据（清空 cache 后重新加载）。
@@ -202,11 +203,7 @@ final class RegistryBrowserViewModel {
     /// 由 toolbar 的刷新按钮触发，用来强制从 `skills.sh` 拉取最新数据。
     func refresh() async {
         await registryService.clearCache()
-        if isSearchActive {
-            await performSearch()
-        } else {
-            await loadLeaderboard()
-        }
+        await reloadCurrentList()
     }
 
     // MARK: - Search
@@ -223,9 +220,9 @@ final class RegistryBrowserViewModel {
         // 取消上一个尚未完成的搜索任务。
         searchTask?.cancel()
 
-        if searchText.isEmpty {
+        if normalizedSearchText == nil {
             // 用户清空了搜索框，切回 leaderboard。
-            Task { await loadLeaderboard() }
+            Task { await reloadCurrentList() }
             return
         }
 
@@ -237,33 +234,18 @@ final class RegistryBrowserViewModel {
             // 检查任务在等待期间是否已经被取消（通常表示用户又输入了新内容）。
             guard !Task.isCancelled else { return }
 
-            await performSearch()
+            await reloadCurrentList()
         }
     }
 
-    /// 调用 `skills.sh` API 执行搜索。
-    ///
-    /// 这是 debounce 完成后真正执行搜索的私有方法，负责更新 `displayedSkills` 或设置错误信息。
-    private func performSearch() async {
-        guard !searchText.isEmpty else { return }
+    func loadMoreIfNeeded(after skillID: String) async {
+        guard shouldLoadMore(after: skillID) else { return }
+        await loadMore()
+    }
 
-        isLoading = true
-        errorMessage = nil
-
-        do {
-            let skills = try await registryService.search(query: searchText)
-            // 只有在仍然处于 search mode 时才更新结果，避免请求返回时用户已经清空搜索框。
-            if isSearchActive {
-                displayedSkills = skills
-            }
-        } catch {
-            if isSearchActive {
-                errorMessage = "搜索失败：\(error.localizedDescription)"
-                displayedSkills = []
-            }
-        }
-
-        isLoading = false
+    func retryLoadMore() async {
+        guard !isLoading else { return }
+        await loadMore()
     }
 
     // MARK: - Install
@@ -297,6 +279,110 @@ final class RegistryBrowserViewModel {
         }
         // 回退逻辑：如果没有 source 追踪信息，就只按 `skillId` 匹配。
         return installedSkillIDsNoSource.contains(registrySkill.skillId)
+    }
+
+    // MARK: - Pagination / List Loading
+
+    private func reloadCurrentList() async {
+        currentLimit = pageSize
+        hasMoreResults = true
+        isLoadingMore = false
+        loadMoreErrorMessage = nil
+        await fetchCurrentList(reset: true)
+    }
+
+    private func loadMore() async {
+        guard !isLoading, !isLoadingMore, hasMoreResults else { return }
+
+        // Leaderboard 模式直接在本地展开下一批，不重复发请求。
+        if normalizedSearchText == nil {
+            currentLimit += pageSize
+            applyVisibleSkills()
+            return
+        }
+
+        currentLimit += pageSize
+        await fetchCurrentList(reset: false)
+    }
+
+    private func fetchCurrentList(reset: Bool) async {
+        listRequestVersion += 1
+        let requestVersion = listRequestVersion
+
+        if reset {
+            isLoading = true
+            errorMessage = nil
+            leaderboardUnavailable = false
+        } else {
+            isLoadingMore = true
+            loadMoreErrorMessage = nil
+        }
+
+        do {
+            if let query = normalizedSearchText {
+                let skills = try await registryService.search(query: query, limit: currentLimit)
+                guard requestVersion == listRequestVersion else { return }
+                allLoadedSkills = skills
+                applyVisibleSkills()
+                hasMoreResults = !skills.isEmpty && skills.count >= currentLimit
+                leaderboardUnavailable = false
+            } else {
+                let skills = try await registryService.fetchLeaderboard(category: selectedCategory)
+                guard requestVersion == listRequestVersion else { return }
+                allLoadedSkills = skills
+                applyVisibleSkills()
+                hasMoreResults = displayedSkills.count < allLoadedSkills.count
+                leaderboardUnavailable = false
+            }
+        } catch {
+            guard requestVersion == listRequestVersion else { return }
+
+            if reset {
+                allLoadedSkills = []
+                displayedSkills = []
+                if normalizedSearchText == nil {
+                    errorMessage = "无法加载排行榜，请改用搜索。"
+                    leaderboardUnavailable = true
+                } else {
+                    errorMessage = "搜索失败：\(error.localizedDescription)"
+                    leaderboardUnavailable = false
+                }
+            } else {
+                currentLimit = max(pageSize, currentLimit - pageSize)
+                loadMoreErrorMessage = error.localizedDescription
+            }
+        }
+
+        guard requestVersion == listRequestVersion else { return }
+        if reset {
+            isLoading = false
+        } else {
+            isLoadingMore = false
+        }
+    }
+
+    private func applyVisibleSkills() {
+        displayedSkills = Array(allLoadedSkills.prefix(currentLimit))
+        if let selectedSkillID, displayedSkills.contains(where: { $0.id == selectedSkillID }) {
+            return
+        }
+        selectedSkillID = displayedSkills.first?.id
+    }
+
+    private var normalizedSearchText: String? {
+        let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private func shouldLoadMore(after skillID: String) -> Bool {
+        guard hasMoreResults, !isLoading, !isLoadingMore, loadMoreErrorMessage == nil else {
+            return false
+        }
+        guard let index = displayedSkills.firstIndex(where: { $0.id == skillID }) else {
+            return false
+        }
+        let triggerIndex = max(displayedSkills.count - loadMoreThreshold, 0)
+        return index >= triggerIndex
     }
 
     // MARK: - Skill Content Loading

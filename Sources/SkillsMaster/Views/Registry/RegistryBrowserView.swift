@@ -164,15 +164,50 @@ struct RegistryBrowserView: View {
     /// When a skill is clicked, selectedSkillID is set → detail pane shows RegistrySkillDetailView.
     /// The `selection:` parameter enables single-selection mode in the List.
     private var skillList: some View {
-        List(viewModel.displayedSkills, selection: $viewModel.selectedSkillID) { skill in
-            RegistrySkillRowView(
-                skill: skill,
-                isInstalled: viewModel.isInstalled(skill),
-                onInstall: { viewModel.installSkill(skill) }
-            )
-            // .tag associates this row with a selection value (the skill's id)
-            // When user clicks this row, selectedSkillID is set to skill.id
-            .tag(skill.id)
+        List(selection: $viewModel.selectedSkillID) {
+            ForEach(viewModel.displayedSkills) { skill in
+                RegistrySkillRowView(
+                    skill: skill,
+                    isInstalled: viewModel.isInstalled(skill),
+                    onInstall: { viewModel.installSkill(skill) }
+                )
+                // .tag associates this row with a selection value (the skill's id)
+                // When user clicks this row, selectedSkillID is set to skill.id
+                .tag(skill.id)
+                .onAppear {
+                    Task { await viewModel.loadMoreIfNeeded(after: skill.id) }
+                }
+            }
+
+            if viewModel.isLoadingMore {
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("Loading more...")
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.vertical, 8)
+                .listRowSeparator(.hidden)
+            } else if let loadMoreErrorMessage = viewModel.loadMoreErrorMessage {
+                VStack(spacing: 6) {
+                    Text("Failed to load more")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                    Text(loadMoreErrorMessage)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                    Button("Retry") {
+                        Task { await viewModel.retryLoadMore() }
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .listRowSeparator(.hidden)
+            }
         }
         // .inset style with alternating row backgrounds — standard macOS list look
         .listStyle(.inset(alternatesRowBackgrounds: true))
