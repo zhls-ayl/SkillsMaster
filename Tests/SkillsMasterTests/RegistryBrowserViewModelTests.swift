@@ -11,6 +11,49 @@ import XCTest
 @MainActor
 final class RegistryBrowserViewModelTests: XCTestCase {
 
+    actor MockRegistryService: SkillRegistryServiceProtocol {
+        private let leaderboardSkills: [RegistrySkill]
+        private let searchTotalCount: Int
+        private(set) var leaderboardCallCount = 0
+        private(set) var searchLimitCalls: [Int] = []
+
+        init(leaderboardSkills: [RegistrySkill] = [], searchTotalCount: Int = 0) {
+            self.leaderboardSkills = leaderboardSkills
+            self.searchTotalCount = searchTotalCount
+        }
+
+        func search(query: String, limit: Int) async throws -> [RegistrySkill] {
+            searchLimitCalls.append(limit)
+            let targetCount = min(limit, searchTotalCount)
+            return (0..<targetCount).map { index in
+                RegistrySkill(
+                    id: "owner/repo/search-\(index)",
+                    skillId: "search-\(index)",
+                    name: "search-\(index)",
+                    installs: index,
+                    source: "owner/repo",
+                    installsYesterday: nil,
+                    change: nil
+                )
+            }
+        }
+
+        func fetchLeaderboard(category: SkillRegistryService.LeaderboardCategory) async throws -> [RegistrySkill] {
+            leaderboardCallCount += 1
+            return leaderboardSkills
+        }
+
+        func clearCache() async {}
+
+        func leaderboardCalls() -> Int {
+            leaderboardCallCount
+        }
+
+        func searchCalls() -> [Int] {
+            searchLimitCalls
+        }
+    }
+
     // MARK: - Helpers
 
     /// 创建一个最小可用的 `Skill` model，用于测试。
@@ -108,5 +151,89 @@ final class RegistryBrowserViewModelTests: XCTestCase {
         // Registry skill with a completely different skillId should not be installed
         let registrySkill = makeRegistrySkill(skillId: "ui-ux-pro-max", source: "alice/skills")
         XCTAssertFalse(vm.isInstalled(registrySkill), "Should NOT be installed when skillId doesn't match any local skill")
+    }
+
+    func testLeaderboardModeUsesLocalPaginationAfterInitialFetch() async {
+        let skillManager = SkillManager()
+        let leaderboardSkills = (0..<130).map { index in
+            RegistrySkill(
+                id: "owner/repo/\(index)",
+                skillId: "skill-\(index)",
+                name: "skill-\(index)",
+                installs: index,
+                source: "owner/repo",
+                installsYesterday: nil,
+                change: nil
+            )
+        }
+        let service = MockRegistryService(leaderboardSkills: leaderboardSkills)
+        let vm = RegistryBrowserViewModel(skillManager: skillManager, registryService: service)
+
+        await vm.onAppear()
+        XCTAssertEqual(vm.displayedSkills.count, 50)
+        XCTAssertTrue(vm.hasMoreResults)
+        var leaderboardCalls = await service.leaderboardCalls()
+        XCTAssertEqual(leaderboardCalls, 1)
+
+        guard let lastID = vm.displayedSkills.last?.id else {
+            XCTFail("Expected leaderboard skills")
+            return
+        }
+
+        await vm.loadMoreIfNeeded(after: lastID)
+        XCTAssertEqual(vm.displayedSkills.count, 100)
+        leaderboardCalls = await service.leaderboardCalls()
+        XCTAssertEqual(leaderboardCalls, 1, "Leaderboard load-more should not re-fetch network data")
+    }
+
+    func testSearchModeLoadMoreRequestsHigherLimit() async {
+        let skillManager = SkillManager()
+        let service = MockRegistryService(searchTotalCount: 140)
+        let vm = RegistryBrowserViewModel(skillManager: skillManager, registryService: service)
+
+        vm.searchText = "skill"
+        await vm.refresh()
+        XCTAssertEqual(vm.displayedSkills.count, 50)
+        XCTAssertTrue(vm.hasMoreResults)
+        var searchCalls = await service.searchCalls()
+        XCTAssertEqual(searchCalls, [50])
+
+        guard let lastID = vm.displayedSkills.last?.id else {
+            XCTFail("Expected search skills")
+            return
+        }
+
+        await vm.loadMoreIfNeeded(after: lastID)
+        XCTAssertEqual(vm.displayedSkills.count, 100)
+        XCTAssertTrue(vm.hasMoreResults)
+        searchCalls = await service.searchCalls()
+        XCTAssertEqual(searchCalls, [50, 100])
+    }
+
+    func testSearchModeStopsWhenNoMoreData() async {
+        let skillManager = SkillManager()
+        let service = MockRegistryService(searchTotalCount: 80)
+        let vm = RegistryBrowserViewModel(skillManager: skillManager, registryService: service)
+
+        vm.searchText = "skill"
+        await vm.refresh()
+        guard let lastID = vm.displayedSkills.last?.id else {
+            XCTFail("Expected search skills")
+            return
+        }
+
+        await vm.loadMoreIfNeeded(after: lastID)
+        XCTAssertEqual(vm.displayedSkills.count, 80)
+        XCTAssertFalse(vm.hasMoreResults)
+        var searchCalls = await service.searchCalls()
+        XCTAssertEqual(searchCalls, [50, 100])
+
+        guard let secondLastID = vm.displayedSkills.last?.id else {
+            XCTFail("Expected loaded list to remain available")
+            return
+        }
+        await vm.loadMoreIfNeeded(after: secondLastID)
+        searchCalls = await service.searchCalls()
+        XCTAssertEqual(searchCalls, [50, 100], "Should not continue requesting when no more results")
     }
 }
