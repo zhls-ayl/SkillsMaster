@@ -16,6 +16,7 @@ SkillsMaster 的目标，就是把这些分散的本地操作整合到一个清�
 - 解析并编辑 `SKILL.md`，支持 YAML frontmatter + Markdown 正文
 - 从 GitHub、Registry 与 Custom Repository 安装 Skills
 - 集成 ClawHub 浏览与安装（面向 OpenClaw）
+- Registry / ClawHub 列表支持触底自动加载更多，并显示底部加载状态
 - 管理 Agent 分配、symbolic link、lock file 与更新检查
 - 监听文件系统变化，在 UI 中自动刷新
 - 支持主题切换、应用版本检查与 Release 打包链路
