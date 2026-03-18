@@ -106,12 +106,15 @@ actor RepositoryManager {
     func add(_ repo: SkillRepository) async throws {
         if !isLoaded { await loadFromDisk() }
 
+        var normalizedRepo = repo
+        normalizedRepo.normalizeLocalSlugIfNeeded()
+
         // Prevent duplicate slugs (same remote repo added twice)
-        if cachedRepos.contains(where: { $0.localSlug == repo.localSlug }) {
-            throw RepositoryError.alreadyExists(repo.localSlug)
+        if cachedRepos.contains(where: { $0.normalizedLocalSlug == normalizedRepo.normalizedLocalSlug }) {
+            throw RepositoryError.alreadyExists(normalizedRepo.normalizedLocalSlug)
         }
 
-        cachedRepos.append(repo)
+        cachedRepos.append(normalizedRepo)
         await saveToDisk()
     }
 
@@ -133,8 +136,10 @@ actor RepositoryManager {
     /// Update an existing repository's configuration (e.g. renamed by user).
     func update(_ repo: SkillRepository) async {
         if !isLoaded { await loadFromDisk() }
-        if let idx = cachedRepos.firstIndex(where: { $0.id == repo.id }) {
-            cachedRepos[idx] = repo
+        var normalizedRepo = repo
+        normalizedRepo.normalizeLocalSlugIfNeeded()
+        if let idx = cachedRepos.firstIndex(where: { $0.id == normalizedRepo.id }) {
+            cachedRepos[idx] = normalizedRepo
             await saveToDisk()
         }
     }
@@ -336,7 +341,17 @@ actor RepositoryManager {
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
             let config = try decoder.decode(RepoConfig.self, from: data)
-            cachedRepos = config.repositories
+            var didRepairSlug = false
+            cachedRepos = config.repositories.map { repo in
+                var mutableRepo = repo
+                if mutableRepo.normalizeLocalSlugIfNeeded() {
+                    didRepairSlug = true
+                }
+                return mutableRepo
+            }
+            if didRepairSlug {
+                await saveToDisk()
+            }
         } catch {
             // Malformed config — reset to empty rather than crashing
             cachedRepos = []

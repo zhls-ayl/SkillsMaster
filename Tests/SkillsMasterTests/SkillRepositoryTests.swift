@@ -64,6 +64,66 @@ final class SkillRepositoryTests: XCTestCase {
         XCTAssertTrue(repo.syncOnLaunch)
     }
 
+    func testDecodeFallsBackToDerivedLocalSlugWhenMissing() throws {
+        let json = """
+        {
+          "id": "33333333-3333-3333-3333-333333333333",
+          "name": "team-skills",
+          "repoURL": "https://example.com/org/repo.git",
+          "authType": "httpsToken",
+          "platform": "github",
+          "isEnabled": true
+        }
+        """
+
+        let data = Data(json.utf8)
+        let repo = try JSONDecoder().decode(SkillRepository.self, from: data)
+
+        XCTAssertEqual(repo.localSlug, "org-repo")
+        XCTAssertTrue(repo.localPath.hasSuffix("/repos/org-repo"))
+    }
+
+    func testDecodeRepairsEmptyLocalSlug() throws {
+        let json = """
+        {
+          "id": "44444444-4444-4444-4444-444444444444",
+          "name": "team-skills",
+          "repoURL": "https://example.com/org/repo.git",
+          "authType": "httpsToken",
+          "platform": "github",
+          "isEnabled": true,
+          "localSlug": ""
+        }
+        """
+
+        let data = Data(json.utf8)
+        let repo = try JSONDecoder().decode(SkillRepository.self, from: data)
+
+        XCTAssertEqual(repo.localSlug, "org-repo")
+        XCTAssertTrue(repo.localPath.hasSuffix("/repos/org-repo"))
+    }
+
+    func testLocalPathFallsBackWhenLocalSlugIsEmpty() {
+        let repo = SkillRepository(
+            id: UUID(uuidString: "55555555-5555-5555-5555-555555555555")!,
+            name: "repo",
+            repoURL: "https://example.com/org/repo.git",
+            authType: .httpsToken,
+            platform: .github,
+            isEnabled: true,
+            lastSyncedAt: nil,
+            localSlug: "",
+            httpUsername: nil,
+            credentialKey: nil,
+            scanHiddenPaths: false,
+            syncOnLaunch: false
+        )
+
+        XCTAssertEqual(repo.normalizedLocalSlug, "org-repo")
+        XCTAssertTrue(repo.localPath.hasSuffix("/repos/org-repo"))
+        XCTAssertFalse(repo.localPath.hasSuffix("/repos/"))
+    }
+
     func testEffectiveLastSyncedAtUsesPersistedValue() {
         let persisted = Date(timeIntervalSince1970: 1_700_000_000)
         let repo = SkillRepository(

@@ -136,12 +136,37 @@ struct SkillRepository: Codable, Identifiable, Hashable {
     /// service layers always stay in sync when storage paths evolve.
     var localPath: String {
         let base = NSString(string: Constants.reposBasePath).expandingTildeInPath
-        return "\(base)/\(localSlug)"
+        return "\(base)/\(normalizedLocalSlug)"
     }
 
     /// Whether the repository has been cloned locally (directory exists)
     var isCloned: Bool {
         FileManager.default.fileExists(atPath: localPath)
+    }
+
+    /// 兼容旧配置或异常数据中缺失/空字符串的 `localSlug`。
+    /// 优先复用持久化值，其次按 repoURL 推导，最后退回到 UUID，避免路径退化成基准目录本身。
+    var normalizedLocalSlug: String {
+        let trimmed = localSlug.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty {
+            return trimmed
+        }
+
+        let derived = Self.slugFrom(repoURL: repoURL).trimmingCharacters(in: .whitespacesAndNewlines)
+        if !derived.isEmpty {
+            return derived
+        }
+
+        return id.uuidString.lowercased()
+    }
+
+    /// 把兼容态 slug 回填到模型，便于后续持久化修复旧配置。
+    @discardableResult
+    mutating func normalizeLocalSlugIfNeeded() -> Bool {
+        let normalized = normalizedLocalSlug
+        guard normalized != localSlug else { return false }
+        localSlug = normalized
+        return true
     }
 
     /// Effective sync timestamp used by UI.
@@ -359,11 +384,13 @@ extension SkillRepository {
         self.platform = try container.decode(Platform.self, forKey: .platform)
         self.isEnabled = try container.decode(Bool.self, forKey: .isEnabled)
         self.lastSyncedAt = try container.decodeIfPresent(Date.self, forKey: .lastSyncedAt)
-        self.localSlug = try container.decode(String.self, forKey: .localSlug)
+        self.localSlug = try container.decodeIfPresent(String.self, forKey: .localSlug)
+            ?? Self.slugFrom(repoURL: repoURL)
         self.httpUsername = try container.decodeIfPresent(String.self, forKey: .httpUsername)
         self.credentialKey = try container.decodeIfPresent(String.self, forKey: .credentialKey)
         self.scanHiddenPaths = try container.decodeIfPresent(Bool.self, forKey: .scanHiddenPaths) ?? false
         self.syncOnLaunch = try container.decodeIfPresent(Bool.self, forKey: .syncOnLaunch) ?? false
+        _ = normalizeLocalSlugIfNeeded()
     }
 
     func encode(to encoder: Encoder) throws {
