@@ -35,6 +35,7 @@ final class ClawHubBrowserViewModel {
     var contentError: String?
 
     var installingSkillSlug: String?
+    var installingStatusMessage: String?
     var notice: Notice?
 
     var isSearchActive: Bool {
@@ -158,6 +159,26 @@ final class ClawHubBrowserViewModel {
         installingSkillSlug == skill.slug
     }
 
+    func installButtonTitle(for skill: ClawHubSkill) -> String {
+        if isInstalling(skill) {
+            return installingStatusMessage ?? "Installing..."
+        }
+        if canReinstall(skill) {
+            return "Reinstall"
+        }
+        return "Install"
+    }
+
+    func detailInstallButtonTitle(for skill: ClawHubSkill) -> String {
+        if isInstalling(skill) {
+            return installingStatusMessage ?? "Installing..."
+        }
+        if canReinstall(skill) {
+            return "Reinstall to OpenClaw"
+        }
+        return "Install to OpenClaw"
+    }
+
     // MARK: - Detail loading
 
     func loadSelection(for skill: ClawHubSkill) async {
@@ -209,14 +230,20 @@ final class ClawHubBrowserViewModel {
 
     private func performInstall(_ skill: ClawHubSkill) async {
         installingSkillSlug = skill.slug
-        defer { installingSkillSlug = nil }
+        installingStatusMessage = "Loading package info..."
+        defer {
+            installingSkillSlug = nil
+            installingStatusMessage = nil
+        }
 
         do {
+            installingStatusMessage = "Loading package info..."
             let detail = try await service.fetchSkillDetail(slug: skill.slug)
             guard let version = detail.installVersion else {
                 throw SkillManager.ImportError.parseFailed("ClawHub did not provide a version for \(skill.slug).")
             }
 
+            installingStatusMessage = "Downloading archive..."
             let archiveResult = await downloadArchiveForInstall(slug: skill.slug, version: version)
             let archiveData = archiveResult.data
             let archiveDownloadError = archiveResult.error
@@ -224,6 +251,7 @@ final class ClawHubBrowserViewModel {
             var skillContent: String?
             var skillContentError: Error?
             do {
+                installingStatusMessage = "Fetching SKILL.md..."
                 skillContent = try await service.fetchSkillContent(slug: skill.slug)
             } catch {
                 skillContentError = error
@@ -233,6 +261,9 @@ final class ClawHubBrowserViewModel {
                 throw archiveDownloadError ?? skillContentError ?? ClawHubService.ServiceError.archiveUnavailable
             }
 
+            installingStatusMessage = archiveData == nil
+                ? "Installing SKILL.md..."
+                : "Installing files..."
             let result = try await skillManager.installClawHubSkill(
                 slug: skill.slug,
                 version: version,
@@ -410,8 +441,11 @@ final class ClawHubBrowserViewModel {
                     break
                 }
 
-                let nanoseconds = UInt64(retryAfterSeconds) * 1_000_000_000
-                try? await Task.sleep(nanoseconds: nanoseconds)
+                for remaining in stride(from: retryAfterSeconds, through: 1, by: -1) {
+                    installingStatusMessage = "Waiting for ClawHub rate limit (\(remaining)s)..."
+                    try? await Task.sleep(nanoseconds: 1_000_000_000)
+                }
+                installingStatusMessage = "Retrying archive download..."
             } catch {
                 lastError = error
                 break

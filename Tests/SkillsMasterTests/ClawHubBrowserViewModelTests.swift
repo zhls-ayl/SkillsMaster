@@ -176,6 +176,27 @@ final class ClawHubBrowserViewModelTests: XCTestCase {
         XCTAssertFalse(viewModel.canReinstall(makeClawHubSkill(slug: "browser-use")))
     }
 
+    func testInstallButtonTitleReturnsReinstallForClawHubManagedInstall() {
+        let skillManager = SkillManager()
+        skillManager.skills = [makeSkill(id: "browser-use", source: "browser-use")]
+
+        let viewModel = ClawHubBrowserViewModel(skillManager: skillManager)
+        viewModel.syncInstalledSkills()
+        let skill = makeClawHubSkill(slug: "browser-use")
+
+        XCTAssertEqual(viewModel.installButtonTitle(for: skill), "Reinstall")
+        XCTAssertEqual(viewModel.detailInstallButtonTitle(for: skill), "Reinstall to OpenClaw")
+    }
+
+    func testInstallButtonTitleReturnsInstallForNewSkill() {
+        let skillManager = SkillManager()
+        let viewModel = ClawHubBrowserViewModel(skillManager: skillManager)
+        let skill = makeClawHubSkill(slug: "browser-use")
+
+        XCTAssertEqual(viewModel.installButtonTitle(for: skill), "Install")
+        XCTAssertEqual(viewModel.detailInstallButtonTitle(for: skill), "Install to OpenClaw")
+    }
+
     func testLoadMoreInBrowseModeIncreasesLimit() async {
         let skillManager = SkillManager()
         let service = MockClawHubService(totalBrowseCount: 120)

@@ -191,15 +191,18 @@ struct ClawHubSkillDetailView: View {
                 } label: {
                     if isInstalling {
                         Label {
-                            Text("Installing...")
+                            Text(viewModel.detailInstallButtonTitle(for: skill))
                         } icon: {
                             ProgressView()
                                 .controlSize(.small)
                         }
-                    } else if viewModel.canReinstall(skill) {
-                        Label("Reinstall to OpenClaw", systemImage: "arrow.triangle.2.circlepath")
                     } else {
-                        Label("Install to OpenClaw", systemImage: "arrow.down.circle")
+                        Label(
+                            viewModel.detailInstallButtonTitle(for: skill),
+                            systemImage: viewModel.canReinstall(skill)
+                                ? "arrow.triangle.2.circlepath"
+                                : "arrow.down.circle"
+                        )
                     }
                 }
                 .buttonStyle(.borderedProminent)
