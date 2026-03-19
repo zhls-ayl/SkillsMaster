@@ -196,12 +196,14 @@ struct ClawHubSkillDetailView: View {
                             ProgressView()
                                 .controlSize(.small)
                         }
+                    } else if viewModel.canReinstall(skill) {
+                        Label("Reinstall to OpenClaw", systemImage: "arrow.triangle.2.circlepath")
                     } else {
                         Label("Install to OpenClaw", systemImage: "arrow.down.circle")
                     }
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(isInstalled || isInstalling)
+                .disabled(isInstalling || (isInstalled && !viewModel.canReinstall(skill)))
 
                 Button {
                     NSWorkspace.shared.open(detailPageURL)

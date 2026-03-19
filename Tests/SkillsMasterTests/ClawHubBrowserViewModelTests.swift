@@ -136,6 +136,16 @@ final class ClawHubBrowserViewModelTests: XCTestCase {
         XCTAssertTrue(viewModel.isInstalled(makeClawHubSkill(slug: "browser-use")))
     }
 
+    func testCanReinstallReturnsTrueForClawHubManagedInstall() {
+        let skillManager = SkillManager()
+        skillManager.skills = [makeSkill(id: "browser-use", source: "browser-use")]
+
+        let viewModel = ClawHubBrowserViewModel(skillManager: skillManager)
+        viewModel.syncInstalledSkills()
+
+        XCTAssertTrue(viewModel.canReinstall(makeClawHubSkill(slug: "browser-use")))
+    }
+
     func testIsInstalledReturnsFalseWhenClawHubSourceDiffers() {
         let skillManager = SkillManager()
         skillManager.skills = [makeSkill(id: "browser-use", source: "other-skill")]
@@ -154,6 +164,16 @@ final class ClawHubBrowserViewModelTests: XCTestCase {
         viewModel.syncInstalledSkills()
 
         XCTAssertTrue(viewModel.isInstalled(makeClawHubSkill(slug: "browser-use")))
+    }
+
+    func testCanReinstallReturnsFalseForManualInstallWithoutClawHubLock() {
+        let skillManager = SkillManager()
+        skillManager.skills = [makeSkill(id: "browser-use", source: nil)]
+
+        let viewModel = ClawHubBrowserViewModel(skillManager: skillManager)
+        viewModel.syncInstalledSkills()
+
+        XCTAssertFalse(viewModel.canReinstall(makeClawHubSkill(slug: "browser-use")))
     }
 
     func testLoadMoreInBrowseModeIncreasesLimit() async {

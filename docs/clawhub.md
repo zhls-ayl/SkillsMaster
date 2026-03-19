@@ -285,6 +285,7 @@ View 层对错误的呈现分为三类：
 `performInstall(_:)` 的流程是：
 1. 先拉取 detail，获取 `installVersion`
 2. 尝试下载 archive
+   - 若收到 `429 rate limited` 且 `retry-after <= 60s`，会按 header 等待一次并自动重试 archive
 3. 尝试拉取 `SKILL.md`
 4. 如果 archive 和 `SKILL.md` 都拿不到，安装失败
 5. 否则调用 `skillManager.installClawHubSkill(...)`
@@ -321,6 +322,8 @@ View 层对错误的呈现分为三类：
 - 但辅助文件未包含在内
 
 这是当前实现中一个很重要的容错策略，避免因 ClawHub 未提供 zip 而完全无法安装。
+
+如果后续限流恢复，已通过 ClawHub 安装的 skill 可以再次点击安装按钮执行 `Reinstall`，用于补齐先前因 rate limit 缺失的辅助文件。
 
 ### 4. 统一落盘
 无论是 archive 还是 markdown-only，最终都走 `persistInstalledSkillDirectory(...)`：

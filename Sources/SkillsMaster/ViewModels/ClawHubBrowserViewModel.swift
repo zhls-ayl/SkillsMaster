@@ -150,6 +150,10 @@ final class ClawHubBrowserViewModel {
         return installedSkillIDsNoSource.contains(skill.slug)
     }
 
+    func canReinstall(_ skill: ClawHubSkill) -> Bool {
+        installedClawHubSlugs.contains(skill.slug)
+    }
+
     func isInstalling(_ skill: ClawHubSkill) -> Bool {
         installingSkillSlug == skill.slug
     }
@@ -213,13 +217,9 @@ final class ClawHubBrowserViewModel {
                 throw SkillManager.ImportError.parseFailed("ClawHub did not provide a version for \(skill.slug).")
             }
 
-            var archiveData: Data?
-            var archiveDownloadError: Error?
-            do {
-                archiveData = try await service.downloadSkillArchive(slug: skill.slug, version: version)
-            } catch {
-                archiveDownloadError = error
-            }
+            let archiveResult = await downloadArchiveForInstall(slug: skill.slug, version: version)
+            let archiveData = archiveResult.data
+            let archiveDownloadError = archiveResult.error
 
             var skillContent: String?
             var skillContentError: Error?
@@ -390,5 +390,34 @@ final class ClawHubBrowserViewModel {
         let existingIDs = Set(existing.map(\.id))
         merged.append(contentsOf: new.filter { !existingIDs.contains($0.id) })
         return merged
+    }
+
+    private func downloadArchiveForInstall(slug: String, version: String) async -> (data: Data?, error: Error?) {
+        var lastError: Error?
+
+        for attempt in 0..<2 {
+            do {
+                let data = try await service.downloadSkillArchive(slug: slug, version: version)
+                return (data, nil)
+            } catch let error as ClawHubService.ServiceError {
+                lastError = error
+
+                guard case .rateLimited(let retryAfterSeconds) = error,
+                      attempt == 0,
+                      let retryAfterSeconds,
+                      retryAfterSeconds > 0,
+                      retryAfterSeconds <= 60 else {
+                    break
+                }
+
+                let nanoseconds = UInt64(retryAfterSeconds) * 1_000_000_000
+                try? await Task.sleep(nanoseconds: nanoseconds)
+            } catch {
+                lastError = error
+                break
+            }
+        }
+
+        return (nil, lastError)
     }
 }
