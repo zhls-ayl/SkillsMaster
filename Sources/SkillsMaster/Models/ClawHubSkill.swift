@@ -39,7 +39,11 @@ struct ClawHubSkill: Identifiable, Hashable {
     }
 
     var browserURL: URL {
-        URL(string: "https://clawhub.ai/skills/\(slug)")!
+        if let ownerHandle, !ownerHandle.isEmpty {
+            return URL(string: "https://clawhub.ai/\(ownerHandle)/\(slug)")!
+        }
+        let encodedSlug = slug.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? slug
+        return URL(string: "https://clawhub.ai/skills?focus=search&q=\(encodedSlug)")!
     }
 
     var formattedDownloads: String {
@@ -67,11 +71,32 @@ struct ClawHubSkill: Identifiable, Hashable {
 struct ClawHubSkillDetail: Hashable {
     let skill: ClawHubSkill
     let latestVersion: String?
+    let latestVersionID: String?
     let latestVersionCreatedAt: Int64?
     let latestChangelog: String?
     let license: String?
     let moderationVerdict: String?
     let moderationSummary: String?
+
+    init(
+        skill: ClawHubSkill,
+        latestVersion: String?,
+        latestVersionID: String? = nil,
+        latestVersionCreatedAt: Int64?,
+        latestChangelog: String?,
+        license: String?,
+        moderationVerdict: String?,
+        moderationSummary: String?
+    ) {
+        self.skill = skill
+        self.latestVersion = latestVersion
+        self.latestVersionID = latestVersionID
+        self.latestVersionCreatedAt = latestVersionCreatedAt
+        self.latestChangelog = latestChangelog
+        self.license = license
+        self.moderationVerdict = moderationVerdict
+        self.moderationSummary = moderationSummary
+    }
 
     /// Preferred version string for installation actions.
     var installVersion: String? {

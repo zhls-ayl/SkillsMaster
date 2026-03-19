@@ -4,17 +4,32 @@ import Foundation
 actor ClawHubService {
 
     enum SkillSort: String, CaseIterable, Identifiable {
-        case `default`
         case downloads
+        case newest
+        case updated
+        case installs
         case stars
+        case name
 
         var id: String { rawValue }
 
         var displayName: String {
             switch self {
-            case .default: return "Default"
             case .downloads: return "Downloads"
+            case .newest: return "Newest"
+            case .updated: return "Updated"
+            case .installs: return "Installs"
             case .stars: return "Stars"
+            case .name: return "Name"
+            }
+        }
+
+        var defaultDirection: SortDirection {
+            switch self {
+            case .name:
+                return .ascending
+            default:
+                return .descending
             }
         }
     }
@@ -34,30 +49,38 @@ actor ClawHubService {
     }
 
     struct BrowseOptions: Equatable {
-        var sort: SkillSort = .default
+        struct RequestBody: Encodable, Equatable {
+            let cursor: String?
+            let numItems: Int
+            let sort: String
+            let dir: String
+            let highlightedOnly: Bool
+            let nonSuspiciousOnly: Bool
+        }
+
+        var sort: SkillSort = .downloads
         var direction: SortDirection = .descending
         var highlightedOnly = false
         var nonSuspiciousOnly = false
         var limit = 50
+        var cursor: String?
 
-        var queryItems: [URLQueryItem] {
-            var items = [URLQueryItem(name: "limit", value: "\(limit)")]
-
-            if sort != .default {
-                items.append(URLQueryItem(name: "sort", value: sort.rawValue))
-                items.append(URLQueryItem(name: "dir", value: direction.rawValue))
-            }
-
-            if highlightedOnly {
-                items.append(URLQueryItem(name: "highlighted", value: "true"))
-            }
-
-            if nonSuspiciousOnly {
-                items.append(URLQueryItem(name: "nonSuspicious", value: "true"))
-            }
-
-            return items
+        var requestBody: RequestBody {
+            RequestBody(
+                cursor: cursor,
+                numItems: limit,
+                sort: sort.rawValue,
+                dir: direction.rawValue,
+                highlightedOnly: highlightedOnly,
+                nonSuspiciousOnly: nonSuspiciousOnly
+            )
         }
+    }
+
+    struct BrowsePage: Equatable {
+        let items: [ClawHubSkill]
+        let nextCursor: String?
+        let hasMore: Bool
     }
 
     enum ServiceError: Error, LocalizedError {
@@ -90,6 +113,8 @@ actor ClawHubService {
     }
 
     private let baseURL = URL(string: "https://clawhub.ai")!
+    private let convexURL = URL(string: "https://wry-manatee-359.convex.cloud")!
+    private let convexClientHeader = "npm-1.24.8"
 
     /// Response cache to reduce repeated requests and limit rate-limit hits.
     private var detailCache: [String: ClawHubSkillDetail] = [:]
@@ -97,23 +122,40 @@ actor ClawHubService {
 
     // MARK: - Public API
 
-    func fetchSkills(options: BrowseOptions = BrowseOptions()) async throws -> [ClawHubSkill] {
-        let response: SkillListResponse = try await sendJSONRequest(
-            path: "/api/v1/skills",
-            queryItems: options.queryItems
+    func fetchSkills(options: BrowseOptions = BrowseOptions()) async throws -> BrowsePage {
+        let response: BrowseResponse = try await sendConvexQuery(
+            path: "skills:listPublicPageV4",
+            arguments: options.requestBody
         )
-        return response.items.map { $0.toClawHubSkill(owner: nil) }
+        return BrowsePage(
+            items: response.page.map { $0.toClawHubSkill() },
+            nextCursor: response.nextCursor,
+            hasMore: response.hasMore
+        )
     }
 
     func searchSkills(query: String, limit: Int = 50) async throws -> [ClawHubSkill] {
-        let response: SkillSearchResponse = try await sendJSONRequest(
-            path: "/api/v1/search",
-            queryItems: [
-                URLQueryItem(name: "q", value: query),
-                URLQueryItem(name: "limit", value: "\(limit)")
-            ]
-        )
-        return response.results.map { $0.toClawHubSkill() }
+        do {
+            let response: ConvexSearchResponse = try await sendConvexAction(
+                path: "search:searchSkills",
+                arguments: SearchArguments(
+                    query: query,
+                    highlightedOnly: false,
+                    nonSuspiciousOnly: false,
+                    limit: limit
+                )
+            )
+            return response.map { $0.toClawHubSkill() }
+        } catch {
+            let response: LegacySkillSearchResponse = try await sendJSONRequest(
+                path: "/api/v1/search",
+                queryItems: [
+                    URLQueryItem(name: "q", value: query),
+                    URLQueryItem(name: "limit", value: "\(limit)")
+                ]
+            )
+            return response.results.map { $0.toClawHubSkill() }
+        }
     }
 
     func fetchSkillDetail(slug: String) async throws -> ClawHubSkillDetail {
@@ -121,8 +163,11 @@ actor ClawHubService {
             return cached
         }
 
-        let response: SkillDetailResponse = try await sendJSONRequest(path: "/api/v1/skills/\(slug)")
-        let detail = response.toClawHubSkillDetail()
+        let response: SkillDetailResponse = try await sendConvexQuery(
+            path: "skills:getBySlug",
+            arguments: SlugArguments(slug: slug)
+        )
+        let detail = response.toClawHubSkillDetail(requestedSlug: slug)
         detailCache[slug] = detail
         return detail
     }
@@ -132,16 +177,18 @@ actor ClawHubService {
             return cached
         }
 
-        let data = try await sendDataRequest(
-            path: "/api/v1/skills/\(slug)/file",
-            queryItems: [URLQueryItem(name: "path", value: "SKILL.md")]
-        )
-
-        guard let content = String(data: data, encoding: .utf8) else {
-            throw ServiceError.invalidResponse(statusCode: 200, message: "ClawHub returned non-UTF8 SKILL.md content.")
+        let detail = try await fetchSkillDetail(slug: slug)
+        guard let versionID = detail.latestVersionID else {
+            throw ServiceError.invalidResponse(statusCode: 200, message: "ClawHub did not return a version identifier for SKILL.md.")
         }
 
-        guard !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+        let response: ReadmeResponse = try await sendConvexAction(
+            path: "skills:getReadme",
+            arguments: ReadmeArguments(versionId: versionID)
+        )
+        let content = response.text.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !content.isEmpty else {
             throw ServiceError.emptySkillContent
         }
 
@@ -164,7 +211,7 @@ actor ClawHubService {
         return data
     }
 
-    // MARK: - Request helpers
+    // MARK: - REST helpers
 
     private func sendJSONRequest<Response: Decodable>(
         path: String,
@@ -178,13 +225,13 @@ actor ClawHubService {
         path: String,
         queryItems: [URLQueryItem] = []
     ) async throws -> Data {
-        let request = try makeRequest(path: path, queryItems: queryItems)
+        let request = try makeRESTRequest(path: path, queryItems: queryItems)
         let (data, response) = try await URLSession.shared.data(for: request)
         try validate(response: response, data: data)
         return data
     }
 
-    private func makeRequest(path: String, queryItems: [URLQueryItem]) throws -> URLRequest {
+    private func makeRESTRequest(path: String, queryItems: [URLQueryItem]) throws -> URLRequest {
         guard var components = URLComponents(url: baseURL.appendingPathComponent(path), resolvingAgainstBaseURL: false) else {
             throw ServiceError.invalidURL
         }
@@ -201,6 +248,88 @@ actor ClawHubService {
         request.setValue("application/json, text/plain, */*", forHTTPHeaderField: "Accept")
         request.setValue("SkillsMaster", forHTTPHeaderField: "User-Agent")
         return request
+    }
+
+    // MARK: - Convex helpers
+
+    private func sendConvexQuery<Response: Decodable, Arguments: Encodable>(
+        path: String,
+        arguments: Arguments
+    ) async throws -> Response {
+        try await sendConvexRequest(
+            endpoint: "/api/query",
+            path: path,
+            arguments: arguments
+        )
+    }
+
+    private func sendConvexAction<Response: Decodable, Arguments: Encodable>(
+        path: String,
+        arguments: Arguments
+    ) async throws -> Response {
+        try await sendConvexRequest(
+            endpoint: "/api/action",
+            path: path,
+            arguments: arguments
+        )
+    }
+
+    private func sendConvexRequest<Response: Decodable, Arguments: Encodable>(
+        endpoint: String,
+        path: String,
+        arguments: Arguments
+    ) async throws -> Response {
+        let body = try JSONEncoder().encode(
+            ConvexRequestBody(path: path, args: [arguments])
+        )
+        let request = try makeConvexRequest(endpoint: endpoint, body: body)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try validate(response: response, data: data)
+
+        let envelope = try JSONDecoder().decode(ConvexEnvelope<Response>.self, from: data)
+        switch envelope.status {
+        case "success":
+            guard let value = envelope.value else {
+                throw ServiceError.invalidResponse(statusCode: 200, message: "ClawHub returned an empty Convex payload.")
+            }
+            return value
+        case "error":
+            throw ServiceError.invalidResponse(
+                statusCode: 200,
+                message: sanitizeConvexErrorMessage(envelope.errorMessage ?? "Server Error")
+            )
+        default:
+            throw ServiceError.invalidResponse(statusCode: 200, message: "ClawHub returned an invalid Convex status.")
+        }
+    }
+
+    private func makeConvexRequest(endpoint: String, body: Data) throws -> URLRequest {
+        let url = convexURL.appendingPathComponent(endpoint)
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.httpBody = body
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(convexClientHeader, forHTTPHeaderField: "Convex-Client")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("SkillsMaster", forHTTPHeaderField: "User-Agent")
+        return request
+    }
+
+    private func sanitizeConvexErrorMessage(_ message: String) -> String {
+        let patterns = [
+            #"\[Request ID:[^\]]+\]\s*"#,
+            #"^\s*Server Error Called by client\s*"#,
+            #"^\s*ConvexError:\s*"#
+        ]
+
+        return patterns.reduce(message) { partialResult, pattern in
+            partialResult.replacingOccurrences(
+                of: pattern,
+                with: "",
+                options: [.regularExpression]
+            )
+        }
+        .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private func validate(response: URLResponse, data: Data) throws {
@@ -224,62 +353,122 @@ actor ClawHubService {
 // MARK: - DTOs
 
 private extension ClawHubService {
-    struct SkillListResponse: Decodable {
-        let items: [SkillSummaryDTO]
+    struct ConvexRequestBody<Arguments: Encodable>: Encodable {
+        let path: String
+        let format = "convex_encoded_json"
+        let args: [Arguments]
     }
 
-    struct SkillSearchResponse: Decodable {
-        let results: [SearchResultDTO]
+    struct ConvexEnvelope<Value: Decodable>: Decodable {
+        let status: String
+        let value: Value?
+        let errorMessage: String?
     }
 
-    struct SkillDetailResponse: Decodable {
-        let skill: SkillSummaryDTO
+    struct SlugArguments: Encodable {
+        let slug: String
+    }
+
+    struct ReadmeArguments: Encodable {
+        let versionId: String
+    }
+
+    struct SearchArguments: Encodable {
+        let query: String
+        let highlightedOnly: Bool
+        let nonSuspiciousOnly: Bool
+        let limit: Int
+    }
+
+    struct BrowseResponse: Decodable {
+        let hasMore: Bool
+        let nextCursor: String?
+        let page: [BrowseItemDTO]
+    }
+
+    struct BrowseItemDTO: Decodable {
         let latestVersion: VersionDTO?
         let owner: OwnerDTO?
-        let moderation: ModerationDTO?
+        let ownerHandle: String?
+        let skill: SkillDTO
 
-        func toClawHubSkillDetail() -> ClawHubSkillDetail {
-            let skillModel = skill.toClawHubSkill(owner: owner)
-            return ClawHubSkillDetail(
-                skill: skillModel,
-                latestVersion: latestVersion?.version ?? skillModel.latestVersion,
-                latestVersionCreatedAt: latestVersion?.createdAt,
-                latestChangelog: latestVersion?.changelog,
-                license: latestVersion?.license,
-                moderationVerdict: moderation?.verdict,
-                moderationSummary: moderation?.summary
+        func toClawHubSkill() -> ClawHubSkill {
+            skill.toClawHubSkill(
+                owner: owner,
+                fallbackOwnerHandle: ownerHandle,
+                latestVersion: latestVersion
             )
         }
     }
 
-    struct SkillSummaryDTO: Decodable {
-        let slug: String
-        let displayName: String?
-        let summary: String?
-        let stats: StatsDTO?
-        let updatedAt: Int64?
+    struct SkillDetailResponse: Decodable {
         let latestVersion: VersionDTO?
-        let tags: TagsDTO?
+        let moderationInfo: ModerationInfoDTO?
+        let owner: OwnerDTO?
+        let requestedSlug: String?
+        let resolvedSlug: String?
+        let skill: SkillDTO
 
-        func toClawHubSkill(owner: OwnerDTO?) -> ClawHubSkill {
+        func toClawHubSkillDetail(requestedSlug: String) -> ClawHubSkillDetail {
+            let skillModel = skill.toClawHubSkill(
+                owner: owner,
+                fallbackOwnerHandle: owner?.handle,
+                latestVersion: latestVersion
+            )
+
+            return ClawHubSkillDetail(
+                skill: skillModel,
+                latestVersion: latestVersion?.version ?? skillModel.latestVersion,
+                latestVersionID: latestVersion?.id,
+                latestVersionCreatedAt: latestVersion?.createdAtMilliseconds,
+                latestChangelog: latestVersion?.changelog,
+                license: latestVersion?.parsed?.license,
+                moderationVerdict: latestVersion?.llmAnalysis?.verdict ?? moderationInfo?.verdict,
+                moderationSummary: latestVersion?.llmAnalysis?.summary ?? moderationInfo?.summary
+            )
+        }
+    }
+
+    struct ReadmeResponse: Decodable {
+        let text: String
+    }
+
+    typealias ConvexSearchResponse = [ConvexSearchResultDTO]
+
+    struct LegacySkillSearchResponse: Decodable {
+        let results: [SearchResultDTO]
+    }
+
+    struct SkillDTO: Decodable {
+        let displayName: String?
+        let slug: String
+        let stats: StatsDTO?
+        let summary: String?
+        let updatedAt: Double?
+
+        func toClawHubSkill(
+            owner: OwnerDTO?,
+            fallbackOwnerHandle: String?,
+            latestVersion: VersionDTO?
+        ) -> ClawHubSkill {
             ClawHubSkill(
                 slug: slug,
                 displayName: displayName ?? slug,
                 summary: summary ?? "",
-                latestVersion: latestVersion?.version ?? tags?.latest,
-                downloads: stats?.downloads ?? 0,
-                stars: stats?.stars ?? 0,
-                versionCount: stats?.versions,
-                ownerHandle: owner?.handle,
-                ownerDisplayName: owner?.displayName,
-                updatedAtMilliseconds: updatedAt
+                latestVersion: latestVersion?.version,
+                downloads: stats?.downloadsInt ?? 0,
+                stars: stats?.starsInt ?? 0,
+                versionCount: stats?.versionsInt,
+                ownerHandle: owner?.handle ?? fallbackOwnerHandle,
+                ownerDisplayName: owner?.displayName ?? owner?.name,
+                updatedAtMilliseconds: updatedAt.map(Int64.init)
             )
         }
     }
 
     struct SearchResultDTO: Decodable {
-        let slug: String
         let displayName: String?
+        let slug: String
         let summary: String?
         let version: String?
         let updatedAt: Int64?
@@ -300,30 +489,78 @@ private extension ClawHubService {
         }
     }
 
-    struct StatsDTO: Decodable {
-        let downloads: Int?
-        let stars: Int?
-        let versions: Int?
+    struct ConvexSearchResultDTO: Decodable {
+        let owner: OwnerDTO?
+        let ownerHandle: String?
+        let skill: SkillDTO
+        let version: VersionDTO?
+
+        func toClawHubSkill() -> ClawHubSkill {
+            skill.toClawHubSkill(
+                owner: owner,
+                fallbackOwnerHandle: ownerHandle,
+                latestVersion: version
+            )
+        }
     }
 
-    struct TagsDTO: Decodable {
-        let latest: String?
+    struct StatsDTO: Decodable {
+        let downloads: Double?
+        let stars: Double?
+        let versions: Double?
+
+        var downloadsInt: Int? {
+            downloads.map(Int.init)
+        }
+
+        var starsInt: Int? {
+            stars.map(Int.init)
+        }
+
+        var versionsInt: Int? {
+            versions.map(Int.init)
+        }
     }
 
     struct VersionDTO: Decodable {
-        let version: String?
-        let createdAt: Int64?
+        let createdAt: Double?
+        let id: String?
         let changelog: String?
+        let llmAnalysis: LLMAnalysisDTO?
+        let parsed: ParsedVersionDTO?
+        let version: String?
+
+        enum CodingKeys: String, CodingKey {
+            case createdAt
+            case id = "_id"
+            case changelog
+            case llmAnalysis
+            case parsed
+            case version
+        }
+
+        var createdAtMilliseconds: Int64? {
+            createdAt.map(Int64.init)
+        }
+    }
+
+    struct ParsedVersionDTO: Decodable {
         let license: String?
     }
 
     struct OwnerDTO: Decodable {
-        let handle: String?
         let displayName: String?
+        let handle: String?
+        let name: String?
     }
 
-    struct ModerationDTO: Decodable {
-        let verdict: String?
+    struct LLMAnalysisDTO: Decodable {
         let summary: String?
+        let verdict: String?
+    }
+
+    struct ModerationInfoDTO: Decodable {
+        let summary: String?
+        let verdict: String?
     }
 }

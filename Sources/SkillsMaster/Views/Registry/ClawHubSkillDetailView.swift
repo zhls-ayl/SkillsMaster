@@ -204,7 +204,7 @@ struct ClawHubSkillDetailView: View {
                 .disabled(isInstalled || isInstalling)
 
                 Button {
-                    NSWorkspace.shared.open(skill.browserURL)
+                    NSWorkspace.shared.open(detailPageURL)
                 } label: {
                     Label("View on ClawHub", systemImage: "safari")
                 }
@@ -254,7 +254,7 @@ struct ClawHubSkillDetailView: View {
                     }
 
                     Button {
-                        NSWorkspace.shared.open(skill.browserURL)
+                        NSWorkspace.shared.open(detailPageURL)
                     } label: {
                         Label("View on ClawHub instead", systemImage: "safari")
                     }
@@ -304,5 +304,9 @@ struct ClawHubSkillDetailView: View {
         default:
             return nil
         }
+    }
+
+    private var detailPageURL: URL {
+        viewModel.selectedSkillDetail?.skill.browserURL ?? skill.browserURL
     }
 }

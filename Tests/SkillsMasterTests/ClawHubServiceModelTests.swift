@@ -25,6 +25,23 @@ final class ClawHubServiceModelTests: XCTestCase {
         XCTAssertNotNil(skill.formattedUpdatedDate)
     }
 
+    func testClawHubSkillUsesOwnerHandleForBrowserURLWhenAvailable() {
+        let skill = ClawHubSkill(
+            slug: "browser-use",
+            displayName: "Browser Use",
+            summary: "Automation skill",
+            latestVersion: "1.0.2",
+            downloads: 21466,
+            stars: 50,
+            versionCount: 3,
+            ownerHandle: "ansengu11",
+            ownerDisplayName: nil,
+            updatedAtMilliseconds: 1773025618143
+        )
+
+        XCTAssertEqual(skill.browserURL.absoluteString, "https://clawhub.ai/ansengu11/browser-use")
+    }
+
     func testClawHubSkillDetailPrefersDetailVersion() {
         let skill = ClawHubSkill(
             slug: "browser-use",
@@ -55,31 +72,29 @@ final class ClawHubServiceModelTests: XCTestCase {
 
     func testBrowseOptionsBuildExpectedQueryItems() {
         let options = ClawHubService.BrowseOptions(
-            sort: .stars,
+            sort: .installs,
             direction: .ascending,
             highlightedOnly: true,
             nonSuspiciousOnly: true,
-            limit: 25
+            limit: 25,
+            cursor: "cursor-1"
         )
 
         XCTAssertEqual(
-            options.queryItems,
-            [
-                URLQueryItem(name: "limit", value: "25"),
-                URLQueryItem(name: "sort", value: "stars"),
-                URLQueryItem(name: "dir", value: "asc"),
-                URLQueryItem(name: "highlighted", value: "true"),
-                URLQueryItem(name: "nonSuspicious", value: "true")
-            ]
+            options.requestBody,
+            .init(
+                cursor: "cursor-1",
+                numItems: 25,
+                sort: "installs",
+                dir: "asc",
+                highlightedOnly: true,
+                nonSuspiciousOnly: true
+            )
         )
     }
 
-    func testBrowseOptionsOmitSortParametersForDefaultOrdering() {
-        let options = ClawHubService.BrowseOptions()
-        let names = options.queryItems.map(\.name)
-
-        XCTAssertEqual(options.queryItems.first, URLQueryItem(name: "limit", value: "50"))
-        XCTAssertFalse(names.contains("sort"))
-        XCTAssertFalse(names.contains("dir"))
+    func testNameSortDefaultsToAscendingDirection() {
+        XCTAssertEqual(ClawHubService.SkillSort.name.defaultDirection, .ascending)
+        XCTAssertEqual(ClawHubService.SkillSort.downloads.defaultDirection, .descending)
     }
 }

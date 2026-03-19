@@ -4,7 +4,7 @@ import Foundation
 ///
 /// Keeping this protocol small allows deterministic ViewModel tests without real network I/O.
 protocol ClawHubServiceProtocol {
-    func fetchSkills(options: ClawHubService.BrowseOptions) async throws -> [ClawHubSkill]
+    func fetchSkills(options: ClawHubService.BrowseOptions) async throws -> ClawHubService.BrowsePage
     func searchSkills(query: String, limit: Int) async throws -> [ClawHubSkill]
     func fetchSkillDetail(slug: String) async throws -> ClawHubSkillDetail
     func fetchSkillContent(slug: String) async throws -> String

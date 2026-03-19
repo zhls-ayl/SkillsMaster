@@ -111,7 +111,7 @@ struct ClawHubBrowserView: View {
                 compactMenuChip(
                     title: viewModel.selectedSort.displayName,
                     systemImage: sortIconName(viewModel.selectedSort),
-                    isSelected: viewModel.selectedSort != .default
+                    isSelected: true
                 )
             }
 
@@ -131,10 +131,9 @@ struct ClawHubBrowserView: View {
                 compactMenuChip(
                     title: viewModel.selectedDirection.displayName,
                     systemImage: viewModel.selectedDirection == .descending ? "arrow.down" : "arrow.up",
-                    isSelected: viewModel.selectedSort != .default
+                    isSelected: true
                 )
             }
-            .disabled(viewModel.selectedSort == .default)
 
             Menu {
                 Button {
@@ -188,7 +187,6 @@ struct ClawHubBrowserView: View {
                         systemImage: direction == .descending ? "arrow.down" : "arrow.up"
                     )
                 }
-                .disabled(viewModel.selectedSort == .default)
             }
         }
     }
@@ -370,9 +368,12 @@ struct ClawHubBrowserView: View {
 
     private func sortIconName(_ sort: ClawHubService.SkillSort) -> String {
         switch sort {
-        case .default: return "arrow.up.arrow.down.circle"
         case .downloads: return "arrow.down.circle"
+        case .newest: return "sparkles"
+        case .updated: return "clock.arrow.circlepath"
+        case .installs: return "square.and.arrow.down"
         case .stars: return "star"
+        case .name: return "textformat.abc"
         }
     }
 }

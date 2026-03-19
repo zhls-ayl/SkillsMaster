@@ -7,7 +7,7 @@ final class ClawHubBrowserViewModelTests: XCTestCase {
     actor MockClawHubService: ClawHubServiceProtocol {
         private let totalBrowseCount: Int
         private let totalSearchCount: Int
-        private(set) var browseLimitCalls: [Int] = []
+        private(set) var browseCallsLog: [(cursor: String?, limit: Int)] = []
         private(set) var searchLimitCalls: [Int] = []
 
         init(totalBrowseCount: Int = 0, totalSearchCount: Int = 0) {
@@ -15,9 +15,19 @@ final class ClawHubBrowserViewModelTests: XCTestCase {
             self.totalSearchCount = totalSearchCount
         }
 
-        func fetchSkills(options: ClawHubService.BrowseOptions) async throws -> [ClawHubSkill] {
-            browseLimitCalls.append(options.limit)
-            return makeSkills(count: min(options.limit, totalBrowseCount))
+        func fetchSkills(options: ClawHubService.BrowseOptions) async throws -> ClawHubService.BrowsePage {
+            browseCallsLog.append((cursor: options.cursor, limit: options.limit))
+
+            let startIndex = options.cursor.flatMap { Int($0.replacingOccurrences(of: "cursor-", with: "")) } ?? 0
+            let endIndex = min(startIndex + options.limit, totalBrowseCount)
+            let items = (startIndex..<endIndex).map { makeSkill(slug: "skill-\($0)") }
+            let nextCursor = endIndex < totalBrowseCount ? "cursor-\(endIndex)" : nil
+
+            return ClawHubService.BrowsePage(
+                items: items,
+                nextCursor: nextCursor,
+                hasMore: nextCursor != nil
+            )
         }
 
         func searchSkills(query: String, limit: Int) async throws -> [ClawHubSkill] {
@@ -46,7 +56,11 @@ final class ClawHubBrowserViewModelTests: XCTestCase {
         }
 
         func browseCalls() -> [Int] {
-            browseLimitCalls
+            browseCallsLog.map { $0.limit }
+        }
+
+        func browseCursors() -> [String?] {
+            browseCallsLog.map { $0.cursor }
         }
 
         func searchCalls() -> [Int] {
@@ -161,7 +175,9 @@ final class ClawHubBrowserViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.displayedSkills.count, 100)
         XCTAssertTrue(viewModel.hasMoreResults)
         let browseCalls = await service.browseCalls()
-        XCTAssertEqual(browseCalls, [50, 100])
+        XCTAssertEqual(browseCalls, [50, 50])
+        let browseCursors = await service.browseCursors()
+        XCTAssertEqual(browseCursors, [nil, "cursor-50"])
     }
 
     func testLoadMoreStopsWhenNoMoreData() async {
@@ -179,7 +195,7 @@ final class ClawHubBrowserViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.displayedSkills.count, 80)
         XCTAssertFalse(viewModel.hasMoreResults)
         var browseCalls = await service.browseCalls()
-        XCTAssertEqual(browseCalls, [50, 100])
+        XCTAssertEqual(browseCalls, [50, 50])
 
         guard let secondLastID = viewModel.displayedSkills.last?.id else {
             XCTFail("Expected list to keep loaded skills")
@@ -188,7 +204,7 @@ final class ClawHubBrowserViewModelTests: XCTestCase {
 
         await viewModel.loadMoreIfNeeded(after: secondLastID)
         browseCalls = await service.browseCalls()
-        XCTAssertEqual(browseCalls, [50, 100], "Should not request another page when hasMoreResults is false")
+        XCTAssertEqual(browseCalls, [50, 50], "Should not request another page when hasMoreResults is false")
     }
 
     func testLoadMoreInSearchModeUsesHigherSearchLimit() async {

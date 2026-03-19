@@ -13,7 +13,7 @@ final class ClawHubBrowserViewModel {
     }
 
     var searchText = ""
-    var selectedSort: ClawHubService.SkillSort = .default
+    var selectedSort: ClawHubService.SkillSort = .downloads
     var selectedDirection: ClawHubService.SortDirection = .descending
     var highlightedOnly = false
     var nonSuspiciousOnly = false
@@ -55,7 +55,8 @@ final class ClawHubBrowserViewModel {
     private var currentDetailSlug: String?
     private let pageSize = 50
     private let loadMoreThreshold = 5
-    private var currentLimit = 50
+    private var nextBrowseCursor: String?
+    private var currentSearchLimit = 50
     private var listRequestVersion = 0
 
     init(skillManager: SkillManager, service: any ClawHubServiceProtocol = ClawHubService()) {
@@ -106,6 +107,7 @@ final class ClawHubBrowserViewModel {
     func selectSort(_ sort: ClawHubService.SkillSort) {
         guard selectedSort != sort else { return }
         selectedSort = sort
+        selectedDirection = sort.defaultDirection
         reloadBrowseListIfNeeded()
     }
 
@@ -234,7 +236,7 @@ final class ClawHubBrowserViewModel {
             let result = try await skillManager.installClawHubSkill(
                 slug: skill.slug,
                 version: version,
-                detailPageURL: skill.browserURL.absoluteString,
+                detailPageURL: detail.skill.browserURL.absoluteString,
                 skillContent: skillContent,
                 archiveData: archiveData,
                 targetAgents: [.openClaw]
@@ -268,7 +270,8 @@ final class ClawHubBrowserViewModel {
             direction: selectedDirection,
             highlightedOnly: highlightedOnly,
             nonSuspiciousOnly: nonSuspiciousOnly,
-            limit: currentLimit
+            limit: pageSize,
+            cursor: nextBrowseCursor
         )
     }
 
@@ -285,7 +288,8 @@ final class ClawHubBrowserViewModel {
     }
 
     private func reloadCurrentList() async {
-        currentLimit = pageSize
+        nextBrowseCursor = nil
+        currentSearchLimit = pageSize
         hasMoreResults = true
         isLoadingMore = false
         loadMoreErrorMessage = nil
@@ -294,7 +298,14 @@ final class ClawHubBrowserViewModel {
 
     private func loadMore() async {
         guard !isLoading, !isLoadingMore, hasMoreResults else { return }
-        currentLimit += pageSize
+
+        if normalizedQuery != nil {
+            currentSearchLimit += pageSize
+        } else if nextBrowseCursor == nil {
+            hasMoreResults = false
+            return
+        }
+
         await fetchCurrentList(reset: false)
     }
 
@@ -312,16 +323,29 @@ final class ClawHubBrowserViewModel {
 
         do {
             let skills: [ClawHubSkill]
+            var loadedNextBrowseCursor: String?
+            var loadedHasMoreResults = false
             if let query = normalizedQuery {
-                skills = try await service.searchSkills(query: query, limit: currentLimit)
+                skills = try await service.searchSkills(query: query, limit: currentSearchLimit)
             } else {
-                skills = try await service.fetchSkills(options: browseOptions)
+                let page = try await service.fetchSkills(options: browseOptions)
+                loadedNextBrowseCursor = page.nextCursor
+                loadedHasMoreResults = page.hasMore && page.nextCursor != nil
+                skills = reset
+                    ? page.items
+                    : mergeSkills(existing: displayedSkills, new: page.items)
             }
 
             guard requestVersion == listRequestVersion else { return }
 
+            if normalizedQuery == nil {
+                nextBrowseCursor = loadedNextBrowseCursor
+                hasMoreResults = loadedHasMoreResults
+            }
             displayedSkills = skills
-            hasMoreResults = !skills.isEmpty && skills.count >= currentLimit
+            if normalizedQuery != nil {
+                hasMoreResults = !skills.isEmpty && skills.count >= currentSearchLimit
+            }
             updateSelection(afterLoading: skills)
         } catch {
             guard requestVersion == listRequestVersion else { return }
@@ -330,7 +354,9 @@ final class ClawHubBrowserViewModel {
                 displayedSkills = []
                 errorMessage = error.localizedDescription
             } else {
-                currentLimit = max(pageSize, currentLimit - pageSize)
+                if normalizedQuery != nil {
+                    currentSearchLimit = max(pageSize, currentSearchLimit - pageSize)
+                }
                 loadMoreErrorMessage = error.localizedDescription
             }
         }
@@ -357,5 +383,12 @@ final class ClawHubBrowserViewModel {
         }
         let triggerIndex = max(displayedSkills.count - loadMoreThreshold, 0)
         return index >= triggerIndex
+    }
+
+    private func mergeSkills(existing: [ClawHubSkill], new: [ClawHubSkill]) -> [ClawHubSkill] {
+        var merged = existing
+        let existingIDs = Set(existing.map(\.id))
+        merged.append(contentsOf: new.filter { !existingIDs.contains($0.id) })
+        return merged
     }
 }

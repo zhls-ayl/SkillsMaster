@@ -46,6 +46,7 @@ SkillsMaster 是一个基于 SwiftUI 的 macOS 应用，用于管理多代理 Sk
 ## 仓库与安装链路
 当前安装来源分为三类：
 - 注册表技能：通过 `SkillRegistryService` 获取索引，再进入安装流程
+- ClawHub：通过 `ClawHubService` 拉取 marketplace 列表、详情、`SKILL.md` 与 archive，由 `ClawHubBrowserViewModel` 编排浏览/安装，并通过 `SkillManager.installClawHubSkill(...)` 安装到 canonical 目录后链接到 `OpenClaw`；详细链路见 `docs/clawhub.md`
 - 远程仓库安装：通过 `GitService` 克隆 / 扫描 / 拷贝到 canonical 目录
 - 自定义仓库：由 `RepositoryManager` 管理配置、同步与轻量索引缓存，由 `RepositoryBrowserViewModel` 驱动浏览与安装；列表使用缓存索引，详情页按需加载完整 `SKILL.md`。`~/.skillsmaster/repos` 下的 clone 目录视为 SkillsMaster 内部缓存，不作为用户手动编辑的工作目录；若检测到本地未提交改动，会跳过扫描缓存以避免展示过期索引。
 
