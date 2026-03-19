@@ -5,6 +5,7 @@
 - `scripts/package-app.sh`：构建通用二进制、组装 `.app`、可选生成 zip
 - `scripts/release.sh`：校验工作区、版本号、远端同步状态，并创建 / 推送 tag
 - `scripts/run.sh`：本地运行入口，处理模块缓存与工具链异常提示
+- `CHANGELOG.md`：发布记录与已修复缺陷入口；每次准备发布版本时都应同步更新
 
 ## 标准本地发布流程
 ```bash
@@ -16,6 +17,7 @@ swift test
 其中：
 - `package-app.sh` 会检查 `xcode-select`、`actool`、二进制架构与资源包
 - `release.sh` 要求工作区干净、分支已配置 upstream、目标 tag 不存在
+- `CHANGELOG.md` 应至少包含该版本的 `Added` / `Changed` / `Fixed` 中实际发生的内容；若本次发布以修复缺陷为主，应优先记录缺陷现象与修复范围
 
 ## GitHub Actions
 - `.github/workflows/ci.yml`
@@ -33,6 +35,7 @@ swift test
 - `scripts/package-app.sh`
 - `.github/workflows/release.yml`
 - `homebrew/skillsmaster.rb`
+- `CHANGELOG.md`
 - `README.md`
 
 ## Homebrew
@@ -47,6 +50,7 @@ swift test
 发布前至少确认：
 - `swift test` 通过
 - `build/SkillsMaster.app` 可成功生成
+- `CHANGELOG.md` 已记录当前版本的关键变更与缺陷修复
 - 通用二进制同时包含 `arm64` 与 `x86_64`
 - 资源包、图标与 `Info.plist` 未丢失
 - Release 产物命名与 workflow、Homebrew 一致
