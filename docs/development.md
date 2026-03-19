@@ -6,33 +6,37 @@
 - Swift 5.9+
 
 推荐优先使用：
-- `./run`：本地运行，自动处理仓库路径迁移后常见的 Swift 模块缓存问题
-- `swift test`：执行全部单元测试
-- `swift test --filter <TestCase>`：执行最小相关测试
+- `./run`：统一入口；无参数默认本地运行，也可转发 `test` / `build` / `package` / `release` / `clean`
+- `./run test`：执行全部单元测试
+- `./run test --filter <TestCase>`：执行最小相关测试
 
 ## 常用命令
 ```bash
-swift build
-swift build -c release
-swift test
-swift test --filter SkillMDParserTests
-swift test --enable-code-coverage
-swift package clean
 ./run
+./run dev
+./run build
+./run build -c release
+./run test
+./run test --filter SkillMDParserTests
+./run test --enable-code-coverage
+./run clean
+./run package --version 1.2.3 --zip
 ```
 
 ## 本地构建与沙箱 / 提权排查
-- 优先使用 `./run` 作为本地运行入口；`scripts/run.sh` 会把 `CLANG_MODULE_CACHE_PATH` 与 `SWIFTPM_MODULECACHE_OVERRIDE` 固定到仓库内的 `.build/`，尽量减少项目路径变更带来的模块缓存问题
+- 优先使用 `./run` 作为统一入口；根目录 `run` 会先把 `CLANG_MODULE_CACHE_PATH` 与 `SWIFTPM_MODULECACHE_OVERRIDE` 固定到仓库内的 `.build/`，再分发到对应子命令，尽量减少项目路径变更带来的模块缓存问题
+- `./run dev` 最终调用 `scripts/run.sh`，保留其“检测旧模块缓存后自动清理 `.build` 并重试一次”的行为
 - 直接执行 `swift build`、`swift run`、`swift test` 前，应先预判 AI 所在环境是否存在沙箱限制；若大概率会访问系统 Swift / clang cache 目录，就应优先准备提权，而不是等失败后再判断
 - 若任务需要直接执行这些命令，且已知当前环境常因系统缓存/权限受限而失败，应在执行前就向用户说明并申请提权；出现 `Operation not permitted`、`ModuleCache`、`org.swift.swiftpm`、`unable to load standard library`、manifest 无法编译等信号时，更应立即按环境限制处理
 - 获得提权后，优先重跑原始命令确认真实编译结果；只有在提权后仍失败，才继续定位代码、配置或依赖问题
-- 如果是项目路径迁移后触发的模块缓存不一致，优先重试 `./run`；该脚本会在检测到旧缓存路径问题时自动清理 `.build` 并重试一次
+- 如果是项目路径迁移后触发的模块缓存不一致，优先重试 `./run` 或 `./run dev`；该入口会继续复用 `scripts/run.sh` 的自动重试逻辑
 - 将这类经验同步沉淀为后续任务的前置检查：协作与提权规则写入 `AGENTS.md`，开发实操中的预检与入口选择写入本文件
 
 ## 开始前预检
 - 在执行本地构建、运行、测试、发布脚本前，先看一遍当前任务相关的环境约束与已知易错点，不要等失败后再回头补查
 - 需要直接跑 `swift build`、`swift run`、`swift test` 时，先判断当前环境是否可能受沙箱限制；若 AI 运行环境受限，优先预判是否需要先申请提权
-- 需要本地运行应用时，默认优先使用 `./run`，不要把它当成构建失败后的兜底方案；它本身就是用于规避模块缓存与路径迁移问题的首选入口
+- 需要本地运行应用时，默认优先使用 `./run` 或 `./run dev`，不要把它当成构建失败后的兜底方案；它本身就是用于规避模块缓存与路径迁移问题的首选入口
+- 需要本地测试、构建、打包时，也优先从 `./run test`、`./run build`、`./run package` 进入，统一环境准备和命令入口
 - 遇到历史上已经确认过的高频问题，应先把对应预防动作纳入本次操作步骤，例如先选对入口命令、先检查权限边界、先确认路径与缓存策略
 
 ## 开发流程
@@ -66,7 +70,7 @@ swift package clean
 以下改动必须同步文档：
 - 修改用户可见行为：更新 `README.md` 或 `docs/roadmap.md`
 - 修改实现结构、路径或迁移逻辑：更新 `docs/architecture.md`
-- 修改命令、测试方法、开发流程：更新本文件
+- 修改命令、测试方法、开发流程，尤其是 `./run` 支持的统一入口与参数：更新本文件
 - 修改打包、发布、GitHub Actions、Homebrew：更新 `docs/release.md`
 
 ## 提交与 Review 约定

@@ -2,4 +2,76 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-exec "${SCRIPT_DIR}/scripts/run.sh"
+REPO_ROOT="${SCRIPT_DIR}"
+
+cd "${REPO_ROOT}"
+
+# Keep caches inside repo so build/test/package share a stable cache path.
+export CLANG_MODULE_CACHE_PATH="${REPO_ROOT}/.build/clang-module-cache"
+export SWIFTPM_MODULECACHE_OVERRIDE="${REPO_ROOT}/.build/swiftpm-module-cache"
+mkdir -p "${CLANG_MODULE_CACHE_PATH}" "${SWIFTPM_MODULECACHE_OVERRIDE}"
+
+usage() {
+  cat <<'EOF'
+Usage: ./run [command] [arguments]
+
+Commands:
+  dev                      Run the app locally
+  test [args...]           Run swift test
+  build [args...]          Run swift build
+  package [args...]        Run scripts/package-app.sh
+  release [args...]        Run scripts/release.sh
+  clean                    Clean SwiftPM build artifacts
+  help                     Show this help
+
+Examples:
+  ./run
+  ./run dev
+  ./run test --filter SkillMDParserTests
+  ./run build -c release
+  ./run package --version 1.2.3 --zip
+  ./run release v1.2.3
+EOF
+}
+
+command="${1:-dev}"
+
+if [[ $# -gt 0 ]]; then
+  shift
+fi
+
+case "${command}" in
+  dev)
+    exec "${REPO_ROOT}/scripts/run.sh" "$@"
+    ;;
+  test)
+    exec swift test "$@"
+    ;;
+  build)
+    exec swift build "$@"
+    ;;
+  package)
+    exec "${REPO_ROOT}/scripts/package-app.sh" "$@"
+    ;;
+  release)
+    exec "${REPO_ROOT}/scripts/release.sh" "$@"
+    ;;
+  clean)
+    if [[ $# -gt 0 ]]; then
+      echo "Error: ./run clean does not accept extra arguments."
+      echo ""
+      usage
+      exit 1
+    fi
+    exec swift package clean
+    ;;
+  help|-h|--help)
+    usage
+    ;;
+  *)
+    echo "Error: Unknown command '${command}'."
+    echo ""
+    usage
+    exit 1
+    ;;
+esac

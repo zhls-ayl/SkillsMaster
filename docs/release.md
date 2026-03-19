@@ -2,6 +2,7 @@
 
 ## 本地打包脚本
 仓库当前使用以下脚本维护发布链路：
+- `run`：统一命令入口；负责环境准备，并分发到开发、测试、构建、打包、发布子命令
 - `scripts/package-app.sh`：构建通用二进制、组装 `.app`、可选生成 zip
 - `scripts/release.sh`：校验工作区、版本号、远端同步状态，并创建 / 推送 tag
 - `scripts/run.sh`：本地运行入口，处理模块缓存与工具链异常提示
@@ -9,15 +10,23 @@
 
 ## 标准本地发布流程
 ```bash
-swift test
-./scripts/package-app.sh --version 1.2.3 --zip
-./scripts/release.sh v1.2.3
+./run test
+./run package --version 1.2.3 --zip
+./run release v1.2.3
 ```
 
 其中：
+- `run` 会先固定 Swift / clang module cache 到仓库内 `.build/`，再分发到对应子命令
 - `package-app.sh` 会检查 `xcode-select`、`actool`、二进制架构与资源包
 - `release.sh` 要求工作区干净、分支已配置 upstream、目标 tag 不存在
 - `CHANGELOG.md` 应至少包含该版本的 `Added` / `Changed` / `Fixed` 中实际发生的内容；若本次发布以修复缺陷为主，应优先记录缺陷现象与修复范围
+
+## 统一入口与底层脚本的关系
+- 推荐人工操作优先使用 `./run`
+- `./run package ...` 最终调用 `scripts/package-app.sh`
+- `./run release ...` 最终调用 `scripts/release.sh`
+- `./run dev` 或无参数调用时，最终调用 `scripts/run.sh`
+- CI、GitHub Actions、单独排查脚本问题时，仍可直接调用 `scripts/*.sh`
 
 ## GitHub Actions
 - `.github/workflows/ci.yml`

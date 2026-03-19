@@ -41,13 +41,29 @@ cd SkillsMaster
 
 ### 运行测试
 ```bash
-swift test
+./run test
 ```
 
 ### 打包应用
 ```bash
-./scripts/package-app.sh --version 1.2.3 --zip
+./run package --version 1.2.3 --zip
 ```
+
+### 常用统一入口
+```bash
+./run help
+./run dev
+./run test --filter SkillMDParserTests
+./run build -c release
+./run package --version 1.2.3 --zip
+./run release v1.2.3
+```
+
+`./run` 现在是仓库统一入口：
+- 无参数时默认等价于 `./run dev`
+- `test` / `build` 透传到 `swift test` / `swift build`
+- `package` / `release` 透传到 `scripts/package-app.sh` / `scripts/release.sh`
+- 现有 `scripts/*.sh` 仍保留，便于 CI、workflow 或单独调试时直接调用
 
 ## 仓库结构
 - `Sources/SkillsMaster/`：应用源码
