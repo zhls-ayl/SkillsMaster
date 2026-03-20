@@ -44,7 +44,7 @@ struct RegistrySkillDetailView: View {
                 // Skill metadata section: author, version, license from SKILL.md frontmatter
                 // Only shown when content has been fetched and metadata contains useful info
                 if let content = viewModel.fetchedContent {
-                    skillMetadataSection(content.metadata)
+                    skillMetadataSection(content.metadata, frontmatterText: content.frontmatterText)
                 }
 
                 Divider()
@@ -174,13 +174,15 @@ struct RegistrySkillDetailView: View {
     ///
     /// - Parameter metadata: The parsed SkillMetadata from SKILL.md frontmatter
     @ViewBuilder
-    private func skillMetadataSection(_ metadata: SkillMetadata) -> some View {
-        // Only show this section if metadata has at least one useful field
-        // (description, author, version, or license)
-        let hasUsefulInfo = !metadata.description.isEmpty
-            || metadata.author != nil
+    private func skillMetadataSection(_ metadata: SkillMetadata, frontmatterText: String) -> some View {
+        let extraFields = FrontmatterDisplay.extraFields(
+            from: frontmatterText,
+            excluding: ["name", "description", "license"]
+        )
+        let hasUsefulInfo = metadata.author != nil
             || metadata.version != nil
             || metadata.license != nil
+            || !extraFields.isEmpty
 
         if hasUsefulInfo {
             Divider()
@@ -190,16 +192,6 @@ struct RegistrySkillDetailView: View {
                     .font(.headline)
 
                 Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 6) {
-                    // Description from YAML frontmatter (may differ from the registry listing)
-                    if !metadata.description.isEmpty {
-                        GridRow {
-                            Text("Description").foregroundStyle(.secondary)
-                            Text(metadata.description)
-                                .textSelection(.enabled)
-                                // fixedSize allows text to wrap to multiple lines
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                    }
                     // Author from metadata.author nested field
                     if let author = metadata.author {
                         GridRow {
@@ -223,6 +215,8 @@ struct RegistrySkillDetailView: View {
                     }
                 }
                 .font(.subheadline)
+
+                SkillFrontmatterView(fields: extraFields, title: nil)
             }
         }
     }

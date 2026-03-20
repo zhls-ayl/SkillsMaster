@@ -20,6 +20,28 @@ struct SkillDetailView: View {
     /// 复制路径按钮的反馈状态：为 `true` 时显示绿色勾选，1.5 秒后自动恢复。
     @State private var pathCopied = false
 
+    private var headerDescriptionText: String {
+        guard let skill = viewModel.skill(id: skillID) else { return "" }
+        return FrontmatterDisplay.value(for: "description", in: skill.frontmatterText)
+            ?? skill.metadata.description
+    }
+
+    private var extraFrontmatterFields: [FrontmatterField] {
+        guard let skill = viewModel.skill(id: skillID) else { return [] }
+        return FrontmatterDisplay.extraFields(
+            from: skill.frontmatterText,
+            excluding: ["name", "description", "license"]
+        )
+    }
+
+    private var shouldShowSkillMetadata: Bool {
+        guard let skill = viewModel.skill(id: skillID) else { return false }
+        return skill.metadata.author != nil
+            || skill.metadata.version != nil
+            || skill.metadata.license != nil
+            || !extraFrontmatterFields.isEmpty
+    }
+
     var body: some View {
         // 这里相当于 SwiftUI 版的 `guard let`：如果 skill 不存在，就直接展示 empty state。
         if let skill = viewModel.skill(id: skillID) {
@@ -27,6 +49,11 @@ struct SkillDetailView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     // 头部信息区。
                     headerSection(skill)
+
+                    if shouldShowSkillMetadata {
+                        Divider()
+                        skillMetadataSection(skill)
+                    }
 
                     // Package 信息区（含 update 状态），进入详情页后优先展示。
                     // 如果存在 `lockEntry`，展示完整 package 信息；否则展示手动关联 repo 的 UI。
@@ -113,66 +140,45 @@ struct SkillDetailView: View {
                 ScopeBadge(scope: skill.scope)
             }
 
-            if !skill.metadata.description.isEmpty {
-                Text(skill.metadata.description)
-                    .font(.body)
-                    .foregroundStyle(.secondary)
+            if !headerDescriptionText.isEmpty {
+                SkillDescriptionText(
+                    text: headerDescriptionText,
+                    font: .body,
+                    isSelectable: true
+                )
             }
+        }
+    }
 
-            // metadata 行。
-            HStack(spacing: 16) {
+    @ViewBuilder
+    private func skillMetadataSection(_ skill: Skill) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Skill Metadata")
+                .font(.headline)
+
+            Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 6) {
                 if let author = skill.metadata.author {
-                    Label(author, systemImage: "person")
+                    GridRow {
+                        Text("Author").foregroundStyle(.secondary)
+                        Text(author).textSelection(.enabled)
+                    }
                 }
                 if let version = skill.metadata.version {
-                    Label("v\(version)", systemImage: "tag")
+                    GridRow {
+                        Text("Version").foregroundStyle(.secondary)
+                        Text(version).textSelection(.enabled)
+                    }
                 }
                 if let license = skill.metadata.license {
-                    Label(license, systemImage: "doc.text")
+                    GridRow {
+                        Text("License").foregroundStyle(.secondary)
+                        Text(license).textSelection(.enabled)
+                    }
                 }
             }
             .font(.subheadline)
-            .foregroundStyle(.secondary)
 
-            // 路径展示与复制按钮。
-            HStack(spacing: 4) {
-                Text(skill.canonicalURL.tildeAbbreviatedPath)
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-                    .textSelection(.enabled)
-
-                // 复制路径按钮。
-                // `NSPasteboard` 是 macOS 的剪贴板 API，概念上类似 iOS 的 `UIPasteboard`。
-                // `.general` 表示系统级通用剪贴板，也就是用户 `Cmd+V` 实际读取的来源。
-                Button {
-                    let pasteboard = NSPasteboard.general
-                    // 调用 `setString` 之前先执行 `clearContents()`，清掉旧内容。
-                    pasteboard.clearContents()
-                    // 写入完整绝对路径，便于 Terminal 或脚本直接使用。
-                    pasteboard.setString(skill.canonicalURL.path, forType: .string)
-
-                    // 设置复制成功状态，图标会暂时切换为绿色勾选。
-                    pathCopied = true
-                    // `Task.sleep` 是 Swift concurrency 中的非阻塞延迟。
-                    // 1.5 秒后自动恢复原始图标。
-                    Task {
-                        try? await Task.sleep(for: .seconds(1.5))
-                        pathCopied = false
-                    }
-                } label: {
-                    // `contentTransition(.symbolEffect(.replace))` 会为 SF Symbol 切换提供系统内置替换动画。
-                    // 这里使用 `AnyShapeStyle` 做 type erasure，统一 `.green` 和 `.tertiary` 的类型。
-                    Image(systemName: pathCopied ? "checkmark" : "doc.on.doc")
-                        .font(.caption)
-                        .foregroundStyle(pathCopied ? AnyShapeStyle(.green) : AnyShapeStyle(.tertiary))
-                        .contentTransition(.symbolEffect(.replace))
-                }
-                // `.plain` button style 会移除默认边框和背景，让按钮看起来更像纯图标。
-                .buttonStyle(.plain)
-                .help("复制路径到剪贴板")
-                // `animation` 会监听 `pathCopied` 的变化，并为颜色等属性应用平滑过渡。
-                .animation(.easeInOut(duration: 0.2), value: pathCopied)
-            }
+            SkillFrontmatterView(fields: extraFrontmatterFields, title: nil)
         }
     }
 
@@ -225,6 +231,8 @@ struct SkillDetailView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("包信息")
                 .font(.headline)
+
+            pathRow(skill)
 
             Text("当前 Skill 尚未关联 Repository。完成关联后才能检查更新。")
                 .font(.subheadline)
@@ -290,6 +298,10 @@ struct SkillDetailView: View {
             // `Grid` 是 macOS 14+ 提供的网格布局，概念上类似 HTML 的 CSS Grid。
             Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 6) {
                 GridRow {
+                    Text("Path").foregroundStyle(.secondary)
+                    pathValueView(skill)
+                }
+                GridRow {
                     Text("Source").foregroundStyle(.secondary)
                     Text(lockEntry.source).textSelection(.enabled)
                 }
@@ -332,6 +344,52 @@ struct SkillDetailView: View {
             }
             .font(.subheadline)
         }
+    }
+
+    @ViewBuilder
+    private func pathRow(_ skill: Skill) -> some View {
+        HStack(spacing: 6) {
+            Text(skill.canonicalURL.tildeAbbreviatedPath)
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+                .textSelection(.enabled)
+
+            copyPathButton(skill)
+        }
+    }
+
+    @ViewBuilder
+    private func pathValueView(_ skill: Skill) -> some View {
+        HStack(spacing: 6) {
+            Text(skill.canonicalURL.tildeAbbreviatedPath)
+                .font(.system(.body, design: .monospaced))
+                .textSelection(.enabled)
+                .fixedSize(horizontal: false, vertical: true)
+
+            copyPathButton(skill)
+        }
+    }
+
+    private func copyPathButton(_ skill: Skill) -> some View {
+        Button {
+            let pasteboard = NSPasteboard.general
+            pasteboard.clearContents()
+            pasteboard.setString(skill.canonicalURL.path, forType: .string)
+
+            pathCopied = true
+            Task {
+                try? await Task.sleep(for: .seconds(1.5))
+                pathCopied = false
+            }
+        } label: {
+            Image(systemName: pathCopied ? "checkmark" : "doc.on.doc")
+                .font(.caption)
+                .foregroundStyle(pathCopied ? AnyShapeStyle(.green) : AnyShapeStyle(.tertiary))
+                .contentTransition(.symbolEffect(.replace))
+        }
+        .buttonStyle(.plain)
+        .help("复制路径到剪贴板")
+        .animation(.easeInOut(duration: 0.2), value: pathCopied)
     }
 
     /// F12：更新状态指示区域。

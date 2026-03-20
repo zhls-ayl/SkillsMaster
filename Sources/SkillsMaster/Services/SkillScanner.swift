@@ -143,14 +143,17 @@ actor SkillScanner {
 
         // Parse SKILL.md
         let metadata: SkillMetadata
+        let frontmatterText: String
         let markdownBody: String
         do {
             let result = try SkillMDParser.parse(fileURL: skillMDURL)
             metadata = result.metadata
+            frontmatterText = result.frontmatterText
             markdownBody = result.markdownBody
         } catch {
             // Use default values on parse failure, do not block the entire scan
             metadata = SkillMetadata(name: skillName, description: "")
+            frontmatterText = ""
             markdownBody = ""
         }
 
@@ -164,6 +167,7 @@ actor SkillScanner {
             id: skillName,
             canonicalURL: canonicalURL,
             metadata: metadata,
+            frontmatterText: frontmatterText,
             markdownBody: markdownBody,
             scope: scope,
             installations: installations,

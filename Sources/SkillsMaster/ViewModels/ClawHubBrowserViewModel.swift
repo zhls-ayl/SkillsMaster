@@ -211,6 +211,7 @@ final class ClawHubBrowserViewModel {
             } catch {
                 fetchedContent = SkillMDParser.ParseResult(
                     metadata: SkillMetadata(name: skill.name, description: skill.descriptionText),
+                    frontmatterText: "",
                     markdownBody: rawContent.trimmingCharacters(in: .whitespacesAndNewlines)
                 )
             }

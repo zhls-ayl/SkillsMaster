@@ -25,6 +25,18 @@ struct RepositorySkillDetailView: View {
         displayMetadata.name.isEmpty ? skill.id : displayMetadata.name
     }
 
+    private var headerDescriptionText: String {
+        FrontmatterDisplay.value(for: "description", in: content?.frontmatterText ?? "")
+            ?? displayMetadata.description
+    }
+
+    private var extraFrontmatterFields: [FrontmatterField] {
+        FrontmatterDisplay.extraFields(
+            from: content?.frontmatterText ?? "",
+            excluding: ["name", "description", "license"]
+        )
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
@@ -33,6 +45,11 @@ struct RepositorySkillDetailView: View {
                 Divider()
 
                 metadataSection
+
+                if !extraFrontmatterFields.isEmpty {
+                    Divider()
+                    SkillFrontmatterView(fields: extraFrontmatterFields)
+                }
 
                 Divider()
 
@@ -79,10 +96,12 @@ struct RepositorySkillDetailView: View {
             }
             .font(.subheadline)
 
-            if !displayMetadata.description.isEmpty {
-                Text(displayMetadata.description)
-                    .font(.body)
-                    .foregroundStyle(.secondary)
+            if !headerDescriptionText.isEmpty {
+                SkillDescriptionText(
+                    text: headerDescriptionText,
+                    font: .body,
+                    isSelectable: true
+                )
             }
         }
     }

@@ -440,6 +440,7 @@ final class RegistryBrowserViewModel {
                 )
                 fetchedContent = SkillMDParser.ParseResult(
                     metadata: fallbackMetadata,
+                    frontmatterText: "",
                     markdownBody: rawContent.trimmingCharacters(in: .whitespacesAndNewlines)
                 )
             }

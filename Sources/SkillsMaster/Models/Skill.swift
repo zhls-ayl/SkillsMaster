@@ -16,6 +16,9 @@ struct Skill: Identifiable, Hashable {
     /// Metadata parsed from SKILL.md
     var metadata: SkillMetadata
 
+    /// Raw YAML frontmatter text from SKILL.md (without --- delimiters)
+    var frontmatterText: String = ""
+
     /// Markdown body after frontmatter in SKILL.md
     var markdownBody: String
 

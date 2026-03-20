@@ -17,7 +17,7 @@ struct ClawHubSkillDetailView: View {
                 packageInfoSection
 
                 if let content = viewModel.fetchedContent {
-                    skillMetadataSection(content.metadata)
+                    skillMetadataSection(content.metadata, frontmatterText: content.frontmatterText)
                 }
 
                 Divider()
@@ -134,11 +134,15 @@ struct ClawHubSkillDetailView: View {
     }
 
     @ViewBuilder
-    private func skillMetadataSection(_ metadata: SkillMetadata) -> some View {
-        let hasUsefulInfo = !metadata.description.isEmpty
-            || metadata.author != nil
+    private func skillMetadataSection(_ metadata: SkillMetadata, frontmatterText: String) -> some View {
+        let extraFields = FrontmatterDisplay.extraFields(
+            from: frontmatterText,
+            excluding: ["name", "description", "license"]
+        )
+        let hasUsefulInfo = metadata.author != nil
             || metadata.version != nil
             || metadata.license != nil
+            || !extraFields.isEmpty
 
         if hasUsefulInfo {
             Divider()
@@ -148,14 +152,6 @@ struct ClawHubSkillDetailView: View {
                     .font(.headline)
 
                 Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 6) {
-                    if !metadata.description.isEmpty {
-                        GridRow {
-                            Text("Description").foregroundStyle(.secondary)
-                            Text(metadata.description)
-                                .textSelection(.enabled)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                    }
                     if let author = metadata.author {
                         GridRow {
                             Text("Author").foregroundStyle(.secondary)
@@ -176,6 +172,8 @@ struct ClawHubSkillDetailView: View {
                     }
                 }
                 .font(.subheadline)
+
+                SkillFrontmatterView(fields: extraFields, title: nil)
             }
         }
     }

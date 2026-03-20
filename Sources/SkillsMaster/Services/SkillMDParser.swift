@@ -10,6 +10,7 @@ enum SkillMDParser {
     /// 解析结果：包含 metadata 与 Markdown 正文。
     struct ParseResult {
         let metadata: SkillMetadata
+        let frontmatterText: String
         let markdownBody: String
     }
 
@@ -79,7 +80,11 @@ enum SkillMDParser {
 
         let metadata = try decodeMetadata(from: yamlString)
 
-        return ParseResult(metadata: metadata, markdownBody: body.trimmingCharacters(in: .whitespacesAndNewlines))
+        return ParseResult(
+            metadata: metadata,
+            frontmatterText: yamlString.trimmingCharacters(in: .newlines),
+            markdownBody: body.trimmingCharacters(in: .whitespacesAndNewlines)
+        )
     }
 
     /// 从字符串内容中仅解析 metadata，不保留 Markdown 正文。

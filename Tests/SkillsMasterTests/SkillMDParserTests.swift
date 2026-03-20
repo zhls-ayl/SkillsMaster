@@ -37,6 +37,7 @@ final class SkillMDParserTests: XCTestCase {
 
         // assert：验证结果
         XCTAssertEqual(result.metadata.name, "agent-notifier")
+        XCTAssertTrue(result.frontmatterText.contains("description: >"))
         XCTAssertTrue(result.metadata.description.contains("Multi-platform"))
         XCTAssertEqual(result.metadata.license, "Apache-2.0")
         XCTAssertEqual(result.metadata.author, "crossoverJie")
@@ -81,6 +82,54 @@ final class SkillMDParserTests: XCTestCase {
         XCTAssertNil(result.metadata.author)
         XCTAssertNil(result.metadata.version)
         XCTAssertEqual(result.markdownBody, "Content here.")
+    }
+
+    /// `>` 是 YAML folded block scalar，会把普通换行折叠成空格。
+    func testParseFoldedDescriptionCollapsesSourceLineBreaks() throws {
+        let content = """
+        ---
+        name: web-content-fetcher
+        description: >
+          Extract article content from any URL as clean Markdown.
+          Uses Scrapling script as primary method.
+          Falls back to Jina Reader for simple pages.
+        ---
+        """
+
+        let result = try SkillMDParser.parseMetadata(content: content)
+
+        XCTAssertEqual(
+            result.description,
+            "Extract article content from any URL as clean Markdown. Uses Scrapling script as primary method. Falls back to Jina Reader for simple pages."
+        )
+
+        let parsed = try SkillMDParser.parse(content: content)
+        XCTAssertTrue(parsed.frontmatterText.contains("description: >"))
+        XCTAssertTrue(parsed.frontmatterText.contains("Uses Scrapling script as primary method."))
+    }
+
+    /// `|` 是 YAML literal block scalar，会保留显式换行。
+    func testParseLiteralDescriptionPreservesLineBreaks() throws {
+        let content = """
+        ---
+        name: multiline-description
+        description: |
+          First line
+          Second line
+          Third line
+        ---
+        """
+
+        let result = try SkillMDParser.parseMetadata(content: content)
+
+        XCTAssertEqual(
+            result.description,
+            "First line\nSecond line\nThird line"
+        )
+
+        let parsed = try SkillMDParser.parse(content: content)
+        XCTAssertTrue(parsed.frontmatterText.contains("description: |"))
+        XCTAssertTrue(parsed.frontmatterText.contains("Second line"))
     }
 
     // MARK: - 错误处理测试
