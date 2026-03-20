@@ -53,6 +53,34 @@ actor GitService {
         let markdownBody: String
     }
 
+    // MARK: - Shared Path Helpers
+
+    /// 从 `SKILL.md` 相对路径推导 skill 目录相对路径。
+    ///
+    /// - `"skills/foo/SKILL.md"` -> `"skills/foo"`
+    /// - `"SKILL.md"` -> `""`（表示 repository 根目录就是 skill 目录）
+    nonisolated static func folderPath(for skillMDPath: String) -> String {
+        let normalized = skillMDPath.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if normalized == "SKILL.md" {
+            return ""
+        }
+
+        if normalized.hasSuffix("/SKILL.md") {
+            return String(normalized.dropLast("/SKILL.md".count))
+        }
+
+        return normalized
+    }
+
+    /// 解析 skill 在本地 clone 目录中的真实目录 URL。
+    ///
+    /// root-level skill 必须直接返回 `repoDir`，不能调用 `appendingPathComponent("")`，
+    /// 否则 `FileManager.copyItem` 会把目录内容错误地复制成 `fooREADME.md` 这类前缀污染文件。
+    nonisolated static func skillDirectoryURL(in repoDir: URL, folderPath: String) -> URL {
+        folderPath.isEmpty ? repoDir : repoDir.appendingPathComponent(folderPath)
+    }
+
     // MARK: - Public Methods
 
     /// 检查系统中是否可用 Git。
@@ -280,7 +308,7 @@ actor GitService {
         // Parse each SKILL.md
         for skillMDURL in skillMDURLs {
             let skillDir = skillMDURL.deletingLastPathComponent()
-            let skillName = skillDir.lastPathComponent
+            let defaultSkillName = skillDir.lastPathComponent
 
             // 计算相对于 repository 根目录的路径。
             // 例如：`repoDir = /tmp/xxx/`，`skillDir = /tmp/xxx/skills/find-skills/`，
@@ -301,7 +329,7 @@ actor GitService {
                 }
                 folderPath = relative
             } else {
-                folderPath = skillName
+                folderPath = defaultSkillName
             }
 
             let skillMDPath = folderPath.isEmpty
@@ -311,8 +339,11 @@ actor GitService {
             // 列表索引阶段只解析 metadata，正文在详情页按需加载。
             do {
                 let metadata = try SkillMDParser.parseMetadata(fileURL: skillMDURL)
+                let skillID = folderPath.isEmpty
+                    ? (metadata.name.isEmpty ? repoDir.lastPathComponent : metadata.name)
+                    : skillDir.lastPathComponent
                 discovered.append(DiscoveredSkill(
-                    id: skillName,
+                    id: skillID,
                     folderPath: folderPath,
                     skillMDPath: skillMDPath,
                     metadata: metadata,
@@ -320,11 +351,12 @@ actor GitService {
                 ))
             } catch {
                 // 如果解析失败，就回退到目录名作为最小信息，不阻断整次扫描。
+                let fallbackID = folderPath.isEmpty ? repoDir.lastPathComponent : skillDir.lastPathComponent
                 discovered.append(DiscoveredSkill(
-                    id: skillName,
+                    id: fallbackID,
                     folderPath: folderPath,
                     skillMDPath: skillMDPath,
-                    metadata: SkillMetadata(name: skillName, description: ""),
+                    metadata: SkillMetadata(name: fallbackID, description: ""),
                     markdownBody: ""
                 ))
             }

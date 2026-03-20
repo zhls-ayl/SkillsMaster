@@ -358,7 +358,7 @@ final class SkillManager {
         await commitHashCache.setHash(for: skill.id, hash: commitHash)
         try await commitHashCache.save()
 
-        let sourceDir = repoDir.appendingPathComponent(skill.folderPath)
+        let sourceDir = GitService.skillDirectoryURL(in: repoDir, folderPath: skill.folderPath)
 
         // 使用 ISO 8601 时间戳，保持与 `npx skills` 一致。
         let now = ISO8601DateFormatter().string(from: Date())
@@ -476,12 +476,7 @@ final class SkillManager {
         }
 
         // 从 `skillPath` 推导出 folderPath。
-        let folderPath: String
-        if lockEntry.skillPath.hasSuffix("/SKILL.md") {
-            folderPath = String(lockEntry.skillPath.dropLast("/SKILL.md".count))
-        } else {
-            folderPath = lockEntry.skillPath
-        }
+        let folderPath = GitService.folderPath(for: lockEntry.skillPath)
 
         // 检查 `CommitHashCache` 中是否已有本地 commit hash。
         let localCommitHash = await commitHashCache.getHash(for: skill.id)
@@ -566,12 +561,7 @@ final class SkillManager {
                     guard let lockEntry = skill.lockEntry else { continue }
 
                     // Derive folderPath
-                    let folderPath: String
-                    if lockEntry.skillPath.hasSuffix("/SKILL.md") {
-                        folderPath = String(lockEntry.skillPath.dropLast("/SKILL.md".count))
-                    } else {
-                        folderPath = lockEntry.skillPath
-                    }
+                    let folderPath = GitService.folderPath(for: lockEntry.skillPath)
 
                     do {
                         let remoteHash = try await gitService.getTreeHash(for: folderPath, in: repoDir)
@@ -632,12 +622,7 @@ final class SkillManager {
         guard let lockEntry = skill.lockEntry else { return }
 
         // Derive folderPath
-        let folderPath: String
-        if lockEntry.skillPath.hasSuffix("/SKILL.md") {
-            folderPath = String(lockEntry.skillPath.dropLast("/SKILL.md".count))
-        } else {
-            folderPath = lockEntry.skillPath
-        }
+        let folderPath = GitService.folderPath(for: lockEntry.skillPath)
 
         // 1. Clone source repository
         let repoDir = try await gitService.shallowClone(repoURL: lockEntry.sourceUrl)
@@ -649,7 +634,7 @@ final class SkillManager {
 
         // 3. Copy files to overwrite canonical directory
         let fm = FileManager.default
-        let sourceDir = repoDir.appendingPathComponent(folderPath)
+        let sourceDir = GitService.skillDirectoryURL(in: repoDir, folderPath: folderPath)
         let canonicalDir = skill.canonicalURL
 
         // Delete old files then copy new files
@@ -878,7 +863,7 @@ final class SkillManager {
         // Ensure local files match the stored skillFolderHash,
         // otherwise hash comparison baseline in subsequent checkForUpdate will be inaccurate
         let fm = FileManager.default
-        let sourceDir = repoDir.appendingPathComponent(matched.folderPath)
+        let sourceDir = GitService.skillDirectoryURL(in: repoDir, folderPath: matched.folderPath)
         let canonicalDir = skill.canonicalURL
 
         // Delete old files then copy new files (consistent with installSkill/updateSkill)

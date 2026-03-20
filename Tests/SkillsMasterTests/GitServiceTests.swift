@@ -96,7 +96,51 @@ final class GitServiceTests: XCTestCase {
         XCTAssertEqual(source, "vercel-labs/skills")
     }
 
+    func testFolderPathForRootSkillMDPathReturnsEmptyString() {
+        XCTAssertEqual(GitService.folderPath(for: "SKILL.md"), "")
+        XCTAssertEqual(GitService.folderPath(for: "skills/my-skill/SKILL.md"), "skills/my-skill")
+    }
+
+    func testSkillDirectoryURLForRootSkillKeepsRepositoryPath() {
+        let repoDir = URL(fileURLWithPath: "/tmp/SkillsMaster-root-skill")
+        let resolved = GitService.skillDirectoryURL(in: repoDir, folderPath: "")
+
+        XCTAssertEqual(resolved.path, repoDir.path)
+    }
+
     // MARK: - scanSkillsInRepo Tests
+
+    /// 验证 root-level `SKILL.md` 会把 metadata.name 作为 skill id，
+    /// 而不是误用临时 clone 目录名。
+    func testScanSkillsInRepoUsesMetadataNameForRootLevelSkill() async throws {
+        let fm = FileManager.default
+        let repoDir = fm.temporaryDirectory.appendingPathComponent("SkillsMaster-test-\(UUID().uuidString)")
+        try fm.createDirectory(at: repoDir, withIntermediateDirectories: true)
+
+        try """
+        ---
+        name: web-content-fetcher
+        description: A root-level skill
+        ---
+        # Root Skill
+        """.write(
+            to: repoDir.appendingPathComponent("SKILL.md"),
+            atomically: true,
+            encoding: .utf8
+        )
+
+        defer { try? fm.removeItem(at: repoDir) }
+
+        let gitService = GitService()
+        let skills = await gitService.scanSkillsInRepo(repoDir: repoDir)
+
+        XCTAssertEqual(skills.count, 1)
+        let skill = try XCTUnwrap(skills.first)
+        XCTAssertEqual(skill.id, "web-content-fetcher")
+        XCTAssertEqual(skill.folderPath, "")
+        XCTAssertEqual(skill.skillMDPath, "SKILL.md")
+        XCTAssertEqual(skill.metadata.name, "web-content-fetcher")
+    }
 
     /// 验证 `scanSkillsInRepo` 能发现隐藏目录（如 `.claude/skills/`）里的 `SKILL.md`。
     func testScanSkillsInRepoFindsHiddenDirectorySkills() async throws {
