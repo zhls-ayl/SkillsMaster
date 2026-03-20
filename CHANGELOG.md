@@ -7,6 +7,14 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-03-20
+### Changed
+- 重构 Skill 详情页的 front matter 展示方式：头部仅保留名称与简短描述，新增结构化 `Skill Metadata` 区块，单独展示 YAML 中未被专门 UI 覆盖的 key/value，避免原始 front matter 整块重复堆叠在详情页中。
+- 统一本地 Skill、Repository、Registry 与 ClawHub 详情页的 metadata 展示逻辑，`author`、`version`、`license` 继续作为独立字段展示，其余复杂嵌套值按格式化文本块呈现。
+
+### Fixed
+- 修复从 GitHub 安装 root-level skill 时目录解析错误的问题。现在当 repository 根目录直接包含 `SKILL.md` 时，安装流程会正确保留仓库根路径，不再把目录内容错误复制成前缀污染文件。
+
 ## [0.1.3] - 2026-03-20
 ### Changed
 - 优化 ClawHub 安装体验：安装按钮会显示更细粒度的阶段状态，例如加载 package 信息、下载 archive、等待 ClawHub rate limit 恢复、重试下载、获取 `SKILL.md` 和本地安装阶段，避免长时间只显示笼统的 `Installing...`。
