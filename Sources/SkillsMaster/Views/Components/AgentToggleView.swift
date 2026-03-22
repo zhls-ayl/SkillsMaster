@@ -3,7 +3,7 @@ import SwiftUI
 /// AgentToggleView displays installation status toggles for skill on each Agent (F06)
 ///
 /// Design principles:
-/// - Each Agent only manages its own directory's symbolic link (Toggle ON = create, OFF = remove)
+/// - Each Agent only manages its own directory's direct install (Toggle ON = create, OFF = remove)
 /// - Cross-directory reading is each Agent's own runtime mechanism — SkillsMaster does not interfere
 /// - Inheritance hints are always shown (regardless of toggle state) to inform users
 ///   that an Agent may still read the skill via another directory even after toggle OFF
@@ -42,11 +42,8 @@ struct AgentToggleView: View {
             // Check if the skill exists in this additional directory
             guard FileManager.default.fileExists(atPath: skillURL.path) else { continue }
 
-            // Verify it resolves to the same canonical skill (not a different skill with the same name)
-            let resolved = SymlinkManager.isSymlink(at: skillURL)
-                ? SymlinkManager.resolveSymlink(at: skillURL)
-                : skillURL
-            if resolved.standardized.path == skill.canonicalURL.standardized.path {
+            // Verify it resolves to the same canonical skill (or is a synced physical copy of it)
+            if SymlinkManager.matchesCanonicalSkill(at: skillURL, canonicalURL: skill.canonicalURL) {
                 // NSString.abbreviatingWithTildeInPath replaces home directory prefix with ~
                 let displayPath = NSString(string: dir.url.path).abbreviatingWithTildeInPath as String
                 paths.append(displayPath)

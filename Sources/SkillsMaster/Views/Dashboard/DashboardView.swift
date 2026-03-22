@@ -111,7 +111,7 @@ struct DashboardView: View {
             }
         } message: {
             if let skill = viewModel.skillToDelete {
-                Text("Are you sure you want to delete \"\(skill.displayName)\"吗？这会删除该 Skill 目录及其全部 symbolic links，且无法撤销。")
+                Text("Are you sure you want to delete \"\(skill.displayName)\"吗？这会删除该 Skill 目录及其全部 Agent 分配（软链接或物理复制），且无法撤销。")
             }
         }
         // Error message

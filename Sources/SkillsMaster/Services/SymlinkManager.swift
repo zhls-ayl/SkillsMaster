@@ -4,7 +4,7 @@ import Foundation
 ///
 /// Core Concepts:
 /// - The "real copy" of all skills is stored in ~/.skillsmaster/skills/ (canonical location)
-/// - Each Agent references the shared skill via symbolic link
+/// - Each Agent references the shared skill via symbolic link or a synced physical copy
 /// - Example: ~/.claude/skills/agent-notifier -> ~/.skillsmaster/skills/agent-notifier
 ///
 /// symbolic link is similar to Linux/macOS `ln -s`, a special file pointing to another file/directory
@@ -115,6 +115,33 @@ enum SymlinkManager {
         return url.resolvingSymlinksInPath()
     }
 
+    /// Check whether an installed path points to the same managed skill as the canonical directory.
+    ///
+    /// Besides true symbolic links, this also treats a physical copy with the same `SKILL.md`
+    /// content as a match. This is needed because some Agents must receive real files instead
+    /// of symbolic links, but inheritance detection should still recognize them as the same skill.
+    static func matchesCanonicalSkill(at installedURL: URL, canonicalURL: URL) -> Bool {
+        if isSymlink(at: installedURL) {
+            return resolveSymlink(at: installedURL).standardized.path == canonicalURL.standardized.path
+        }
+
+        if installedURL.standardized.path == canonicalURL.standardized.path {
+            return true
+        }
+
+        let fm = FileManager.default
+        let installedSkillMD = installedURL.appendingPathComponent("SKILL.md")
+        let canonicalSkillMD = canonicalURL.appendingPathComponent("SKILL.md")
+        guard fm.fileExists(atPath: installedSkillMD.path),
+              fm.fileExists(atPath: canonicalSkillMD.path),
+              let installedData = try? Data(contentsOf: installedSkillMD),
+              let canonicalData = try? Data(contentsOf: canonicalSkillMD) else {
+            return false
+        }
+
+        return installedData == canonicalData
+    }
+
     /// Get installation info of skill across all Agents (including inherited installations)
     ///
     /// Uses two-pass scan strategy:
@@ -145,9 +172,7 @@ enum SymlinkManager {
             // If it's a symbolic link, verify it ultimately points to the same canonical location
             // Use resolvingSymlinksInPath() to recursively resolve, handling multi-level symbolic link chains
             if isLink {
-                let resolved = resolveSymlink(at: skillURL)
-                // standardized normalizes path (removes .. and . etc)
-                if resolved.standardized.path == canonicalURL.standardized.path {
+                if matchesCanonicalSkill(at: skillURL, canonicalURL: canonicalURL) {
                     installations.append(SkillInstallation(
                         agentType: agentType,
                         path: skillURL,
@@ -181,14 +206,7 @@ enum SymlinkManager {
                 }
 
                 // Verify this path (after resolving symbolic link) indeed points to the same canonical skill
-                let resolved: URL
-                if isSymlink(at: skillURL) {
-                    resolved = resolveSymlink(at: skillURL)
-                } else {
-                    resolved = skillURL
-                }
-
-                if resolved.standardized.path == canonicalURL.standardized.path {
+                if matchesCanonicalSkill(at: skillURL, canonicalURL: canonicalURL) {
                     // Inherited installation found: skill exists in source Agent directory, current Agent can read it
                     installations.append(SkillInstallation(
                         agentType: agentType,

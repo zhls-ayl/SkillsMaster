@@ -1,7 +1,7 @@
 import Foundation
 
 /// SkillInstallation records the installation status of a skill under an Agent
-/// A skill can be installed to multiple Agents via symbolic link
+/// A skill can be installed to multiple Agents via symbolic link or physical copy
 ///
 /// Two types of installation:
 /// - Direct installation (isInherited == false): skill exists in the Agent's own skills directory

@@ -57,4 +57,7 @@ enum Constants {
     /// UserDefaults key for app appearance preference.
     /// Stored as `AppThemeMode.rawValue` (`system` / `light` / `dark`).
     static let appThemeModeKey = "appThemeMode"
+
+    /// UserDefaults key prefix for per-Agent install mode preferences.
+    static let agentInstallModeKeyPrefix = "agentInstallMode"
 }

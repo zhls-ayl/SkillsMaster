@@ -172,7 +172,7 @@ enum AgentType: String, CaseIterable, Identifiable, Codable {
     }
 
     /// SkillsMaster private canonical skills directory URL (~/.skillsmaster/skills/)
-    /// All skill files are stored here; Agent directories contain symbolic links pointing to this location.
+    /// Managed skill files are stored here; Agent directories contain symbolic links or synced physical copies.
     /// Migrated from ~/.agents/skills/ to avoid overlap with Agent-readable directories.
     static let sharedSkillsDirectoryURL: URL = {
         let path = NSString(string: "~/.skillsmaster/skills").expandingTildeInPath

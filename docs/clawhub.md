@@ -8,7 +8,7 @@ ClawHub 在 SkillsMaster 中是一个独立的在线来源，不复用 `Registry
 - 搜索、排序、筛选并查看 skill 详情
 - 拉取 `SKILL.md` 供详情页渲染
 - 将选中的 ClawHub skill 安装到 SkillsMaster canonical 目录
-- 为 `OpenClaw` 建立 symbolic link，使其可直接使用该 skill
+- 按 `OpenClaw` 的默认安装方式，把 skill 落到其目录中，使其可直接使用该 skill
 
 当前实现明确面向 `OpenClaw`，不是面向所有 Agent 的通用安装入口。
 
@@ -105,7 +105,7 @@ ClawHub 不直接写文件。真正的落盘动作由 `SkillManager.installClawH
 - 构建临时目录
 - 解压 archive 或写入 markdown-only 目录
 - 复制到 SkillsMaster canonical 目录
-- 为目标 Agent 创建 symbolic link
+- 按目标 Agent 的默认安装方式创建 direct install（symbolic link 或 physical copy）
 - 写入 lock file
 - 触发 `refresh()` 让扫描结果回到 UI
 
@@ -328,7 +328,7 @@ View 层对错误的呈现分为三类：
 ### 4. 统一落盘
 无论是 archive 还是 markdown-only，最终都走 `persistInstalledSkillDirectory(...)`：
 1. 将 skill 目录复制到 `~/.skillsmaster/skills/<slug>`
-2. 为目标 Agent 创建 symbolic link
+2. 按目标 Agent 的默认安装方式把 skill 落到 Agent 目录
 3. 确保 `~/.agents/.skill-lock.json` 存在
 4. 写入或更新 lock entry
 5. 调用 `refresh()` 让扫描结果返回 UI
@@ -341,9 +341,9 @@ View 层对错误的呈现分为三类：
 这意味着：
 - canonical 目录在 `~/.skillsmaster/skills`
 - OpenClaw skills 目录在 `~/.openclaw/skills`
-- 最终由 `SymlinkManager.createSymlink` 在 OpenClaw 目录下建立到 canonical 目录的链接
+- 最终由 SkillsMaster 按 OpenClaw 当前默认安装方式，把 canonical 内容 materialize 到 OpenClaw 目录
 
-这与项目整体的“真实文件在 canonical 目录，Agent 目录只放 symbolic link”的架构保持一致。
+这与项目整体的“真实文件以 canonical 目录为事实源，Agent 目录可以是 symbolic link 或同步 physical copy”的架构保持一致。
 
 ## 本地状态识别
 ClawHub 页面需要在列表和详情中判断某个 skill 是否已经安装。当前识别逻辑分两层：
@@ -367,7 +367,7 @@ ClawHub 虽然是独立功能，但它仍然复用项目的底层公共机制：
 - `SkillMDParser`：解析 ClawHub 拉回的 `SKILL.md`
 - `SkillManager`：统一安装与 refresh
 - `SkillScanner`：扫描 canonical 目录和 Agent 目录，生成本地 Skill 列表
-- `SymlinkManager`：为 OpenClaw 创建 symbolic link
+- `SymlinkManager`：识别 OpenClaw 目录中的 symbolic link / physical copy 以及继承关系
 - `LockFileManager`：写入 `~/.agents/.skill-lock.json`
 
 这意味着 ClawHub 在产品层面是单独链路，但在本地生命周期管理层面仍遵守 SkillsMaster 的主架构。

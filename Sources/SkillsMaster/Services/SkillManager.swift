@@ -63,6 +63,9 @@ final class SkillManager {
     /// 当前检测到的全部 Agents。
     var agents: [Agent] = []
 
+    /// 每个 Agent 的默认安装方式。
+    var defaultInstallModes: [AgentType: AgentInstallMode] = [:]
+
     /// 当前是否处于 loading 状态。
     var isLoading = false
 
@@ -115,11 +118,14 @@ final class SkillManager {
     private let commitHashCache = CommitHashCache()
     /// 管理用户配置的 custom repositories。
     let repositoryManager = RepositoryManager()
+    private let installModeStore: AgentInstallModeStore
     private var cancellables = Set<AnyCancellable>()
 
     // MARK: - Initialization
 
-    init() {
+    init(installModeStore: AgentInstallModeStore = AgentInstallModeStore()) {
+        self.installModeStore = installModeStore
+        self.defaultInstallModes = installModeStore.loadAll()
         setupFileWatcher()
     }
 
@@ -229,23 +235,42 @@ final class SkillManager {
         watcher.startWatching(paths: paths)
     }
 
+    // MARK: - Agent Install Mode
+
+    /// 获取指定 Agent 的默认安装方式；未配置时回退到 `软链接`。
+    func installMode(for agent: AgentType) -> AgentInstallMode {
+        defaultInstallModes[agent] ?? .symlink
+    }
+
+    /// 更新指定 Agent 的默认安装方式，并立即迁移当前由 SkillsMaster 管理的 direct install。
+    func updateDefaultInstallMode(_ mode: AgentInstallMode, for agent: AgentType) async throws {
+        guard installMode(for: agent) != mode else { return }
+
+        defaultInstallModes[agent] = mode
+        installModeStore.setMode(mode, for: agent)
+
+        do {
+            try migrateManagedDirectInstalls(for: agent, to: mode)
+            await refresh()
+        } catch {
+            await refresh()
+            throw error
+        }
+    }
+
     // MARK: - F04: Skill Deletion
 
     /// Delete a skill
     ///
     /// Deletion flow:
-    /// 1. Remove direct installation symbolic links from all Agents (skip inherited installations)
+    /// 1. Remove direct installations from all Agents (symbolic links or physical copies; skip inherited installations)
     /// 2. Delete canonical directory (actual files)
     /// 3. Update lock file
     /// 4. Refresh data
-    ///
-    /// Inherited installation symbolic links don't need separate deletion: they point to symbolic links in the source Agent directory,
-    /// and the source Agent's symbolic link will be deleted in step 1; even if not deleted, after the canonical directory is removed
-    /// they become dangling symbolic links, which don't affect functionality
     func deleteSkill(_ skill: Skill) async throws {
-        // 1. Remove all direct installation symbolic links (skip inherited installations)
-        for installation in skill.installations where installation.isSymlink && !installation.isInherited {
-            try SymlinkManager.removeSymlink(
+        // 1. Remove all direct installations (skip inherited installations)
+        for installation in skill.installations where !installation.isInherited {
+            try removeDirectInstall(
                 skillName: skill.id,
                 from: installation.agentType
             )
@@ -273,32 +298,39 @@ final class SkillManager {
         let content = try SkillMDParser.serialize(metadata: metadata, markdownBody: markdownBody)
         let skillMDURL = skill.canonicalURL.appendingPathComponent("SKILL.md")
         try content.write(to: skillMDURL, atomically: true, encoding: .utf8)
+        try syncCopiedDirectInstallations(for: skill)
         await refresh()
     }
 
     // MARK: - F06: Agent Assignment (Toggle Symlink)
 
-    /// Install skill to specified Agent (create symbolic link)
+    /// Install skill to specified Agent using that Agent's configured default mode.
     func assignSkill(_ skill: Skill, to agent: AgentType) async throws {
-        try SymlinkManager.createSymlink(from: skill.canonicalURL, to: agent)
+        try materializeSkill(
+            skill.id,
+            from: skill.canonicalURL,
+            to: agent,
+            mode: installMode(for: agent),
+            replaceExisting: false
+        )
         await refresh()
     }
 
-    /// Uninstall skill from specified Agent (delete symbolic link)
+    /// Uninstall skill from specified Agent (delete symbolic link or physical copy)
     func unassignSkill(_ skill: Skill, from agent: AgentType) async throws {
-        try SymlinkManager.removeSymlink(skillName: skill.id, from: agent)
+        try removeDirectInstall(skillName: skill.id, from: agent)
         await refresh()
     }
 
     /// Toggle skill installation status on specified Agent
     ///
-    /// Each Agent only manages its own directory's symbolic link — SkillsMaster never touches
+    /// Each Agent only manages its own direct install — SkillsMaster never touches
     /// another Agent's directory. Cross-directory reading is each Agent's own runtime
     /// behavior, which SkillsMaster does not interfere with.
     ///
     /// Toggle behavior:
-    /// - Has direct install (symbolic link in agent's own dir) → remove it
-    /// - No direct install (regardless of inherited status) → create symbolic link in agent's own dir
+    /// - Has direct install (symbolic link or physical copy in agent's own dir) → remove it
+    /// - No direct install (regardless of inherited status) → materialize into that agent's own dir
     /// - If agent only has an inherited installation, toggling ON creates a direct install (override)
     ///
     /// IMPORTANT: We check the file system directly instead of relying on skill.installations,
@@ -322,7 +354,7 @@ final class SkillManager {
             // Something exists at agent's skills dir → remove it (symbolic link or real directory)
             try await unassignSkill(skill, from: agent)
         } else {
-            // 如果当前目录下什么都没有，就在这个 Agent 自己的目录里创建 direct symbolic link。
+            // 如果当前目录下什么都没有，就在这个 Agent 自己的目录里按默认方式创建 direct install。
             // 无论它之前是否通过继承方式可见，这里都可以正常建立直接安装。
             try await assignSkill(skill, to: agent)
         }
@@ -332,7 +364,7 @@ final class SkillManager {
 
     /// 把已 clone repository 中的 skill 安装到本地 canonical 目录。
     ///
-    /// 当前安装流程包括：获取 tree hash、复制文件、创建 symbolic link、更新 lock file，最后刷新 UI。
+    /// 当前安装流程包括：获取 tree hash、复制文件、按 Agent 默认方式落盘、更新 lock file，最后刷新 UI。
     ///
     /// - Parameters:
     ///   - repoDir: 已 clone 的本地临时目录
@@ -379,7 +411,7 @@ final class SkillManager {
         )
     }
 
-    /// 安装 ClawHub skill 到 canonical 目录，并为目标 Agent（默认 OpenClaw）建立 symbolic link。
+    /// 安装 ClawHub skill 到 canonical 目录，并按目标 Agent 的默认方式完成 direct install。
     ///
     /// - archive 安装成功时返回 `.installedFromArchive`
     /// - 若 archive 不可用但 `SKILL.md` 可用，则 fallback 为 markdown-only 安装并返回 `.installedSkillMarkdownOnly`
@@ -642,6 +674,7 @@ final class SkillManager {
             try fm.removeItem(at: canonicalDir)
         }
         try fm.copyItem(at: sourceDir, to: canonicalDir)
+        try syncCopiedDirectInstallations(for: skill)
 
         // 4. Update lock entry (new hash + new updatedAt)
         let now = ISO8601DateFormatter().string(from: Date())
@@ -661,6 +694,97 @@ final class SkillManager {
     }
 
     // MARK: - Helper Methods
+
+    /// 将一个 skill 按指定方式落到目标 Agent 目录。
+    private func materializeSkill(
+        _ skillName: String,
+        from sourceURL: URL,
+        to agent: AgentType,
+        mode: AgentInstallMode,
+        replaceExisting: Bool
+    ) throws {
+        let targetURL = agent.skillsDirectoryURL.appendingPathComponent(skillName)
+
+        if replaceExisting {
+            try removeDirectInstallIfExists(at: targetURL)
+        } else if directInstallExists(at: targetURL) {
+            throw SymlinkManager.SymlinkError.targetAlreadyExists(targetURL)
+        }
+
+        switch mode {
+        case .symlink:
+            try SymlinkManager.createSymlink(from: sourceURL, to: agent)
+        case .copy:
+            try copySkillDirectory(from: sourceURL, to: targetURL, replaceExisting: false)
+        }
+    }
+
+    /// 删除 Agent 目录下的 direct install，不区分 symbolic link 或真实目录。
+    private func removeDirectInstall(skillName: String, from agent: AgentType) throws {
+        let targetURL = agent.skillsDirectoryURL.appendingPathComponent(skillName)
+        try removeDirectInstallIfExists(at: targetURL)
+    }
+
+    private func removeDirectInstallIfExists(at targetURL: URL) throws {
+        guard directInstallExists(at: targetURL) else { return }
+        try FileManager.default.removeItem(at: targetURL)
+    }
+
+    private func directInstallExists(at url: URL) -> Bool {
+        SymlinkManager.isSymlink(at: url) || FileManager.default.fileExists(atPath: url.path)
+    }
+
+    private func copySkillDirectory(from sourceURL: URL, to targetURL: URL, replaceExisting: Bool) throws {
+        let fm = FileManager.default
+
+        guard fm.fileExists(atPath: sourceURL.path) else {
+            throw SymlinkManager.SymlinkError.sourceNotFound(sourceURL)
+        }
+
+        let parentDir = targetURL.deletingLastPathComponent()
+        if !fm.fileExists(atPath: parentDir.path) {
+            try fm.createDirectory(at: parentDir, withIntermediateDirectories: true)
+        }
+
+        if replaceExisting, directInstallExists(at: targetURL) {
+            try fm.removeItem(at: targetURL)
+        }
+
+        try fm.copyItem(at: sourceURL, to: targetURL)
+    }
+
+    /// 同步所有“物理复制” direct install，使其重新覆盖到最新事实源内容。
+    private func syncCopiedDirectInstallations(for skill: Skill) throws {
+        for installation in skill.installations where !installation.isInherited && !installation.isSymlink {
+            // canonical 就是该 direct install 本身时，说明它是原始源目录，不需要自我覆盖。
+            guard installation.path.standardized.path != skill.canonicalURL.standardized.path else { continue }
+            try copySkillDirectory(from: skill.canonicalURL, to: installation.path, replaceExisting: true)
+        }
+    }
+
+    /// 迁移某个 Agent 当前由 SkillsMaster 管理的 direct install。
+    ///
+    /// 只迁移“事实源不在该 Agent 自身目录”的 direct install，避免去改写用户手工放在
+    /// 该 Agent 目录中的 agent-local skill。
+    private func migrateManagedDirectInstalls(for agent: AgentType, to mode: AgentInstallMode) throws {
+        let targetDir = agent.skillsDirectoryURL.standardized.path
+
+        for skill in skills {
+            guard skill.installations.contains(where: { $0.agentType == agent && !$0.isInherited }) else { continue }
+
+            let canonicalParent = skill.canonicalURL.deletingLastPathComponent().standardized.path
+            guard canonicalParent != targetDir else { continue }
+            guard FileManager.default.fileExists(atPath: skill.canonicalURL.path) else { continue }
+
+            try materializeSkill(
+                skill.id,
+                from: skill.canonicalURL,
+                to: agent,
+                mode: mode,
+                replaceExisting: true
+            )
+        }
+    }
 
     /// Get local commit hash for specified skill (read from CommitHashCache)
     ///
@@ -722,7 +846,7 @@ final class SkillManager {
         try? await commitHashCache.save()
     }
 
-    /// 统一安装落盘流程：复制到 canonical 目录 -> 建 symbolic link -> 更新 lock file -> refresh。
+    /// 统一安装落盘流程：复制到 canonical 目录 -> 按 Agent 默认方式建立 direct install -> 更新 lock file -> refresh。
     private func persistInstalledSkillDirectory(
         from sourceURL: URL,
         skillName: String,
@@ -743,7 +867,13 @@ final class SkillManager {
         try fm.copyItem(at: sourceURL, to: canonicalDir)
 
         for agent in targetAgents {
-            try? SymlinkManager.createSymlink(from: canonicalDir, to: agent)
+            try materializeSkill(
+                skillName,
+                from: canonicalDir,
+                to: agent,
+                mode: installMode(for: agent),
+                replaceExisting: true
+            )
         }
 
         try await lockFileManager.createIfNotExists()
@@ -877,6 +1007,8 @@ final class SkillManager {
         }
         // copyItem recursively copies entire directory (similar to cp -r)
         try fm.copyItem(at: sourceDir, to: canonicalDir)
+
+        try syncCopiedDirectInstallations(for: skill)
 
         // 6. Write to commitHashCache (two maps)
         // 6a. skills map: store commit hash (for subsequent compare URL)

@@ -1,7 +1,7 @@
 # 架构与实现边界
 
 ## 系统定位
-SkillsMaster 是一个基于 SwiftUI 的 macOS 应用，用于管理多代理 Skills 的本地生命周期。它不是通用包管理器，也不是云端服务；核心职责是把本地目录、symbolic link、lock file、Git 来源与 UI 操作统一起来。
+SkillsMaster 是一个基于 SwiftUI 的 macOS 应用，用于管理多代理 Skills 的本地生命周期。它不是通用包管理器，也不是云端服务；核心职责是把本地目录、symbolic link / physical copy、lock file、Git 来源与 UI 操作统一起来。
 
 ## 实现结构
 - `Sources/SkillsMaster/App/`：应用入口、主题应用、启动激活
@@ -28,9 +28,10 @@ SkillsMaster 是一个基于 SwiftUI 的 macOS 应用，用于管理多代理 Sk
 - 自定义仓库扫描缓存：`~/.skillsmaster/.repository-scan-cache.json`（按仓库 HEAD 复用轻量索引；working tree 有本地改动时跳过缓存）
 
 其中需要特别注意：
-- `~/.skillsmaster/skills` 是 SkillsMaster 自己维护的 canonical 目录
+- `~/.skillsmaster/skills` 是 SkillsMaster 自己维护的 canonical 目录，也是 managed skill 的事实源
 - `~/.agents/.skill-lock.json` 仍保留在旧位置，以兼容外部工具
 - 扫描阶段仍会兼容读取 `~/.agents/skills`，用于兼容旧数据以及部分 Agent 的附加读取规则
+- 每个 Agent 可以单独配置默认 direct install 方式：`symbolic link` 或 `physical copy`
 
 ## 代理与兼容策略
 `AgentType` 定义了当前受支持代理、检测命令、主目录与附加可读目录。不是所有代理都只读取自己的目录：
@@ -46,11 +47,11 @@ SkillsMaster 是一个基于 SwiftUI 的 macOS 应用，用于管理多代理 Sk
 ## 仓库与安装链路
 当前安装来源分为三类：
 - 注册表技能：通过 `SkillRegistryService` 获取索引，再进入安装流程
-- ClawHub：通过 `ClawHubService` 拉取 marketplace 列表、详情、`SKILL.md` 与 archive，由 `ClawHubBrowserViewModel` 编排浏览/安装，并通过 `SkillManager.installClawHubSkill(...)` 安装到 canonical 目录后链接到 `OpenClaw`；详细链路见 `docs/clawhub.md`
+- ClawHub：通过 `ClawHubService` 拉取 marketplace 列表、详情、`SKILL.md` 与 archive，由 `ClawHubBrowserViewModel` 编排浏览/安装，并通过 `SkillManager.installClawHubSkill(...)` 安装到 canonical 目录后按 `OpenClaw` 默认安装方式落盘；详细链路见 `docs/clawhub.md`
 - 远程仓库安装：通过 `GitService` 克隆 / 扫描 / 拷贝到 canonical 目录
 - 自定义仓库：由 `RepositoryManager` 管理配置、同步与轻量索引缓存，由 `RepositoryBrowserViewModel` 驱动浏览与安装；列表使用缓存索引，详情页按需加载完整 `SKILL.md`。`~/.skillsmaster/repos` 下的 clone 目录视为 SkillsMaster 内部缓存，不作为用户手动编辑的工作目录；若检测到本地未提交改动，会跳过扫描缓存以避免展示过期索引。
 
-统一安装后都会落到 canonical 目录，再由 `SymlinkManager` 处理代理侧链接，并由 `LockFileManager` 更新 lock file。
+统一安装后都会落到 canonical 目录，再按各 Agent 的默认安装方式把 direct install 落到代理目录，并由 `LockFileManager` 更新 lock file。对于 physical copy，后续更新、重新安装和应用内编辑也会同步覆盖 Agent 目录副本。
 
 ## 更新链路
 - 技能更新：`GitService` + `SkillContentFetcher` + `CommitHashCache`
@@ -61,7 +62,7 @@ SkillsMaster 是一个基于 SwiftUI 的 macOS 应用，用于管理多代理 Sk
 以下区域文档、代码和测试必须同步：
 - `MigrationManager.swift`：历史路径迁移与兼容
 - `LockFileManager.swift`：lock file 格式与原子写入
-- `SymlinkManager.swift`：symbolic link 创建、解析、删除与继承判断
+- `SymlinkManager.swift`：symbolic link 创建、解析、删除与 direct install / 继承识别
 - `RepositoryManager.swift` / `RepositoryCredentialStore.swift`：仓库配置与凭据存储
 - `UpdateChecker.swift`：应用下载、替换、重启流程
 - `scripts/` 与 `.github/workflows/`：打包、发布、Homebrew 自动更新

@@ -219,7 +219,7 @@ struct ClawHubSkillDetailView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
-                Text("OpenClaw (installed via SkillsMaster canonical directory + symlink)")
+                Text("OpenClaw（通过 SkillsMaster canonical 目录分配，按默认安装方式落盘）")
                     .font(.system(.callout, design: .monospaced))
                     .textSelection(.enabled)
                     .padding(8)

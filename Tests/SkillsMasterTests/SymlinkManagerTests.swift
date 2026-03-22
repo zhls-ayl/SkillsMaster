@@ -69,4 +69,45 @@ final class SymlinkManagerTests: XCTestCase {
         let resolved = SymlinkManager.resolveSymlink(at: dir)
         XCTAssertEqual(resolved.path, dir.path)
     }
+
+    // MARK: - matchesCanonicalSkill Tests
+
+    func testMatchesCanonicalSkillReturnsTrueForPhysicalCopy() throws {
+        let fm = FileManager.default
+
+        let canonicalDir = tempDir.appendingPathComponent("canonical")
+        try fm.createDirectory(at: canonicalDir, withIntermediateDirectories: true)
+        try "name: demo".write(
+            to: canonicalDir.appendingPathComponent("SKILL.md"),
+            atomically: true,
+            encoding: .utf8
+        )
+
+        let copiedDir = tempDir.appendingPathComponent("copied")
+        try fm.copyItem(at: canonicalDir, to: copiedDir)
+
+        XCTAssertTrue(SymlinkManager.matchesCanonicalSkill(at: copiedDir, canonicalURL: canonicalDir))
+    }
+
+    func testMatchesCanonicalSkillReturnsFalseForDifferentPhysicalDirectory() throws {
+        let fm = FileManager.default
+
+        let canonicalDir = tempDir.appendingPathComponent("canonical")
+        try fm.createDirectory(at: canonicalDir, withIntermediateDirectories: true)
+        try "name: demo".write(
+            to: canonicalDir.appendingPathComponent("SKILL.md"),
+            atomically: true,
+            encoding: .utf8
+        )
+
+        let differentDir = tempDir.appendingPathComponent("different")
+        try fm.createDirectory(at: differentDir, withIntermediateDirectories: true)
+        try "name: other".write(
+            to: differentDir.appendingPathComponent("SKILL.md"),
+            atomically: true,
+            encoding: .utf8
+        )
+
+        XCTAssertFalse(SymlinkManager.matchesCanonicalSkill(at: differentDir, canonicalURL: canonicalDir))
+    }
 }

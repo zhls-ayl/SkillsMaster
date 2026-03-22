@@ -1,12 +1,12 @@
 # SkillsMaster
 
-SkillsMaster 是一个面向 macOS 的原生应用，用统一的图形界面管理多种 AI 编程代理的 Skills。它聚焦于 **扫描、展示、安装、编辑、更新、同步**，把本地目录、symbolic link、lock file 与 Repository 来源整合成一套可维护的工作流。
+SkillsMaster 是一个面向 macOS 的原生应用，用统一的图形界面管理多种 AI 编程代理的 Skills。它聚焦于 **扫描、展示、安装、编辑、更新、同步**，把本地目录、symbolic link / physical copy、lock file 与 Repository 来源整合成一套可维护的工作流。
 
 ## 它解决什么问题
 如果你同时使用多个 AI 编程代理，通常会遇到这些问题：
 - Skills 分散在不同目录，难以统一查看
 - `SKILL.md` 需要手动编辑，容易出错
-- symbolic link、lock file、仓库来源难以追踪
+- symbolic link / physical copy、lock file、仓库来源难以追踪
 - 想检查更新或切换 Agent 安装状态时，缺少统一入口
 
 SkillsMaster 的目标，就是把这些分散的本地操作整合到一个清晰的 macOS UI 里完成。
@@ -17,7 +17,7 @@ SkillsMaster 的目标，就是把这些分散的本地操作整合到一个清�
 - 从 GitHub、Registry 与 Custom Repository 安装 Skills
 - 集成 ClawHub 浏览与安装（面向 OpenClaw）
 - Registry / ClawHub 列表支持触底自动加载更多，并显示底部加载状态
-- 管理 Agent 分配、symbolic link、lock file 与更新检查
+- 管理 Agent 分配、每个 Agent 的默认安装方式（symbolic link / physical copy）、lock file 与更新检查
 - 监听文件系统变化，在 UI 中自动刷新
 - 支持主题切换、应用版本检查与 Release 打包链路
 

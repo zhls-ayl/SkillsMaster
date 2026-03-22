@@ -23,13 +23,17 @@ struct SettingsView: View {
                     Label("关于", systemImage: "info.circle")
                 }
         }
-        // Widened and taller to accommodate the Repositories list tab
-        .frame(width: 500, height: 420)
+        // Widened and taller to accommodate repository management and per-Agent install mode settings
+        .frame(width: 560, height: 560)
     }
 }
 
 /// 通用 settings
 struct 通用SettingsView: View {
+
+    @Environment(SkillManager.self) private var skillManager
+
+    @State private var installModeError: String?
 
     /// Persisted appearance mode in UserDefaults.
     ///
@@ -71,6 +75,54 @@ struct 通用SettingsView: View {
                     }
                 }
                 .pickerStyle(.menu)
+            }
+
+            Section("Agent 默认安装方式") {
+                Text("切换后会立即迁移该 Agent 当前由 SkillsMaster 管理的 direct install。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                ForEach(AgentType.allCases) { agentType in
+                    LabeledContent {
+                        Picker(
+                            agentType.displayName,
+                            selection: Binding(
+                                get: { skillManager.installMode(for: agentType) },
+                                set: { newMode in
+                                    installModeError = nil
+                                    Task {
+                                        do {
+                                            try await skillManager.updateDefaultInstallMode(newMode, for: agentType)
+                                        } catch {
+                                            installModeError = error.localizedDescription
+                                        }
+                                    }
+                                }
+                            )
+                        ) {
+                            ForEach(AgentInstallMode.allCases) { mode in
+                                Text(mode.displayName).tag(mode)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 200)
+                    } label: {
+                        HStack(spacing: 8) {
+                            AgentIconView(agentType: agentType, size: 14)
+                            Text(agentType.displayName)
+                        }
+                    }
+                }
+
+                Text("手工放在 Agent 目录中的 agent-local Skill 不会被这个设置改写。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                if let installModeError {
+                    Label(installModeError, systemImage: "exclamationmark.triangle")
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                }
             }
 
             Section("Paths") {
