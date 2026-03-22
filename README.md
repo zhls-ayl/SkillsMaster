@@ -1,87 +1,176 @@
 # SkillsMaster
 
-SkillsMaster 是一个面向 macOS 的原生应用，用统一的图形界面管理多种 AI 编程代理的 Skills。它聚焦于 **扫描、展示、安装、编辑、更新、同步**，把本地目录、symbolic link / physical copy、lock file 与 Repository 来源整合成一套可维护的工作流。
+SkillsMaster 是一个面向 macOS 的原生应用，用统一的图形界面管理多种 AI 编程代理的 Skills。当前仓库围绕真实实现持续维护以下链路：本地扫描、Agent 分配、`SKILL.md` 编辑、更新检查、Registry / ClawHub / Custom Repository 安装，以及测试、打包、Release、Homebrew 分发。
+
+> 项目来源：本仓库源自 fork [crossoverJie/SkillDeck](https://github.com/crossoverJie/SkillDeck.git)，当前以 `SkillsMaster` 为产品名持续演进和维护。
 
 ## 它解决什么问题
+
 如果你同时使用多个 AI 编程代理，通常会遇到这些问题：
+
 - Skills 分散在不同目录，难以统一查看
-- `SKILL.md` 需要手动编辑，容易出错
-- symbolic link / physical copy、lock file、仓库来源难以追踪
-- 想检查更新或切换 Agent 安装状态时，缺少统一入口
+- `SKILL.md` 需要手工维护，Frontmatter 和 Markdown 容易出错
+- symbolic link / physical copy、lock file、来源仓库和更新状态难以追踪
+- 不同 Agent 之间存在继承读取规则，是否“真的安装到该 Agent”不容易判断
+- 想从 Registry、GitHub 仓库、ClawHub 或自定义仓库安装 Skill 时，缺少统一入口
 
-SkillsMaster 的目标，就是把这些分散的本地操作整合到一个清晰的 macOS UI 里完成。
+SkillsMaster 的目标，是把这些分散在文件系统、命令行和配置文件里的操作，收敛到一个原生 macOS UI 里完成。
 
-## 核心能力
-- 统一扫描本地 Skills，并按 Agent、作用域、安装状态集中展示
-- 解析并编辑 `SKILL.md`，支持 YAML frontmatter + Markdown 正文
-- 从 GitHub、Registry 与 Custom Repository 安装 Skills
-- 集成 ClawHub 浏览与安装（面向 OpenClaw）
-- Registry / ClawHub 列表支持触底自动加载更多，并显示底部加载状态
-- 管理 Agent 分配、每个 Agent 的默认安装方式（symbolic link / physical copy）、lock file 与更新检查
-- 监听文件系统变化，在 UI 中自动刷新
-- 支持主题切换、应用版本检查与 Release 打包链路
+## 当前已实现
 
-## 适用人群
-- 同时使用 Claude Code、Codex、Gemini CLI、GitHub Copilot、Cursor、OpenCode 等多个 Agent 的开发者
-- 希望通过 GUI 管理本地 Skills，而不是频繁手改目录和配置文件的用户
-- 需要追踪 Skill 来源、更新状态与安装归属的维护者
+- 自动检测本机 Agent，并扫描 `~/.skillsmaster/skills`、各 Agent 目录以及兼容目录中的 Skills
+- 统一展示 direct install 与 inherited install，并支持按 Agent 过滤查看
+- Dashboard 支持搜索、排序、删除，以及在 Finder / Terminal 中打开 Skill
+- 详情页支持查看 Frontmatter、Markdown 正文、lock file 信息和更新状态
+- 内置 `SKILL.md` 编辑器，可编辑 YAML frontmatter 与正文内容并保存回本地
+- 可为每个 Agent 单独设置默认安装方式：`symbolic link` 或 `physical copy`
+- 从 GitHub 仓库扫描并安装 Skills，安装后落到 canonical 目录并写入 lock file
+- 浏览并安装 `skills.sh` Registry 中的 Skills
+- 浏览 ClawHub marketplace，查看详情、读取 `SKILL.md`，并安装到 OpenClaw
+- 管理 GitHub / GitLab Custom Repository，支持 `SSH` 和 `HTTPS + Token`
+- Custom Repository 支持 clone / pull、轻量索引缓存、按需加载详情和本地安装
+- 支持为未记录来源的本地 Skill 手动关联 Repository，随后执行更新检查
+- 支持批量检查 Git 来源 Skill 更新，并记录本地 / 远端 commit hash
+- 启动时执行从 `~/.agents` 到 `~/.skillsmaster` 的迁移，并保留对旧兼容路径的读取
+- 文件系统变化会触发自动刷新，尽量让 UI 与磁盘状态保持同步
+- 支持主题切换、应用版本检查、自更新入口、测试、打包、GitHub Release 和 Homebrew cask 链路
+
+## 支持的 Agents
+
+当前代码中已支持以下 Agent 类型：
+
+- Claude Code
+- Codex
+- Gemini CLI
+- GitHub Copilot
+- OpenCode
+- Antigravity
+- Cursor
+- Kiro CLI
+- CodeBuddy
+- OpenClaw
+- Trae
+
+## 来源与存储约定
+
+- canonical Skills 目录：`~/.skillsmaster/skills`
+- lock file：`~/.agents/.skill-lock.json`
+- Custom Repository clone / cache 目录：`~/.skillsmaster/repos`
+- Custom Repository 配置：`~/.skillsmaster/.skillsmaster-repos.json`
+
+需要注意的用户可见约定：
+
+- `~/.skillsmaster/skills` 是 SkillsMaster 维护的事实源目录
+- Agent 目录中的 direct install 会按默认安装方式落为 symbolic link 或 physical copy
+- `~/.agents/.skill-lock.json` 仍保留在旧位置，以兼容外部工具
+- Custom Repository 的本地 clone 目录是 SkillsMaster 管理的 cache，不是推荐的手工编辑工作区
+- 当前 ClawHub 入口明确面向 OpenClaw，不是面向所有 Agent 的通用 marketplace 安装入口
+
+## 当前边界
+
+以下方向在当前仓库中还没有完整交付，不应当视为已支持：
+
+- Project-level Skills 管理
+- Create Skill Wizard / 模板化创建流程
+- 更深入的批量操作能力
+- 完整的签名、公证、DMG 分发体验
 
 ## 环境要求
+
 - macOS 14+
 - Xcode 15+
 - Swift 5.9+
 
 ## 快速开始
+
 ### 从源码运行
+
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/zhls-ayl/SkillsMaster.git
 cd SkillsMaster
 ./run
 ```
 
 ### 运行测试
+
 ```bash
 ./run test
 ```
 
 ### 打包应用
+
 ```bash
 ./run package --version 1.2.3 --zip
 ```
 
-### 常用统一入口
+### 发布版本
+
+```bash
+./run release v1.2.3
+```
+
+## 常用命令
+
+`./run` 是仓库统一入口。无参数时默认等价于 `./run dev`，并会把 Swift / clang module cache 固定到仓库内 `.build/`，降低路径迁移和系统缓存造成的问题。
+
 ```bash
 ./run help
 ./run dev
 ./run test --filter SkillMDParserTests
 ./run build -c release
+./run clean
 ./run package --version 1.2.3 --zip
 ./run release v1.2.3
 ```
 
-`./run` 现在是仓库统一入口：
-- 无参数时默认等价于 `./run dev`
-- `test` / `build` 透传到 `swift test` / `swift build`
-- `package` / `release` 透传到 `scripts/package-app.sh` / `scripts/release.sh`
-- 现有 `scripts/*.sh` 仍保留，便于 CI、workflow 或单独调试时直接调用
+## 界面预览
+
+### Custom Repository
+
+[![SkillsMaster Custom Repository](docs/screenshots/skill-detail.png)](https://raw.githubusercontent.com/zhls-ayl/SkillsMaster/main/docs/screenshots/skill-detail.png)
+
+### Agent 默认安装方式设置
+
+[![SkillsMaster Agent 默认安装方式设置](docs/screenshots/agent-setting.png)](https://raw.githubusercontent.com/zhls-ayl/SkillsMaster/main/docs/screenshots/agent-setting.png)
+
+### Dashboard
+
+[![SkillsMaster Dashboard](docs/screenshots/dashboard.png)](https://raw.githubusercontent.com/zhls-ayl/SkillsMaster/main/docs/screenshots/dashboard.png)
+
+### Registry 浏览页
+
+[![SkillsMaster Registry 浏览页](docs/screenshots/registry-browser.png)](https://raw.githubusercontent.com/zhls-ayl/SkillsMaster/main/docs/screenshots/registry-browser.png)
+
+### ClawHub 浏览页
+
+[![SkillsMaster ClawHub 浏览页](docs/screenshots/clawhub-browser.png)](https://raw.githubusercontent.com/zhls-ayl/SkillsMaster/main/docs/screenshots/clawhub-browser.png)
+
+### Repository 设置页
+
+[![SkillsMaster Repository 设置页](docs/screenshots/repository-settings.png)](https://raw.githubusercontent.com/zhls-ayl/SkillsMaster/main/docs/screenshots/repository-settings.png)
+
+### `SKILL.md` 编辑器
+
+[![SkillsMaster SKILL.md 编辑器](docs/screenshots/skill-editor.png)](https://raw.githubusercontent.com/zhls-ayl/SkillsMaster/main/docs/screenshots/skill-editor.png)
+
+## 文档入口
+
+- [`README.md`](README.md)：项目概览、适用人群、快速开始、界面预览
+- [`docs/Index.md`](docs/Index.md)：文档导航、阅读顺序、更新落点
+- [`AGENTS.md`](AGENTS.md)：仓库协作原则、确认边界、验证要求、高风险改动规则
+
+如果你准备继续理解实现，建议从 [`docs/architecture.md`](docs/architecture.md) 开始；如果你准备参与开发或改动发布链路，再继续阅读 [`docs/development.md`](docs/development.md) 和 [`docs/release.md`](docs/release.md)。
 
 ## 仓库结构
-- `Sources/SkillsMaster/`：应用源码
+
+- `Sources/SkillsMaster/`：SwiftUI + MVVM 应用源码
 - `Tests/SkillsMasterTests/`：单元测试
-- `scripts/`：运行、打包、Release 相关脚本
-- `docs/`：架构、开发、发布与能力边界文档
+- `scripts/`：本地运行、打包、Release 脚本
+- `docs/`：架构、开发、发布、能力边界文档
 - `.github/workflows/`：CI / Release workflow
+- `homebrew/skillsmaster.rb`：Homebrew cask 模板
 
-## 文档分工
-- `README.md`：回答“这是什么、适合谁、如何快速开始”
-- `docs/Index.md`：回答“详细文档在哪里、应该先读哪篇、改动后该更新哪篇”
-- `AGENTS.md`：回答“协作时按什么原则执行、哪些改动要先确认、如何验证与汇报”
+## 相关说明
 
-如果你准备参与开发，先读 `docs/Index.md`；如果你准备在仓库里执行修改，再读 `AGENTS.md`。
-
-## Custom Repository 说明
-- `~/.skillsmaster/repos` 是 SkillsMaster 维护的 custom repository 本地 clone / cache 目录，不是推荐的手动编辑工作区。
-- 如果你需要修改 Repository 内容，请优先在原始仓库工作区提交并通过 Sync 拉取；应用检测到本地 clone 有未提交改动时，会跳过扫描缓存以避免显示过期索引。
-
-## 界面预览
-![SkillsMaster 界面截图](docs/screenshots/skill-detail.png)
+- 单元测试当前覆盖 parser、Git、lock file、symlink、repository cache、ViewModel 等关键模块
+- 修改用户可见行为、路径约定、脚本入口或发布方式时，应同步更新 `README.md`、相关专题文档和必要测试
