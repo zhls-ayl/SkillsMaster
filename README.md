@@ -127,31 +127,31 @@ cd SkillsMaster
 
 ### Custom Repository
 
-[![SkillsMaster Custom Repository](docs/screenshots/skill-detail.png)](https://raw.githubusercontent.com/zhls-ayl/SkillsMaster/main/docs/screenshots/skill-detail.png)
+![SkillsMaster Custom Repository](docs/screenshots/skill-detail.png)
 
 ### Agent 默认安装方式设置
 
-[![SkillsMaster Agent 默认安装方式设置](docs/screenshots/agent-setting.png)](https://raw.githubusercontent.com/zhls-ayl/SkillsMaster/main/docs/screenshots/agent-setting.png)
+![SkillsMaster Agent 默认安装方式设置](docs/screenshots/agent-setting.png)
 
 ### Dashboard
 
-[![SkillsMaster Dashboard](docs/screenshots/dashboard.png)](https://raw.githubusercontent.com/zhls-ayl/SkillsMaster/main/docs/screenshots/dashboard.png)
+![SkillsMaster Dashboard](docs/screenshots/dashboard.png)
 
 ### Registry 浏览页
 
-[![SkillsMaster Registry 浏览页](docs/screenshots/registry-browser.png)](https://raw.githubusercontent.com/zhls-ayl/SkillsMaster/main/docs/screenshots/registry-browser.png)
+![SkillsMaster Registry 浏览页](docs/screenshots/registry-browser.png)
 
 ### ClawHub 浏览页
 
-[![SkillsMaster ClawHub 浏览页](docs/screenshots/clawhub-browser.png)](https://raw.githubusercontent.com/zhls-ayl/SkillsMaster/main/docs/screenshots/clawhub-browser.png)
+![SkillsMaster ClawHub 浏览页](docs/screenshots/clawhub-browser.png)
 
 ### Repository 设置页
 
-[![SkillsMaster Repository 设置页](docs/screenshots/repository-settings.png)](https://raw.githubusercontent.com/zhls-ayl/SkillsMaster/main/docs/screenshots/repository-settings.png)
+![SkillsMaster Repository 设置页](docs/screenshots/repository-settings.png)
 
 ### `SKILL.md` 编辑器
 
-[![SkillsMaster SKILL.md 编辑器](docs/screenshots/skill-editor.png)](https://raw.githubusercontent.com/zhls-ayl/SkillsMaster/main/docs/screenshots/skill-editor.png)
+![SkillsMaster SKILL.md 编辑器](docs/screenshots/skill-editor.png)
 
 ## 文档入口
 
