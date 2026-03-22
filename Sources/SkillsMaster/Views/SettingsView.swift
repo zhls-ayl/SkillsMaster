@@ -64,6 +64,16 @@ struct 通用SettingsView: View {
         )
     }
 
+    /// 按显示名长度升序排列，同长度再按字母顺序稳定排序，减少右侧控件的视觉参差。
+    private var sortedAgentTypes: [AgentType] {
+        AgentType.allCases.sorted { lhs, rhs in
+            if lhs.displayName.count != rhs.displayName.count {
+                return lhs.displayName.count < rhs.displayName.count
+            }
+            return lhs.displayName.localizedStandardCompare(rhs.displayName) == .orderedAscending
+        }
+    }
+
     var body: some View {
         Form {
             Section("Appearance") {
@@ -82,34 +92,40 @@ struct 通用SettingsView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
-                ForEach(AgentType.allCases) { agentType in
-                    LabeledContent {
-                        Picker(
-                            agentType.displayName,
-                            selection: Binding(
-                                get: { skillManager.installMode(for: agentType) },
-                                set: { newMode in
-                                    installModeError = nil
-                                    Task {
-                                        do {
-                                            try await skillManager.updateDefaultInstallMode(newMode, for: agentType)
-                                        } catch {
-                                            installModeError = error.localizedDescription
+                VStack(alignment: .leading, spacing: 10) {
+                    ForEach(sortedAgentTypes) { agentType in
+                        HStack(spacing: 16) {
+                            HStack(spacing: 8) {
+                                AgentIconView(agentType: agentType, size: 14)
+                                Text(agentType.displayName)
+                            }
+                            .frame(width: 150, alignment: .leading)
+
+                            Spacer(minLength: 12)
+
+                            Picker(
+                                "",
+                                selection: Binding(
+                                    get: { skillManager.installMode(for: agentType) },
+                                    set: { newMode in
+                                        installModeError = nil
+                                        Task {
+                                            do {
+                                                try await skillManager.updateDefaultInstallMode(newMode, for: agentType)
+                                            } catch {
+                                                installModeError = error.localizedDescription
+                                            }
                                         }
                                     }
+                                )
+                            ) {
+                                ForEach(AgentInstallMode.allCases) { mode in
+                                    Text(mode.displayName).tag(mode)
                                 }
-                            )
-                        ) {
-                            ForEach(AgentInstallMode.allCases) { mode in
-                                Text(mode.displayName).tag(mode)
                             }
-                        }
-                        .pickerStyle(.segmented)
-                        .frame(width: 200)
-                    } label: {
-                        HStack(spacing: 8) {
-                            AgentIconView(agentType: agentType, size: 14)
-                            Text(agentType.displayName)
+                            .labelsHidden()
+                            .pickerStyle(.segmented)
+                            .frame(width: 180)
                         }
                     }
                 }
