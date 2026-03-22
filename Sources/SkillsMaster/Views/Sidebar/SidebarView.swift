@@ -114,7 +114,7 @@ struct SidebarView: View {
             }
 
             Section("Agents") {
-                ForEach(AgentType.allCases) { agentType in
+                ForEach(AgentType.displayNameLengthSortedCases) { agentType in
                     let agent = skillManager.agents.first { $0.type == agentType }
 
                     sidebarRow {

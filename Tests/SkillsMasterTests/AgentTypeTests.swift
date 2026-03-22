@@ -200,6 +200,19 @@ final class AgentTypeTests: XCTestCase {
         XCTAssertEqual(AgentType.allCases.count, 11)
     }
 
+    func testDisplayNameLengthSortedCasesOrdersByNameLengthThenAlphabetically() {
+        let orderedNames = AgentType.displayNameLengthSortedCases.map(\.displayName)
+
+        XCTAssertEqual(orderedNames.first, "Trae")
+        XCTAssertEqual(orderedNames.last, "GitHub Copilot")
+
+        let fiveLetterNames = orderedNames.filter { $0.count == 5 }
+        XCTAssertEqual(fiveLetterNames, ["Codex"])
+
+        let sixLetterNames = orderedNames.filter { $0.count == 6 }
+        XCTAssertEqual(sixLetterNames, ["Cursor"])
+    }
+
     func testGitHubCopilotRawValue() {
         let agent = AgentType.githubCopilot
 

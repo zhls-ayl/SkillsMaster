@@ -187,6 +187,17 @@ enum AgentType: String, CaseIterable, Identifiable, Codable {
         return URL(fileURLWithPath: path)
     }()
 
+    /// Agents sorted for UI display: shorter names first, then alphabetical order.
+    /// This reduces visual jaggedness when labels are shown in a vertical list.
+    static var displayNameLengthSortedCases: [AgentType] {
+        allCases.sorted { lhs, rhs in
+            if lhs.displayName.count != rhs.displayName.count {
+                return lhs.displayName.count < rhs.displayName.count
+            }
+            return lhs.displayName.localizedStandardCompare(rhs.displayName) == .orderedAscending
+        }
+    }
+
     /// Skills directories of other Agents that this Agent can read in addition to its own skills directory
     ///
     /// This is the "Single Source of Truth" for cross-directory reading rules.

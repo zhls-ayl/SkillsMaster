@@ -64,14 +64,8 @@ struct 通用SettingsView: View {
         )
     }
 
-    /// 按显示名长度升序排列，同长度再按字母顺序稳定排序，减少右侧控件的视觉参差。
     private var sortedAgentTypes: [AgentType] {
-        AgentType.allCases.sorted { lhs, rhs in
-            if lhs.displayName.count != rhs.displayName.count {
-                return lhs.displayName.count < rhs.displayName.count
-            }
-            return lhs.displayName.localizedStandardCompare(rhs.displayName) == .orderedAscending
-        }
+        AgentType.displayNameLengthSortedCases
     }
 
     var body: some View {
