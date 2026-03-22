@@ -2,8 +2,9 @@ import Foundation
 
 /// `SkillContentFetcher` 负责为 registry skill 从 GitHub 拉取原始 `SKILL.md` 内容。
 ///
-/// 由于 `skills.sh` 没有提供单个 skill 内容的 JSON API，这里直接访问 GitHub raw content CDN
-///（`raw.githubusercontent.com`）来获取 `SKILL.md`。
+/// 由于 `skills.sh` 没有提供单个 skill 内容的 JSON API，这里直接访问 GitHub 获取
+/// `SKILL.md`。默认优先走 `raw.githubusercontent.com`，若 raw CDN 在当前网络环境下不可达，
+/// 则自动回退到 GitHub Contents API（`api.github.com/repos/.../contents/...`）。
 ///
 /// 当前实现需要兼容多种 repository layout：
 /// - **Flat layout**：`{skillId}/SKILL.md` 位于 repo 根目录
@@ -19,6 +20,11 @@ import Foundation
 ///
 /// 这里使用 `actor` 维护 cache，保证并发访问时的 thread safety，与项目中的其他 `Service actor` 保持一致。
 actor SkillContentFetcher {
+
+    /// GitHub raw CDN 在部分网络环境下可能握手失败或被中间网络层拦截。
+    /// 一旦确认 raw CDN 不稳定，本轮 app 生命周期内后续请求直接走 GitHub Contents API，
+    /// 避免每次都先经历一次 raw 失败。
+    private var shouldBypassRawCDN = false
 
     // MARK: - Error Types
 
@@ -79,13 +85,18 @@ actor SkillContentFetcher {
             return cached.content
         }
 
-        // 2. Try direct candidate URLs: both branch names × both directory layouts.
+        // 2. Try direct candidate paths: both branch names × supported directory layouts.
         // This is the fast path — works when skillId matches the directory name exactly.
-        let urls = candidateURLs(source: source, skillId: skillId)
-        for url in urls {
-            if let content = try await fetchFromURL(url) {
-                cache[cacheKey] = (content: content, fetchedAt: Date())
-                return content
+        for branch in ["main", "master"] {
+            for path in candidatePaths(skillId: skillId) {
+                if let content = try await fetchContentAtPath(
+                    source: source,
+                    path: path,
+                    branch: branch
+                ) {
+                    cache[cacheKey] = (content: content, fetchedAt: Date())
+                    return content
+                }
             }
         }
 
@@ -134,41 +145,42 @@ actor SkillContentFetcher {
         return URL(string: "https://raw.githubusercontent.com/\(source)/\(branch)/\(filePath)")!
     }
 
-    /// Generate all candidate URLs to try when fetching a skill's SKILL.md
+    /// Build the GitHub Contents API URL for a SKILL.md file.
     ///
-    /// Returns URLs ordered by likelihood of success:
-    /// 1. `main` branch, flat layout: `{skillId}/SKILL.md` (repo root)
-    /// 2. `main` branch, monorepo layout: `skills/{skillId}/SKILL.md` (skills/ subdirectory)
-    /// 3. `main` branch, plugin-style: `.claude/skills/{skillId}/SKILL.md`
-    /// 4. `main` branch, root layout: `SKILL.md` (repo root, no subdirectory)
-    /// 5–8. Same 4 patterns on `master` branch (older repos)
+    /// URL pattern: `https://api.github.com/repos/{owner}/{repo}/contents/{path}/SKILL.md?ref={branch}`
+    /// The API returns JSON with a base64-encoded `content` field, which is more resilient
+    /// than relying solely on GitHub's raw CDN in restricted network environments.
     ///
-    /// Many large skill repositories (e.g., `inference-sh/skills`) use a `skills/` subdirectory
-    /// to organize skills within a monorepo. Other repos (e.g., `vercel-labs/agent-skills`)
-    /// place skill folders directly at the repository root. Some repos (e.g.,
-    /// `nextlevelbuilder/ui-ux-pro-max-skill`) use `.claude/skills/` as the skill directory.
-    /// Single-skill repos may place SKILL.md directly at the repository root.
+    /// - Parameters:
+    ///   - source: Repository in "owner/repo" format
+    ///   - path: Relative path to the skill directory
+    ///   - branch: Git branch name ("main" or "master")
+    /// - Returns: Fully constructed GitHub Contents API URL
+    func buildContentsAPIURL(source: String, path: String, branch: String) -> URL {
+        let filePath = path.isEmpty ? "SKILL.md" : "\(path)/SKILL.md"
+        var components = URLComponents()
+        components.scheme = "https"
+        components.host = "api.github.com"
+        components.percentEncodedPath = "/repos/\(source)/contents/\(filePath)"
+        components.queryItems = [URLQueryItem(name: "ref", value: branch)]
+        return components.url!
+    }
+
+    /// Generate all candidate raw URLs to try when fetching a skill's SKILL.md
+    ///
+    /// Exposed for tests and debug visibility. The actual fetch path now prefers raw CDN
+    /// when available and automatically falls back to the GitHub Contents API when needed.
     ///
     /// - Parameters:
     ///   - source: Repository in "owner/repo" format
     ///   - skillId: Skill identifier (directory name)
-    /// - Returns: Array of candidate URLs to try in order
+    /// - Returns: Array of candidate raw URLs to try in order
     func candidateURLs(source: String, skillId: String) -> [URL] {
-        // Four possible directory layouts within the repo, ordered by likelihood:
-        let paths = [
-            skillId,                          // Flat layout: {skillId}/SKILL.md at repo root
-            "skills/\(skillId)",              // Monorepo layout: skills/{skillId}/SKILL.md
-            ".claude/skills/\(skillId)",      // Plugin-style: .claude/skills/{skillId}/SKILL.md
-            "",                               // Root level: SKILL.md at repo root (no subdirectory)
-        ]
-        // Two possible branch names
-        let branches = ["main", "master"]
-
         // Generate all combinations: branch × path
         // `flatMap` + `map` produces the cartesian product (similar to a nested for-loop)
         // Result: 4 paths × 2 branches = 8 candidate URLs
-        return branches.flatMap { branch in
-            paths.map { path in
+        ["main", "master"].flatMap { branch in
+            candidatePaths(skillId: skillId).map { path in
                 buildRawURL(source: source, path: path, branch: branch)
             }
         }
@@ -179,6 +191,45 @@ actor SkillContentFetcher {
     /// Exposed as internal for unit tests to verify cache key format.
     func cacheKey(source: String, skillId: String) -> String {
         "\(source)/\(skillId)"
+    }
+
+    /// Supported repository layouts in priority order.
+    private func candidatePaths(skillId: String) -> [String] {
+        [
+            skillId,                          // Flat layout: {skillId}/SKILL.md at repo root
+            "skills/\(skillId)",              // Monorepo layout: skills/{skillId}/SKILL.md
+            ".claude/skills/\(skillId)",      // Plugin-style: .claude/skills/{skillId}/SKILL.md
+            "",                               // Root level: SKILL.md at repo root (no subdirectory)
+        ]
+    }
+
+    /// Fetch `SKILL.md` from a known repo path.
+    ///
+    /// Default strategy:
+    /// 1. Try GitHub raw CDN (`raw.githubusercontent.com`) for lower overhead.
+    /// 2. If raw CDN has a transport / server issue, mark it unavailable and retry via
+    ///    GitHub Contents API.
+    /// 3. If raw CDN returns `404`, treat it as "path not found" and continue to the next candidate.
+    private func fetchContentAtPath(source: String, path: String, branch: String) async throws -> String? {
+        if shouldBypassRawCDN {
+            return try await fetchFromContentsAPI(source: source, path: path, branch: branch)
+        }
+
+        do {
+            return try await fetchFromRawURL(
+                buildRawURL(source: source, path: path, branch: branch)
+            )
+        } catch let error as FetchError {
+            switch error {
+            case .networkError, .invalidResponse, .invalidEncoding:
+                shouldBypassRawCDN = true
+                return try await fetchFromContentsAPI(source: source, path: path, branch: branch)
+            case .notFound:
+                return nil
+            }
+        } catch {
+            throw error
+        }
     }
 
     // MARK: - Private Networking
@@ -219,9 +270,11 @@ actor SkillContentFetcher {
                     dirPath = String(path.dropLast("/SKILL.md".count))
                 }
 
-                let rawURL = buildRawURL(source: source, path: dirPath, branch: branch)
-
-                guard let content = try await fetchFromURL(rawURL) else {
+                guard let content = try await fetchContentAtPath(
+                    source: source,
+                    path: dirPath,
+                    branch: branch
+                ) else {
                     continue
                 }
 
@@ -341,7 +394,67 @@ actor SkillContentFetcher {
         return false
     }
 
-    /// Fetch content from a specific URL, returning nil for 404 responses
+    /// Fetch content from GitHub's Contents API, returning nil for 404 responses.
+    ///
+    /// GitHub returns a JSON object with base64-encoded `content`, so this helper
+    /// decodes the body back into UTF-8 markdown text.
+    private func fetchFromContentsAPI(source: String, path: String, branch: String) async throws -> String? {
+        struct ContentsResponse: Decodable {
+            let content: String
+            let encoding: String
+        }
+
+        var request = URLRequest(url: buildContentsAPIURL(source: source, path: path, branch: branch))
+        request.timeoutInterval = 15
+        request.setValue("application/vnd.github.v3+json", forHTTPHeaderField: "Accept")
+        request.setValue("SkillsMaster", forHTTPHeaderField: "User-Agent")
+
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await URLSession.shared.data(for: request)
+        } catch {
+            throw FetchError.networkError(error.localizedDescription)
+        }
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw FetchError.networkError("Invalid response type")
+        }
+
+        if httpResponse.statusCode == 404 {
+            return nil
+        }
+
+        guard httpResponse.statusCode == 200 else {
+            throw FetchError.invalidResponse(httpResponse.statusCode)
+        }
+
+        let payload: ContentsResponse
+        do {
+            payload = try JSONDecoder().decode(ContentsResponse.self, from: data)
+        } catch {
+            throw FetchError.networkError("Invalid GitHub API response")
+        }
+
+        guard payload.encoding.caseInsensitiveCompare("base64") == .orderedSame else {
+            throw FetchError.invalidEncoding
+        }
+
+        let normalizedContent = payload.content.replacingOccurrences(of: "\n", with: "")
+        guard
+            let decodedData = Data(
+                base64Encoded: normalizedContent,
+                options: [.ignoreUnknownCharacters]
+            ),
+            let content = String(data: decodedData, encoding: .utf8)
+        else {
+            throw FetchError.invalidEncoding
+        }
+
+        return content
+    }
+
+    /// Fetch content from a specific raw URL, returning nil for 404 responses
     ///
     /// Returns `nil` for HTTP 404 (not found) to support the main→master fallback strategy.
     /// Throws `FetchError` for network errors or unexpected HTTP status codes.
@@ -349,7 +462,7 @@ actor SkillContentFetcher {
     /// - Parameter url: The URL to fetch content from
     /// - Returns: String content if successful, nil if 404
     /// - Throws: `FetchError` for network or encoding errors
-    private func fetchFromURL(_ url: URL) async throws -> String? {
+    private func fetchFromRawURL(_ url: URL) async throws -> String? {
         // Create HTTP request with timeout
         // URLRequest is similar to Java's HttpURLConnection or Go's http.NewRequest
         var request = URLRequest(url: url)

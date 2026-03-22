@@ -74,6 +74,40 @@ final class SkillContentFetcherTests: XCTestCase {
         )
     }
 
+    /// 验证 monorepo layout 下 GitHub Contents API URL 的构造。
+    ///
+    /// 当 raw CDN 不可达时，fetcher 会改走 `api.github.com/repos/.../contents/...`
+    /// 读取 base64 编码的文件内容。
+    func testBuildContentsAPIURLMonorepoLayout() async {
+        let fetcher = SkillContentFetcher()
+        let url = await fetcher.buildContentsAPIURL(
+            source: "inference-sh/skills",
+            path: "skills/remotion-render",
+            branch: "main"
+        )
+
+        XCTAssertEqual(
+            url.absoluteString,
+            "https://api.github.com/repos/inference-sh/skills/contents/skills/remotion-render/SKILL.md?ref=main"
+        )
+    }
+
+    /// 验证 root-level `SKILL.md` 的 GitHub Contents API URL 不会出现多余斜杠。
+    func testBuildContentsAPIURLEmptyPath() async {
+        let fetcher = SkillContentFetcher()
+        let url = await fetcher.buildContentsAPIURL(
+            source: "some-user/some-repo",
+            path: "",
+            branch: "master"
+        )
+
+        XCTAssertEqual(
+            url.absoluteString,
+            "https://api.github.com/repos/some-user/some-repo/contents/SKILL.md?ref=master"
+        )
+        XCTAssertFalse(url.absoluteString.contains("/contents//SKILL.md"))
+    }
+
     // MARK: - Candidate URL Tests
 
     /// 验证 `candidateURLs` 会按预期顺序生成全部 8 个候选 URL。

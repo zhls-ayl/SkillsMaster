@@ -7,6 +7,11 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-03-22
+### Fixed
+- 修复 Registry 中部分 Skill 的 `Skill Content` 无法加载并显示 `Network error: The network connection was lost` 的问题。`SkillContentFetcher` 现在会在 `raw.githubusercontent.com` 不可达时自动回退到 GitHub Contents API，避免正文加载链路被 raw CDN 连接问题直接中断。
+- 修复 `skills.sh` 展示 slug 与 GitHub 仓库实际目录名不一致时 Registry 详情页容易取不到正文的问题。现有路径猜测逻辑保留，同时继续通过 Git Tree fallback 查找真实 `SKILL.md` 路径，以兼容像 `remotion-best-practices -> skills/remotion/SKILL.md` 这类映射。
+
 ## [0.1.5] - 2026-03-22
 ### Added
 - 新增每个 Agent 独立的默认安装方式配置，支持在 `软链接` 与 `物理复制` 之间持久化切换，并在设置变更后立即迁移该 Agent 当前由 SkillsMaster 管理的 direct install。
