@@ -28,9 +28,8 @@ final class AgentFileBrowserServiceTests: XCTestCase {
         service = nil
     }
 
-    func testLoadTreeIncludesHiddenFilesAndMarksSkillsSubtreeProtected() throws {
+    func testLoadRootSnapshotIncludesHiddenFilesWithoutRecursivelyLoadingChildren() throws {
         try createFile(at: rootURL.appendingPathComponent(".env"), contents: "OPENAI_API_KEY=test")
-        try createFile(at: rootURL.appendingPathComponent("settings.json"), contents: "{}")
         try FileManager.default.createDirectory(
             at: protectedURL.appendingPathComponent("sample-skill"),
             withIntermediateDirectories: true
@@ -40,9 +39,10 @@ final class AgentFileBrowserServiceTests: XCTestCase {
             contents: "# skill"
         )
 
-        let snapshot = service.loadTree(rootURL: rootURL, protectedURL: protectedURL)
+        let snapshot = service.loadRootSnapshot(rootURL: rootURL, protectedURL: protectedURL)
 
         XCTAssertTrue(snapshot.rootExists)
+        XCTAssertEqual(snapshot.watchBaseURL.standardizedFileURL.path, rootURL.standardizedFileURL.path)
 
         let envFile = try XCTUnwrap(snapshot.entries.first { $0.name == ".env" })
         XCTAssertTrue(envFile.isHidden)
@@ -50,13 +50,42 @@ final class AgentFileBrowserServiceTests: XCTestCase {
 
         let skillsDirectory = try XCTUnwrap(snapshot.entries.first { $0.name == "skills" })
         XCTAssertTrue(skillsDirectory.isProtected)
+        XCTAssertNil(skillsDirectory.loadedChildCount)
+    }
 
-        let protectedChild = try XCTUnwrap(skillsDirectory.children?.first { $0.name == "sample-skill" })
+    func testLoadDirectoryContentsLoadsProtectedChildrenLazily() throws {
+        try FileManager.default.createDirectory(
+            at: protectedURL.appendingPathComponent("sample-skill"),
+            withIntermediateDirectories: true
+        )
+        try createFile(
+            at: protectedURL.appendingPathComponent("sample-skill/SKILL.md"),
+            contents: "# skill"
+        )
+
+        let children = try service.loadDirectoryContents(
+            at: protectedURL,
+            rootURL: rootURL,
+            protectedURL: protectedURL
+        )
+
+        let protectedChild = try XCTUnwrap(children.first { $0.name == "sample-skill" })
         XCTAssertTrue(protectedChild.isProtected)
         XCTAssertEqual(
             protectedChild.protectionReason,
             "`skills/` 目录及其子内容由 SkillsMaster 管理，在 Agent Files 中只读。"
         )
+    }
+
+    func testLoadItemDetailsDetectsTextFilesOnDemand() throws {
+        let fileURL = rootURL.appendingPathComponent("settings.json")
+        try createFile(at: fileURL, contents: "{}")
+
+        let details = try service.loadItemDetails(at: fileURL)
+
+        XCTAssertTrue(details.isTextFile)
+        XCTAssertEqual(details.fileSize, 2)
+        XCTAssertNotNil(details.modifiedDate)
     }
 
     func testCreateRejectsReservedSkillsPath() throws {

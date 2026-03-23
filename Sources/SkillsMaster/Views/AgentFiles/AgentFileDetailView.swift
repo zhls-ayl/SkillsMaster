@@ -29,6 +29,9 @@ struct AgentFileDetailView: View {
             }
             .padding()
         }
+        .task(id: viewModel.selectedItemID) {
+            viewModel.loadSelectedItemDetails()
+        }
     }
 
     @ViewBuilder
@@ -96,26 +99,34 @@ struct AgentFileDetailView: View {
                 detailRow("隐藏文件", value: item.isHidden ? "是" : "否")
                 detailRow("Symbolic Link", value: item.isSymbolicLink ? "是" : "否")
 
-                if let modifiedDate = item.modifiedDate {
-                    detailRow("修改时间", value: dateFormatter.string(from: modifiedDate))
-                }
-
-                if let fileSize = item.fileSize {
-                    detailRow("大小", value: byteCountFormatter.string(fromByteCount: Int64(fileSize)))
-                } else if item.isDirectory {
-                    detailRow("子项数量", value: "\(item.childCount)")
+                if item.isDirectory {
+                    if let loadedChildCount = viewModel.loadedChildCount(for: item) {
+                        detailRow("已加载子项", value: "\(loadedChildCount)")
+                    } else {
+                        detailRow("已加载子项", value: "展开目录后加载")
+                    }
+                } else if viewModel.isLoadingSelectedItemDetails {
+                    detailRow("详情", value: "Loading...")
+                } else if let details = viewModel.selectedItemDetails {
+                    if let modifiedDate = details.modifiedDate {
+                        detailRow("修改时间", value: dateFormatter.string(from: modifiedDate))
+                    }
+                    if let fileSize = details.fileSize {
+                        detailRow("大小", value: byteCountFormatter.string(fromByteCount: Int64(fileSize)))
+                    }
+                    detailRow("文本文件", value: details.isTextFile ? "是" : "否")
                 }
             }
             .font(.subheadline)
 
             if let reason = item.protectionReason {
                 protectionNotice(title: "受保护路径", message: reason)
-            } else if !item.isDirectory && !item.isTextFile {
-                Text("当前只允许通过系统默认应用打开文本文件。非文本文件可在 Finder 中定位后自行处理。")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
             } else if item.isSymbolicLink {
                 Text("当前项是 symbolic link。列表中只展示链接本身，不会递归展开其目标目录。")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            } else if let details = viewModel.selectedItemDetails, !item.isDirectory, !details.isTextFile {
+                Text("当前只允许通过系统默认应用打开文本文件。非文本文件可在 Finder 中定位后自行处理。")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -195,6 +206,6 @@ struct AgentFileDetailView: View {
         if item.isSymbolicLink {
             return "文件 symbolic link"
         }
-        return item.isTextFile ? "文本文件" : "文件"
+        return "文件"
     }
 }

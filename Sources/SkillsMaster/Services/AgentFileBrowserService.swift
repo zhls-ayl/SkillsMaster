@@ -1,7 +1,7 @@
 import Foundation
 import UniformTypeIdentifiers
 
-final class AgentFileBrowserService {
+struct AgentFileBrowserService: Sendable {
 
     enum CreateKind {
         case file
@@ -13,6 +13,7 @@ final class AgentFileBrowserService {
         case invalidName
         case itemAlreadyExists(URL)
         case itemNotFound(URL)
+        case notDirectory(URL)
         case protectedPath(String)
 
         var errorDescription: String? {
@@ -25,45 +26,101 @@ final class AgentFileBrowserService {
                 return "目标已存在：\(url.lastPathComponent)"
             case .itemNotFound(let url):
                 return "目标不存在：\(url.path)"
+            case .notDirectory(let url):
+                return "目标不是目录：\(url.path)"
             case .protectedPath(let reason):
                 return reason
             }
         }
     }
 
-    func loadTree(for agentType: AgentType) throws -> AgentFileTreeSnapshot {
+    func loadRootSnapshot(for agentType: AgentType) throws -> AgentFileRootSnapshot {
         guard let rootURL = agentType.configDirectoryURL else {
             throw BrowserError.configDirectoryUnavailable(agentType)
         }
 
-        return loadTree(rootURL: rootURL, protectedURL: agentType.skillsDirectoryURL)
+        return loadRootSnapshot(rootURL: rootURL, protectedURL: agentType.skillsDirectoryURL)
     }
 
-    func loadTree(rootURL: URL, protectedURL: URL) -> AgentFileTreeSnapshot {
+    func loadRootSnapshot(rootURL: URL, protectedURL: URL) -> AgentFileRootSnapshot {
         let fm = FileManager.default
         let standardizedRoot = rootURL.standardizedFileURL
-        let standardizedProtected = protectedURL.standardizedFileURL
 
         guard fm.fileExists(atPath: standardizedRoot.path) else {
-            return AgentFileTreeSnapshot(
+            return AgentFileRootSnapshot(
                 entries: [],
-                watchedDirectories: [nearestExistingAncestor(for: standardizedRoot)],
-                rootExists: false
+                rootExists: false,
+                watchBaseURL: nearestExistingAncestor(for: standardizedRoot)
             )
         }
 
-        var watchedDirectories: [URL] = []
-        let entries = loadEntries(
-            in: standardizedRoot,
+        let entries = (try? loadDirectoryContents(
+            at: standardizedRoot,
             rootURL: standardizedRoot,
-            protectedURL: standardizedProtected,
-            watchedDirectories: &watchedDirectories
+            protectedURL: protectedURL.standardizedFileURL
+        )) ?? []
+
+        return AgentFileRootSnapshot(
+            entries: entries,
+            rootExists: true,
+            watchBaseURL: standardizedRoot
+        )
+    }
+
+    func loadDirectoryContents(
+        at directoryURL: URL,
+        rootURL: URL,
+        protectedURL: URL
+    ) throws -> [AgentFileItem] {
+        let directoryURL = directoryURL.standardizedFileURL
+        let rootURL = rootURL.standardizedFileURL
+        let protectedURL = protectedURL.standardizedFileURL
+        let fm = FileManager.default
+
+        var isDirectory: ObjCBool = false
+        guard fm.fileExists(atPath: directoryURL.path, isDirectory: &isDirectory) else {
+            throw BrowserError.itemNotFound(directoryURL)
+        }
+        guard isDirectory.boolValue else {
+            throw BrowserError.notDirectory(directoryURL)
+        }
+
+        let keys: Set<URLResourceKey> = [
+            .isDirectoryKey,
+            .isSymbolicLinkKey,
+            .isHiddenKey
+        ]
+
+        let contents = try fm.contentsOfDirectory(
+            at: directoryURL,
+            includingPropertiesForKeys: Array(keys),
+            options: []
         )
 
-        return AgentFileTreeSnapshot(
-            entries: entries,
-            watchedDirectories: watchedDirectories,
-            rootExists: true
+        let entries = contents.map {
+            buildEntry(at: $0, rootURL: rootURL, protectedURL: protectedURL)
+        }
+
+        return entries.sorted(by: compareEntries)
+    }
+
+    func loadItemDetails(at itemURL: URL) throws -> AgentFileDetails {
+        let itemURL = itemURL.standardizedFileURL
+        let keys: Set<URLResourceKey> = [
+            .isDirectoryKey,
+            .isSymbolicLinkKey,
+            .fileSizeKey,
+            .contentModificationDateKey
+        ]
+
+        let values = try itemURL.resourceValues(forKeys: keys)
+        let isDirectory = values.isDirectory == true
+        let isSymbolicLink = values.isSymbolicLink == true || SymlinkManager.isSymlink(at: itemURL)
+
+        return AgentFileDetails(
+            fileSize: isDirectory ? nil : values.fileSize,
+            modifiedDate: values.contentModificationDate,
+            isTextFile: !isDirectory && !isSymbolicLink && isProbablyTextFile(at: itemURL)
         )
     }
 
@@ -190,78 +247,19 @@ final class AgentFileBrowserService {
         try FileManager.default.removeItem(at: itemURL)
     }
 
-    private func loadEntries(
-        in directoryURL: URL,
-        rootURL: URL,
-        protectedURL: URL,
-        watchedDirectories: inout [URL]
-    ) -> [AgentFileItem] {
-        watchedDirectories.append(directoryURL)
-
-        guard let contents = try? FileManager.default.contentsOfDirectory(
-            at: directoryURL,
-            includingPropertiesForKeys: [
-                .isDirectoryKey,
-                .isSymbolicLinkKey,
-                .isHiddenKey,
-                .isRegularFileKey,
-                .fileSizeKey,
-                .contentModificationDateKey
-            ],
-            options: []
-        ) else {
-            return []
-        }
-
-        let entries = contents.compactMap { url in
-            buildEntry(
-                at: url,
-                rootURL: rootURL,
-                protectedURL: protectedURL,
-                watchedDirectories: &watchedDirectories
-            )
-        }
-
-        return entries.sorted(by: compareEntries)
-    }
-
-    private func buildEntry(
-        at url: URL,
-        rootURL: URL,
-        protectedURL: URL,
-        watchedDirectories: inout [URL]
-    ) -> AgentFileItem? {
+    private func buildEntry(at url: URL, rootURL: URL, protectedURL: URL) -> AgentFileItem {
         let standardizedURL = url.standardizedFileURL
-
-        let resourceValues = try? standardizedURL.resourceValues(forKeys: [
+        let keys: Set<URLResourceKey> = [
             .isDirectoryKey,
             .isSymbolicLinkKey,
-            .isHiddenKey,
-            .isRegularFileKey,
-            .fileSizeKey,
-            .contentModificationDateKey
-        ])
+            .isHiddenKey
+        ]
+        let values = try? standardizedURL.resourceValues(forKeys: keys)
 
-        let isSymbolicLink = resourceValues?.isSymbolicLink == true || SymlinkManager.isSymlink(at: standardizedURL)
-        let isDirectory = resourceValues?.isDirectory == true
-        let isHidden = resourceValues?.isHidden == true || standardizedURL.lastPathComponent.hasPrefix(".")
-        let fileSize = resourceValues?.fileSize
-        let modifiedDate = resourceValues?.contentModificationDate
+        let isSymbolicLink = values?.isSymbolicLink == true || SymlinkManager.isSymlink(at: standardizedURL)
+        let isDirectory = values?.isDirectory == true
+        let isHidden = values?.isHidden == true || standardizedURL.lastPathComponent.hasPrefix(".")
         let protectionReason = skillsProtectionReason(for: standardizedURL, protectedURL: protectedURL)
-        let isProtected = protectionReason != nil
-        let canTraverseChildren = isDirectory && !isSymbolicLink
-
-        let children: [AgentFileItem]?
-        if canTraverseChildren {
-            children = loadEntries(
-                in: standardizedURL,
-                rootURL: rootURL,
-                protectedURL: protectedURL,
-                watchedDirectories: &watchedDirectories
-            )
-        } else {
-            children = nil
-        }
 
         return AgentFileItem(
             url: standardizedURL,
@@ -269,12 +267,9 @@ final class AgentFileBrowserService {
             isDirectory: isDirectory,
             isSymbolicLink: isSymbolicLink,
             isHidden: isHidden,
-            isTextFile: !isDirectory && !isSymbolicLink && isProbablyTextFile(at: standardizedURL),
-            isProtected: isProtected,
+            isProtected: protectionReason != nil,
             protectionReason: protectionReason,
-            fileSize: isDirectory ? nil : fileSize,
-            modifiedDate: modifiedDate,
-            children: children
+            loadedChildCount: nil
         )
     }
 

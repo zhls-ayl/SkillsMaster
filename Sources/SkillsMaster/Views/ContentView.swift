@@ -70,6 +70,7 @@ struct ContentView: View {
             } else if case .agentFiles(let agentType) = selectedSidebarItem,
                       let vm = agentFilesVMs[agentType] {
                 AgentFilesBrowserView(viewModel: vm)
+                    .id("agent-files-browser-\(agentType.rawValue)")
                     .navigationSplitViewColumnWidth(min: 280, ideal: 360, max: 520)
             } else if case .customRepo(let repoID) = selectedSidebarItem,
                       let vm = repoVMs[repoID] {
@@ -126,6 +127,7 @@ struct ContentView: View {
             } else if case .agentFiles(let agentType) = selectedSidebarItem,
                       let vm = agentFilesVMs[agentType] {
                 AgentFileDetailView(viewModel: vm)
+                    .id("agent-files-detail-\(agentType.rawValue)")
             } else if case .customRepo = selectedSidebarItem {
                 if case .customRepo(let repoID) = selectedSidebarItem,
                    let vm = repoVMs[repoID],

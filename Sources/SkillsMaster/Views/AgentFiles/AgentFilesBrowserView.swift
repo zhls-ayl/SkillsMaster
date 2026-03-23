@@ -24,10 +24,11 @@ struct AgentFilesBrowserView: View {
                 )
             } else {
                 List(selection: $viewModel.selectedItemID) {
-                    OutlineGroup(viewModel.entries, children: \.children) { item in
-                        fileRow(for: item)
-                            .tag(item.id)
-                    }
+                    AgentFileTreeRowsView(
+                        entries: viewModel.entries,
+                        depth: 0,
+                        viewModel: viewModel
+                    )
                 }
             }
         }
@@ -75,7 +76,7 @@ struct AgentFilesBrowserView: View {
                 .help("刷新")
             }
         }
-        .task {
+        .task(id: viewModel.agentType) {
             viewModel.reloadIfNeeded()
         }
         .sheet(item: $namePrompt) { prompt in
@@ -157,30 +158,6 @@ struct AgentFilesBrowserView: View {
         }
     }
 
-    @ViewBuilder
-    private func fileRow(for item: AgentFileItem) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: item.iconName)
-                .foregroundStyle(item.isProtected ? .orange : .secondary)
-
-            Text(item.name)
-                .foregroundStyle(item.isHidden ? .secondary : .primary)
-
-            if item.isProtected {
-                Spacer(minLength: 8)
-                Text("只读")
-                    .font(.caption2)
-                    .foregroundStyle(.orange)
-            } else if item.isSymbolicLink {
-                Spacer(minLength: 8)
-                Text("symlink")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .contentShape(Rectangle())
-    }
-
     private func handleNamePrompt(_ prompt: NamePromptContext, name: String) {
         do {
             switch prompt.kind {
@@ -231,6 +208,87 @@ struct AgentFilesBrowserView: View {
             return "这会删除文件夹 “\(item.name)” 及其全部内容，且无法撤销。"
         }
         return "这会删除文件 “\(item.name)”，且无法撤销。"
+    }
+}
+
+private struct AgentFileTreeRowsView: View {
+    let entries: [AgentFileItem]
+    let depth: Int
+    @Bindable var viewModel: AgentFilesViewModel
+
+    var body: some View {
+        ForEach(entries) { item in
+            AgentFileRowView(item: item, depth: depth, viewModel: viewModel)
+                .tag(item.id)
+
+            if item.isExpandable && viewModel.isExpanded(item) {
+                if viewModel.isLoadingChildren(for: item) {
+                    HStack(spacing: 8) {
+                        ProgressView()
+                            .controlSize(.small)
+                        Text("Loading...")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.leading, CGFloat(depth + 1) * 18 + 18)
+                } else {
+                    AgentFileTreeRowsView(
+                        entries: viewModel.children(for: item),
+                        depth: depth + 1,
+                        viewModel: viewModel
+                    )
+                }
+            }
+        }
+    }
+}
+
+private struct AgentFileRowView: View {
+    let item: AgentFileItem
+    let depth: Int
+    @Bindable var viewModel: AgentFilesViewModel
+
+    var body: some View {
+        HStack(spacing: 8) {
+            disclosureControl
+
+            Image(systemName: item.iconName)
+                .foregroundStyle(item.isProtected ? .orange : .secondary)
+
+            Text(item.name)
+                .foregroundStyle(item.isHidden ? .secondary : .primary)
+
+            if item.isProtected {
+                Spacer(minLength: 8)
+                Text("只读")
+                    .font(.caption2)
+                    .foregroundStyle(.orange)
+            } else if item.isSymbolicLink {
+                Spacer(minLength: 8)
+                Text("symlink")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.leading, CGFloat(depth) * 18)
+        .contentShape(Rectangle())
+    }
+
+    @ViewBuilder
+    private var disclosureControl: some View {
+        if item.isExpandable {
+            Button {
+                viewModel.toggleExpansion(for: item)
+            } label: {
+                Image(systemName: viewModel.isExpanded(item) ? "chevron.down" : "chevron.right")
+                    .font(.system(size: 11, weight: .semibold))
+                    .frame(width: 14, height: 14)
+            }
+            .buttonStyle(.plain)
+        } else {
+            Color.clear
+                .frame(width: 14, height: 14)
+        }
     }
 }
 
