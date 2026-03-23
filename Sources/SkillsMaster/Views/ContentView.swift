@@ -191,6 +191,9 @@ struct ContentView: View {
             // 先执行从旧路径（`~/.agents/`）到新路径（`~/.skillsmaster/`）的迁移。
             // 这一步必须发生在 `refresh()` 之前，否则 scanner 看不到新的 canonical 目录。
             MigrationManager.migrateIfNeeded()
+            // 清理旧版 root-level GitHub 安装 bug 留下的残留 lock entry / cache / broken symlink。
+            // 这是 best-effort maintenance，不应阻塞 app 启动。
+            _ = try? await LegacyRootSkillArtifactCleaner().cleanup()
             await skillManager.refresh()
             // Build repoVMs for any repositories that were loaded during refresh
             rebuildRepoVMs()

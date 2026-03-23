@@ -106,6 +106,17 @@ actor CommitHashCache {
         cache[skillName] = hash
     }
 
+    /// Remove commit hash for a specific skill (writes to memory only, call save() to persist)
+    ///
+    /// Used by legacy cleanup flows to purge stale private cache entries after the
+    /// corresponding lock file record and on-disk artifacts have been removed.
+    ///
+    /// - Parameter skillName: Unique identifier of the skill (directory name)
+    func removeHash(for skillName: String) {
+        ensureLoaded()
+        cache.removeValue(forKey: skillName)
+    }
+
     // MARK: - Linked Skills Methods (Manually Linked Repo Info)
 
     /// Get manually linked info for a specific skill
