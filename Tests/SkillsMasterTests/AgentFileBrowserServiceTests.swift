@@ -88,6 +88,38 @@ final class AgentFileBrowserServiceTests: XCTestCase {
         XCTAssertNotNil(details.modifiedDate)
     }
 
+    func testLoadRootSnapshotTreatsDirectorySymlinkAsDirectoryButNotExpandable() throws {
+        let realDirectoryURL = rootURL.appendingPathComponent("projects")
+        try FileManager.default.createDirectory(at: realDirectoryURL, withIntermediateDirectories: true)
+        try createFile(at: realDirectoryURL.appendingPathComponent("README.md"), contents: "# docs")
+
+        let symlinkURL = rootURL.appendingPathComponent("projects-link")
+        try FileManager.default.createSymbolicLink(at: symlinkURL, withDestinationURL: realDirectoryURL)
+
+        let snapshot = service.loadRootSnapshot(rootURL: rootURL, protectedURL: protectedURL)
+        let entry = try XCTUnwrap(snapshot.entries.first { $0.name == "projects-link" })
+
+        XCTAssertTrue(entry.isSymbolicLink)
+        XCTAssertTrue(entry.isDirectory)
+        XCTAssertFalse(entry.isExpandable)
+        XCTAssertEqual(entry.iconName, "folder.badge.questionmark")
+    }
+
+    func testLoadItemDetailsTreatsDirectorySymlinkAsDirectory() throws {
+        let realDirectoryURL = rootURL.appendingPathComponent("configs")
+        try FileManager.default.createDirectory(at: realDirectoryURL, withIntermediateDirectories: true)
+        try createFile(at: realDirectoryURL.appendingPathComponent("settings.json"), contents: "{}")
+
+        let symlinkURL = rootURL.appendingPathComponent("configs-link")
+        try FileManager.default.createSymbolicLink(at: symlinkURL, withDestinationURL: realDirectoryURL)
+
+        let details = try service.loadItemDetails(at: symlinkURL)
+
+        XCTAssertNil(details.fileSize)
+        XCTAssertFalse(details.isTextFile)
+        XCTAssertNotNil(details.modifiedDate)
+    }
+
     func testCreateRejectsReservedSkillsPath() throws {
         XCTAssertThrowsError(
             try service.createItem(

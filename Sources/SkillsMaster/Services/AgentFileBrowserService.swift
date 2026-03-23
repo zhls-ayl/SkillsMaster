@@ -114,7 +114,7 @@ struct AgentFileBrowserService: Sendable {
         ]
 
         let values = try itemURL.resourceValues(forKeys: keys)
-        let isDirectory = values.isDirectory == true
+        let isDirectory = isDirectoryLike(itemURL, values: values)
         let isSymbolicLink = values.isSymbolicLink == true || SymlinkManager.isSymlink(at: itemURL)
 
         return AgentFileDetails(
@@ -257,7 +257,7 @@ struct AgentFileBrowserService: Sendable {
         let values = try? standardizedURL.resourceValues(forKeys: keys)
 
         let isSymbolicLink = values?.isSymbolicLink == true || SymlinkManager.isSymlink(at: standardizedURL)
-        let isDirectory = values?.isDirectory == true
+        let isDirectory = isDirectoryLike(standardizedURL, values: values)
         let isHidden = values?.isHidden == true || standardizedURL.lastPathComponent.hasPrefix(".")
         let protectionReason = skillsProtectionReason(for: standardizedURL, protectedURL: protectedURL)
 
@@ -278,6 +278,16 @@ struct AgentFileBrowserService: Sendable {
             return lhs.isDirectory && !rhs.isDirectory
         }
         return lhs.name.localizedStandardCompare(rhs.name) == .orderedAscending
+    }
+
+    private func isDirectoryLike(_ url: URL, values: URLResourceValues?) -> Bool {
+        if values?.isDirectory == true {
+            return true
+        }
+
+        var isDirectory: ObjCBool = false
+        return FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory)
+            && isDirectory.boolValue
     }
 
     private func validatedName(_ rawName: String) throws -> String {

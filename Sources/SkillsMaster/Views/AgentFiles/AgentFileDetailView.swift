@@ -143,7 +143,9 @@ struct AgentFileDetailView: View {
                 detailRow("Symbolic Link", value: item.isSymbolicLink ? "是" : "否")
 
                 if item.isDirectory {
-                    if let loadedChildCount = viewModel.loadedChildCount(for: item) {
+                    if item.isSymbolicLink {
+                        detailRow("已加载子项", value: "symlink 目标不递归展开")
+                    } else if let loadedChildCount = viewModel.loadedChildCount(for: item) {
                         detailRow("已加载子项", value: "\(loadedChildCount)")
                     } else {
                         detailRow("已加载子项", value: "展开目录后加载")
