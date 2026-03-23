@@ -40,7 +40,7 @@ final class TextFileEditorViewModel {
         do {
             let fileURL = self.fileURL
             let content = try await Task.detached(priority: .userInitiated) {
-                try Self.readText(from: fileURL)
+                try TextFileLoader.readText(from: fileURL)
             }.value
 
             guard !Task.isCancelled else { return }
@@ -84,16 +84,5 @@ final class TextFileEditorViewModel {
 
     func discardChanges() {
         text = originalText
-    }
-
-    nonisolated private static func readText(from url: URL) throws -> String {
-        let data = try Data(contentsOf: url)
-        if let string = String(data: data, encoding: .utf8) {
-            return string
-        }
-        if let string = String(data: data, encoding: .ascii) {
-            return string
-        }
-        throw CocoaError(.fileReadInapplicableStringEncoding)
     }
 }

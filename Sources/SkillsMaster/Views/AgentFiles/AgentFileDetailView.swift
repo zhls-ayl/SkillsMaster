@@ -108,22 +108,30 @@ struct AgentFileDetailView: View {
     @ViewBuilder
     private func selectedItemSection(_ item: AgentFileItem) -> some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack(spacing: 10) {
-                Image(systemName: item.iconName)
-                    .foregroundStyle(item.isProtected ? .orange : .secondary)
-                    .font(.title3)
+            HStack(alignment: .top, spacing: 12) {
+                HStack(spacing: 10) {
+                    Image(systemName: item.iconName)
+                        .foregroundStyle(item.isProtected ? .orange : .secondary)
+                        .font(.title3)
 
-                Text(item.name)
-                    .font(.title2)
-                    .fontWeight(.bold)
+                    Text(item.name)
+                        .font(.title2)
+                        .fontWeight(.bold)
 
-                if item.isProtected {
-                    Text("只读")
-                        .font(.caption)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color.orange.opacity(0.15))
-                        .clipShape(Capsule())
+                    if item.isProtected {
+                        Text("只读")
+                            .font(.caption)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.orange.opacity(0.15))
+                            .clipShape(Capsule())
+                    }
+                }
+
+                Spacer()
+
+                if viewModel.previewViewModel != nil {
+                    previewActionButtons()
                 }
             }
 
@@ -141,7 +149,7 @@ struct AgentFileDetailView: View {
                         detailRow("已加载子项", value: "展开目录后加载")
                     }
                 } else if viewModel.isLoadingSelectedItemDetails {
-                    detailRow("详情", value: "Loading...")
+                    detailRow("详情", value: "加载中...")
                 } else if let details = viewModel.selectedItemDetails {
                     if let modifiedDate = details.modifiedDate {
                         detailRow("修改时间", value: dateFormatter.string(from: modifiedDate))
@@ -160,18 +168,41 @@ struct AgentFileDetailView: View {
                 Text("当前项是 symbolic link。列表中只展示链接本身，不会递归展开其目标目录。")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
-            } else if let details = viewModel.selectedItemDetails, !item.isDirectory, !details.isTextFile {
+            } else if let details = viewModel.selectedItemDetails,
+                      !item.isDirectory,
+                      !details.isTextFile {
                 Text("当前只允许通过系统默认应用打开文本文件。非文本文件可在 Finder 中定位后自行处理。")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            } else if !item.isDirectory,
+                      !item.isSymbolicLink,
+                      viewModel.previewViewModel == nil,
+                      viewModel.selectedItemDetails?.isTextFile == true {
+                Text("当前文本文件暂不支持内置预览，可通过外置编辑器查看。")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
 
-            actionSection(
-                canEditInternally: viewModel.canEditSelectedInternally,
-                canOpenInExternalEditor: viewModel.canOpenSelectedInExternalEditor,
-                canRevealInFinder: viewModel.canRevealSelectedOrRoot,
-                canOpenInTerminal: viewModel.canOpenSelectedOrRootInTerminal
-            )
+            if let previewViewModel = viewModel.previewViewModel {
+                previewSection(previewViewModel)
+            } else {
+                actionSection(
+                    canEditInternally: viewModel.canEditSelectedInternally,
+                    canOpenInExternalEditor: viewModel.canOpenSelectedInExternalEditor,
+                    canRevealInFinder: viewModel.canRevealSelectedOrRoot,
+                    canOpenInTerminal: viewModel.canOpenSelectedOrRootInTerminal
+                )
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func previewSection(_ previewViewModel: TextFilePreviewViewModel) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("内容")
+                .font(.headline)
+
+            TextFilePreviewView(viewModel: previewViewModel)
         }
     }
 
@@ -212,6 +243,49 @@ struct AgentFileDetailView: View {
                 }
                 .buttonStyle(.bordered)
                 .disabled(!canOpenInTerminal)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func previewActionButtons() -> some View {
+        HStack(spacing: 8) {
+            Button {
+                viewModel.revealSelectedOrRootInFinder()
+            } label: {
+                Image(systemName: "folder")
+            }
+            .buttonStyle(.borderless)
+            .help("在 Finder 中显示")
+            .disabled(!viewModel.canRevealSelectedOrRoot)
+
+            Button {
+                viewModel.openSelectedOrRootInTerminal()
+            } label: {
+                Image(systemName: "terminal")
+            }
+            .buttonStyle(.borderless)
+            .help("在 Terminal 中打开")
+            .disabled(!viewModel.canOpenSelectedOrRootInTerminal)
+
+            if viewModel.canEditSelectedInternally {
+                Button {
+                    viewModel.startEditingSelectedItem()
+                } label: {
+                    Image(systemName: "pencil")
+                }
+                .buttonStyle(.borderless)
+                .help("编辑")
+            }
+
+            if viewModel.canOpenSelectedInExternalEditor {
+                Button {
+                    viewModel.openSelectedInExternalEditor()
+                } label: {
+                    Image(systemName: "square.and.arrow.up")
+                }
+                .buttonStyle(.borderless)
+                .help("在外置编辑器中打开")
             }
         }
     }

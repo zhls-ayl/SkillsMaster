@@ -19,6 +19,7 @@ final class AgentFilesViewModel {
     var errorMessage: String?
     var selectedItemDetails: AgentFileDetails?
     var isLoadingSelectedItemDetails = false
+    var previewViewModel: TextFilePreviewViewModel?
     var editorViewModel: TextFileEditorViewModel?
     var pendingNavigationAction: PendingNavigationAction?
 
@@ -162,6 +163,7 @@ final class AgentFilesViewModel {
                 childrenByParentID = [:]
                 expandedDirectoryIDs = []
                 selectedItemDetails = nil
+                previewViewModel = nil
                 editorViewModel = nil
                 pendingNavigationAction = nil
                 hasLoadedOnce = true
@@ -171,6 +173,7 @@ final class AgentFilesViewModel {
                 }
 
                 normalizeSelection()
+                prepareSelectedItemPreview()
                 restartWatcher()
                 isLoading = false
                 loadSelectedItemDetails()
@@ -181,6 +184,7 @@ final class AgentFilesViewModel {
                 childrenByParentID = [:]
                 expandedDirectoryIDs = []
                 selectedItemDetails = nil
+                previewViewModel = nil
                 editorViewModel = nil
                 pendingNavigationAction = nil
                 watchBaseURL = nearestExistingAncestor(for: rootURL)
@@ -354,12 +358,14 @@ final class AgentFilesViewModel {
 
         closeEditor()
         selectedItemID = newSelection
+        prepareSelectedItemPreview()
         loadSelectedItemDetails()
     }
 
     func startEditingSelectedItem() {
         guard let selectedItem, canEditSelectedInternally else { return }
         errorMessage = nil
+        previewViewModel = nil
         editorViewModel = TextFileEditorViewModel(fileURL: selectedItem.url)
         selectedItemDetails = nil
     }
@@ -371,6 +377,8 @@ final class AgentFilesViewModel {
             return
         }
         closeEditor()
+        prepareSelectedItemPreview()
+        loadSelectedItemDetails()
     }
 
     func cancelPendingNavigationAction() {
@@ -381,9 +389,12 @@ final class AgentFilesViewModel {
         switch pendingNavigationAction {
         case .closeEditor:
             closeEditor()
+            prepareSelectedItemPreview()
+            loadSelectedItemDetails()
         case .selectItem(let selection):
             closeEditor()
             selectedItemID = selection
+            prepareSelectedItemPreview()
             loadSelectedItemDetails()
         case nil:
             break
@@ -397,6 +408,7 @@ final class AgentFilesViewModel {
         guard didSave else { return false }
 
         closeEditor()
+        prepareSelectedItemPreview()
         loadSelectedItemDetails()
         return true
     }
@@ -410,9 +422,16 @@ final class AgentFilesViewModel {
 
         self.editorViewModel = nil
 
-        if case .selectItem(let selection) = pendingAction {
-            selectedItemID = selection
+        switch pendingAction {
+        case .closeEditor:
+            prepareSelectedItemPreview()
             loadSelectedItemDetails()
+        case .selectItem(let selection):
+            selectedItemID = selection
+            prepareSelectedItemPreview()
+            loadSelectedItemDetails()
+        case nil:
+            break
         }
         self.pendingNavigationAction = nil
         return true
@@ -515,7 +534,22 @@ final class AgentFilesViewModel {
         if findItem(withID: selectedItemID, in: entries) == nil {
             self.selectedItemID = nil
             closeEditor()
+            selectedItemDetails = nil
+            previewViewModel = nil
         }
+    }
+
+    private func prepareSelectedItemPreview() {
+        guard editorViewModel == nil,
+              let selectedItem,
+              !selectedItem.isDirectory,
+              !selectedItem.isSymbolicLink,
+              TextEditableFileKind.from(url: selectedItem.url) != nil else {
+            previewViewModel = nil
+            return
+        }
+
+        previewViewModel = TextFilePreviewViewModel(fileURL: selectedItem.url)
     }
 
     private func findItem(withID id: String, in items: [AgentFileItem]) -> AgentFileItem? {

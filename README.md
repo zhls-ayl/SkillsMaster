@@ -23,7 +23,8 @@ SkillsMaster 的目标，是把这些分散在文件系统、命令行和配置�
 - Dashboard 支持搜索、排序、删除，以及在 Finder / Terminal 中打开 Skill；右侧详情保留完整管理能力
 - 支持在 Sidebar 中按 `Agents > Skills / Files` 分层导航；`Agents > Skills` 的详情页只读显示 Skill 标题、描述、Metadata 与 Markdown 正文，`Agent Files` 仅对已安装或已有配置目录的 Agent 显示
 - `Agent Files` 支持浏览 Agent 配置根目录，默认显示隐藏文件，并支持新建文件、新建文件夹、重命名、删除
-- `Agent Files` 中支持在右侧 detail pane 中编辑 `.json`、`.md`、`.toml` 等文本文件；切换文件、切换 Sidebar 或关闭编辑时会提示保存 / 放弃 / 取消
+- `Agent Files` 中点击 `.md`、`.json`、`.toml`、`.txt`、`.yaml`、`.yml`、`.log` 等文本文件时，会先在右侧 detail pane 直接预览内容；其中 Markdown 走原生渲染，其余文本走等宽代码块预览，并保留单独的编辑入口
+- `Agent Files` 的文本预览超过 10 MB 时会回退为原始文本预览，不再执行 Markdown 渲染或结构化格式化
 - `Agent Files` 中可配置全局外置编辑器和全局默认终端，并支持在 Finder / 外置编辑器 / 终端中打开当前文件或目录
 - `Agent Files` 中的 `skills/` 目录及其子内容只读显示，不允许新建、重命名、删除或外部编辑
 - 详情页支持查看 Frontmatter、Markdown 正文、lock file 信息和更新状态
