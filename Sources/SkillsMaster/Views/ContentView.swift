@@ -61,12 +61,12 @@ struct ContentView: View {
                 .navigationSplitViewColumnWidth(min: 180, ideal: 220, max: 300)
         } content: {
             // 中栏：根据 sidebar selection 展示不同 content。
-            // F09：当选中 “Registry” 时，显示 `RegistryBrowserView` 而不是 `DashboardView`。
+            // F09：当选中 “Skills.sh” 时，显示 `RegistryBrowserView` 而不是 `DashboardView`。
             if selectedSidebarItem == .registry {
-                // F09：Registry Browser，用于浏览和搜索 `skills.sh` catalog。
+                // F09：skills.sh Browser，用于浏览和搜索 `skills.sh` catalog。
                 if let vm = registryVM {
                     RegistryBrowserView(viewModel: vm)
-                        // Registry 页面需要更宽的中栏，以容纳 skill 信息和 install 按钮。
+                        // Skills.sh 页面需要更宽的中栏，以容纳 skill 信息和 install 按钮。
                         .navigationSplitViewColumnWidth(min: 300, ideal: 400, max: 600)
                 }
             } else if selectedSidebarItem == .clawHub {
@@ -112,7 +112,7 @@ struct ContentView: View {
                     EmptyStateView(
                         icon: "globe",
                         title: "请选择 Skill",
-                        subtitle: "请从 Registry 中选择一个 Skill 查看详情"
+                        subtitle: "请从 Skills.sh 中选择一个 Skill 查看详情"
                     )
                 }
             } else if selectedSidebarItem == .clawHub {

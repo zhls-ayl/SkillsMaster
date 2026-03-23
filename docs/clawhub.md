@@ -3,7 +3,7 @@
 本文记录当前仓库中 ClawHub 功能的真实实现，覆盖入口、模型、API 对接、分页、详情加载、安装落盘与限制条件。若代码与本文不一致，以 `Sources/` 与 `Tests/` 中当前实现为准，并在修改后同步更新本文。
 
 ## 功能定位
-ClawHub 在 SkillsMaster 中是一个独立的在线来源，不复用 `Registry` 的实现，也不是通用 repository 浏览器的一个变体。当前设计目标是：
+ClawHub 在 SkillsMaster 中是一个独立的在线来源，不复用 `Skills.sh` 的实现，也不是通用 repository 浏览器的一个变体。当前设计目标是：
 - 在应用内浏览 ClawHub marketplace
 - 搜索、排序、筛选并查看 skill 详情
 - 拉取 `SKILL.md` 供详情页渲染
@@ -13,7 +13,7 @@ ClawHub 在 SkillsMaster 中是一个独立的在线来源，不复用 `Registry
 当前实现明确面向 `OpenClaw`，不是面向所有 Agent 的通用安装入口。
 
 ## 入口与界面组织
-ClawHub 通过 `SidebarItem.clawHub` 作为独立导航项暴露在侧边栏，和 `Dashboard`、`Registry`、`Custom Repos` 平级。
+ClawHub 通过 `SidebarItem.clawHub` 作为独立导航项暴露在侧边栏，位于 `Marketplace` 分组下，与 `Skills.sh` 同级。
 
 对应 UI 结构如下：
 - 左栏：`SidebarView` 提供 `ClawHub` 导航项

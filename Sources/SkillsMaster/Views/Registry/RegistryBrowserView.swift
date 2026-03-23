@@ -1,13 +1,13 @@
 import SwiftUI
 
-/// RegistryBrowserView is the F09 Registry Browser main view
+/// RegistryBrowserView is the F09 skills.sh browser main view
 ///
 /// Displays the skills.sh catalog with two modes:
 /// 1. **Leaderboard browsing**: Category tabs (All Time / Trending 24h / Hot) showing ranked skills
 /// 2. **Search**: Type-ahead search using the skills.sh API
 ///
 /// This view occupies the "content" column (middle pane) of the NavigationSplitView,
-/// replacing DashboardView when the "Registry" sidebar item is selected.
+/// replacing DashboardView when the "Skills.sh" sidebar item is selected.
 ///
 /// @Bindable is used instead of @Binding for @Observable objects — it allows creating
 /// two-way bindings ($viewModel.property) from @Observable class properties.
@@ -43,7 +43,7 @@ struct RegistryBrowserView: View {
                 skillList
             }
         }
-        .navigationTitle("Skill Registry")
+        .navigationTitle("Skills.sh")
         // .searchable adds a native macOS search bar in the toolbar area
         // The text binding ($viewModel.searchText) updates as user types.
         // `prompt` is the placeholder text shown when the search field is empty.

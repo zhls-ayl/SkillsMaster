@@ -71,9 +71,9 @@ struct SidebarView: View {
     var body: some View {
         List(selection: $selection) {
             // Section creates groups (shown as collapsible groups in macOS sidebar)
-            Section("概览") {
+            Section("Installed") {
                 sidebarRow {
-                    Label("仪表板", systemImage: "square.grid.2x2")
+                    Label("All Skills", systemImage: "square.grid.2x2")
                 }
                 .badge(skillManager.skills.count)
                 // IMPORTANT: keep .tag as the outermost row modifier.
@@ -82,9 +82,12 @@ struct SidebarView: View {
                 // .badge/.opacity/.listRowBackground, some rows become non-selectable.
                 .tag(SidebarItem.dashboard)
 
-                // F09: Registry browser — browse and search skills.sh catalog
+            }
+
+            // F09: skills.sh browser — browse and search the online catalog
+            Section("Marketplace") {
                 sidebarRow {
-                    Label("Registry", systemImage: "globe")
+                    Label("Skills.sh", systemImage: "globe")
                 }
                 .tag(SidebarItem.registry)
 
@@ -94,11 +97,11 @@ struct SidebarView: View {
                 .tag(SidebarItem.clawHub)
             }
 
-            // Custom Repos section: shown only when at least one repository is configured
+            // Repositories section: shown only when at least one repository is configured
             // ForEach on an empty array renders nothing, so the section header would still appear.
             // We wrap in an `if !isEmpty` guard to fully hide the section when no repos are configured.
             if !skillManager.repositories.isEmpty {
-                Section("Custom Repos") {
+                Section("Repositories") {
                     ForEach(skillManager.repositories) { repo in
                         let item = SidebarItem.customRepo(repo.id)
                         let syncStatus = skillManager.repoSyncStatuses[repo.id] ?? .idle
@@ -128,7 +131,20 @@ struct SidebarView: View {
             }
 
             Section("Agents") {
-                DisclosureGroup("Skills") {
+                DisclosureGroup("Agent Files") {
+                    ForEach(fileAgentTypes) { agentType in
+                        sidebarRow {
+                            Label {
+                                Text(agentType.displayName)
+                            } icon: {
+                                AgentIconView(agentType: agentType, size: 16)
+                            }
+                        }
+                        .tag(SidebarItem.agentFiles(agentType))
+                    }
+                }
+
+                DisclosureGroup("Agents Skills") {
                     ForEach(skillAgentTypes) { agentType in
                         let agent = skillManager.agents.first { $0.type == agentType }
 
@@ -146,19 +162,6 @@ struct SidebarView: View {
                         // opacity controls transparency: uninstalled Agents are shown semi-transparent
                         .opacity(agent?.isInstalled == true ? 1.0 : 0.5)
                         .tag(SidebarItem.agentSkills(agentType))
-                    }
-                }
-
-                DisclosureGroup("Files") {
-                    ForEach(fileAgentTypes) { agentType in
-                        sidebarRow {
-                            Label {
-                                Text(agentType.displayName)
-                            } icon: {
-                                AgentIconView(agentType: agentType, size: 16)
-                            }
-                        }
-                        .tag(SidebarItem.agentFiles(agentType))
                     }
                 }
             }
@@ -278,7 +281,7 @@ struct SidebarView: View {
     }
 
     /// Returns true if the given SyncStatus represents an error state.
-    /// Used to decide the icon foreground color in the Custom Repos section.
+    /// Used to decide the icon foreground color in the Repositories section.
     private func syncErrorStatus(_ status: SkillRepository.SyncStatus) -> Bool {
         if case .error = status { return true }
         return false

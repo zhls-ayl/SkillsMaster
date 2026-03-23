@@ -1,6 +1,6 @@
 # SkillsMaster
 
-SkillsMaster 是一个面向 macOS 的原生应用，用统一的图形界面管理多种 AI 编程代理的 Skills 与 Agent 根目录文件。当前仓库围绕真实实现持续维护以下链路：本地扫描、Agent 分配、Agent Files 浏览、内置文本编辑、外置编辑器 / 默认终端配置、更新检查、Registry / ClawHub / Custom Repository 安装，以及测试、打包、Release、Homebrew 分发。
+SkillsMaster 是一个面向 macOS 的原生应用，用统一的图形界面管理多种 AI 编程代理的 Skills 与 Agent 根目录文件。当前仓库围绕真实实现持续维护以下链路：本地扫描、Agent 分配、Agent Files 浏览、内置文本编辑、外置编辑器 / 默认终端配置、更新检查、Skills.sh / ClawHub / Custom Repository 安装，以及测试、打包、Release、Homebrew 分发。
 
 > 项目来源：本仓库源自 fork [crossoverJie/SkillDeck](https://github.com/crossoverJie/SkillDeck.git)，当前以 `SkillsMaster` 为产品名持续演进和维护。
 
@@ -12,7 +12,7 @@ SkillsMaster 是一个面向 macOS 的原生应用，用统一的图形界面管
 - `SKILL.md` 需要手工维护，Frontmatter 和 Markdown 容易出错
 - symbolic link / physical copy、lock file、来源仓库和更新状态难以追踪
 - 不同 Agent 之间存在继承读取规则，是否“真的安装到该 Agent”不容易判断
-- 想从 Registry、GitHub 仓库、ClawHub 或自定义仓库安装 Skill 时，缺少统一入口
+- 想从 Skills.sh、GitHub 仓库、ClawHub 或自定义仓库安装 Skill 时，缺少统一入口
 
 SkillsMaster 的目标，是把这些分散在文件系统、命令行和配置文件里的操作，收敛到一个原生 macOS UI 里完成。
 
@@ -20,8 +20,8 @@ SkillsMaster 的目标，是把这些分散在文件系统、命令行和配置�
 
 - 自动检测本机 Agent，并扫描 `~/.skillsmaster/skills`、各 Agent 目录以及兼容目录中的 Skills
 - 统一展示 direct install 与 inherited install，并支持按 Agent 过滤查看
-- Dashboard 支持搜索、排序、删除，以及在 Finder / Terminal 中打开 Skill；右侧详情保留完整管理能力
-- 支持在 Sidebar 中按 `Agents > Skills / Files` 分层导航；`Agents > Skills` 的详情页只读显示 Skill 标题、描述、Metadata 与 Markdown 正文，`Agent Files` 仅对已安装或已有配置目录的 Agent 显示
+- `Installed > All Skills` 页面支持搜索、排序、删除，以及在 Finder / Terminal 中打开 Skill；右侧详情保留完整管理能力
+- 支持在 Sidebar 中按 `Installed / Marketplace / Repositories / Agents` 分组导航；`Agents > Agent Files` 仅对已安装或已有配置目录的 Agent 显示，`Agents > Agents Skills` 的详情页只读显示 Skill 标题、描述、Metadata 与 Markdown 正文
 - `Agent Files` 支持浏览 Agent 配置根目录，默认显示隐藏文件，并支持新建文件、新建文件夹、重命名、删除
 - `Agent Files` 中点击 `.md`、`.json`、`.toml`、`.txt`、`.yaml`、`.yml`、`.log` 等文本文件时，会先在右侧 detail pane 直接预览内容；其中 Markdown 走原生渲染，其余文本走等宽代码块预览，并保留单独的编辑入口
 - `Agent Files` 的文本预览超过 10 MB 时会回退为原始文本预览，不再执行 Markdown 渲染或结构化格式化
@@ -31,7 +31,7 @@ SkillsMaster 的目标，是把这些分散在文件系统、命令行和配置�
 - `Skill Detail` 中的 `SKILL.md` 编辑已统一为右侧 detail pane 纯文本编辑器
 - 可为每个 Agent 单独设置默认安装方式：`symbolic link` 或 `physical copy`
 - 从 GitHub 仓库扫描并安装 Skills，安装后落到 canonical 目录并写入 lock file
-- 浏览并安装 `skills.sh` Registry 中的 Skills
+- 浏览并安装 `Skills.sh` 中的 Skills
 - 浏览 ClawHub marketplace，查看详情、读取 `SKILL.md`，并安装到 OpenClaw
 - 管理 GitHub / GitLab Custom Repository，支持 `SSH` 和 `HTTPS + Token`
 - Custom Repository 支持 clone / pull、轻量索引缓存、按需加载详情和本地安装
@@ -136,21 +136,21 @@ cd SkillsMaster
 
 ## 界面预览
 
-### Custom Repository
+### Repositories 浏览页
 
-![SkillsMaster Custom Repository](docs/screenshots/skill-detail.png)
+![SkillsMaster Repositories 浏览页](docs/screenshots/skill-detail.png)
 
 ### Agent 默认安装方式设置
 
 ![SkillsMaster Agent 默认安装方式设置](docs/screenshots/agent-setting.png)
 
-### Dashboard
+### All Skills
 
-![SkillsMaster Dashboard](docs/screenshots/dashboard.png)
+![SkillsMaster All Skills](docs/screenshots/dashboard.png)
 
-### Registry 浏览页
+### Skills.sh 浏览页
 
-![SkillsMaster Registry 浏览页](docs/screenshots/registry-browser.png)
+![SkillsMaster Skills.sh 浏览页](docs/screenshots/registry-browser.png)
 
 ### ClawHub 浏览页
 

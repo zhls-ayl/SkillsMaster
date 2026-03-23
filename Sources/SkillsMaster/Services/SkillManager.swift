@@ -81,7 +81,7 @@ final class SkillManager {
     // MARK: - Custom Repositories State
 
     /// 用户配置的 custom repositories（支持 GitHub / GitLab）。
-    /// 首次 `refresh()` 时会从配置文件中加载，并驱动 sidebar 中的 `Custom Repos` 区域。
+    /// 首次 `refresh()` 时会从配置文件中加载，并驱动 sidebar 中的 `Repositories` 区域。
     var repositories: [SkillRepository] = []
 
     /// 每个 repository 的同步状态（仅保存在内存中，不落盘）。

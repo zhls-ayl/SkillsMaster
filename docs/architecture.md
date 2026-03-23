@@ -21,8 +21,8 @@ SkillsMaster 是一个基于 SwiftUI 的 macOS 应用，用于管理多代理 Sk
 - `Views/AgentFiles/`、`Views/Components/TextFilePreviewView.swift` 与 `Views/Editor/TextFileEditorView.swift`：负责文件树、详情、只读预览和纯文本编辑 UI
 
 当前 `Skill Detail` 存在两种展示模式：
-- `Dashboard` 进入时显示完整管理视图：Metadata、包信息、更新状态、Agent 分配与 Finder / Terminal / 编辑操作
-- `Agents > Skills > 具体 Agent` 进入时显示只读内容视图：仅保留标题、描述、Metadata 与 Markdown 正文，不展示包信息、Agent 分配或任何管理按钮
+- `Installed > All Skills` 进入时显示完整管理视图：Metadata、包信息、更新状态、Agent 分配与 Finder / Terminal / 编辑操作
+- `Agents > Agents Skills > 具体 Agent` 进入时显示只读内容视图：仅保留标题、描述、Metadata 与 Markdown 正文，不展示包信息、Agent 分配或任何管理按钮
 
 ## 启动与刷新主流程
 1. `SkillsMasterApp` 注入全局 `SkillManager`
@@ -51,8 +51,9 @@ SkillsMaster 是一个基于 SwiftUI 的 macOS 应用，用于管理多代理 Sk
 - Codex、Gemini CLI 仍兼容读取 `~/.agents/skills`
 - OpenCode、Copilot、Cursor 等存在跨目录读取或继承关系
 - SkillsMaster 在 UI 中区分“直接安装”和“继承安装”，避免误删或误切换
+- Sidebar 的 `Agents` 分组先显示 `Agent Files`，再显示 `Agents Skills`
 - `Agent Files` 的根目录以 `configDirectoryPath` 为准；例如 Codex 为 `~/.codex`，Claude Code 为 `~/.claude`
-- 只有 CLI 已安装或配置目录已存在的 Agent，才会在 Sidebar 的 `Agents > Files` 下显示
+- 只有 CLI 已安装或配置目录已存在的 Agent，才会在 Sidebar 的 `Agents > Agent Files` 下显示
 - `skills/` 目录及其子树在 `Agent Files` 中视为受保护路径：允许浏览、允许只读预览、允许 Finder / Terminal 跳转，但不允许新建、重命名、删除、内置编辑或外置编辑
 - `Agent Files` 对 `.md`、`.json`、`.toml`、`.txt`、`.yaml`、`.yml`、`.log` 提供内置文本预览；其中 Markdown 走原生渲染，其他类型走等宽代码块展示，超过 10 MB 时统一回退为原始文本预览
 - `Agent Files` 的内置编辑格式与上述预览格式保持一致；`SKILL.md` 在 `Skill Detail` 中也复用同一套纯文本编辑器，但不会绕过 `Agent Files` 的只读保护规则
