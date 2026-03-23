@@ -19,6 +19,10 @@ SkillsMaster 是一个基于 SwiftUI 的 macOS 应用，用于管理多代理 Sk
 - `ViewModels/TextFileEditorViewModel.swift`：负责纯文本编辑器的加载、保存与脏状态
 - `Views/AgentFiles/` 与 `Views/Editor/TextFileEditorView.swift`：负责文件树、详情和纯文本编辑 UI
 
+当前 `Skill Detail` 存在两种展示模式：
+- `Dashboard` 进入时显示完整管理视图：Metadata、包信息、更新状态、Agent 分配与 Finder / Terminal / 编辑操作
+- `Agents > Skills > 具体 Agent` 进入时显示只读内容视图：仅保留标题、描述、Metadata 与 Markdown 正文，不展示包信息、Agent 分配或任何管理按钮
+
 ## 启动与刷新主流程
 1. `SkillsMasterApp` 注入全局 `SkillManager`
 2. `ContentView` 首次出现时执行迁移：`MigrationManager.migrateIfNeeded()`

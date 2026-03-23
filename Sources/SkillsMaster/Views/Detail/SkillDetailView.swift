@@ -10,8 +10,25 @@ import SwiftUI
 /// - 操作按钮（edit、delete、open in Finder / Terminal）
 struct SkillDetailView: View {
 
+    enum DisplayMode: Equatable {
+        case management
+        case contentOnly
+
+        var showsManagementUI: Bool {
+            self == .management
+        }
+
+        static func forSidebarSelection(_ selection: SidebarItem?) -> Self {
+            if case .agentSkills = selection {
+                return .contentOnly
+            }
+            return .management
+        }
+    }
+
     let skillID: String
     @Bindable var viewModel: SkillDetailViewModel
+    let displayMode: DisplayMode
 
     /// 复制路径按钮的反馈状态：为 `true` 时显示绿色勾选，1.5 秒后自动恢复。
     @State private var pathCopied = false
@@ -81,19 +98,21 @@ struct SkillDetailView: View {
                         skillMetadataSection(skill)
                     }
 
-                    // Package 信息区（含 update 状态），进入详情页后优先展示。
-                    // 如果存在 `lockEntry`，展示完整 package 信息；否则展示手动关联 repo 的 UI。
-                    Divider()
-                    if let lockEntry = skill.lockEntry {
-                        lockFileSection(skill, lockEntry)
-                    } else {
-                        linkToRepoSection(skill)
+                    if displayMode.showsManagementUI {
+                        // Package 信息区（含 update 状态），进入详情页后优先展示。
+                        // 如果存在 `lockEntry`，展示完整 package 信息；否则展示手动关联 repo 的 UI。
+                        Divider()
+                        if let lockEntry = skill.lockEntry {
+                            lockFileSection(skill, lockEntry)
+                        } else {
+                            linkToRepoSection(skill)
+                        }
+
+                        Divider()
+
+                        // Agent assignment 区域。
+                        agentAssignmentSection(skill)
                     }
-
-                    Divider()
-
-                    // Agent assignment 区域。
-                    agentAssignmentSection(skill)
 
                     Divider()
 
@@ -104,37 +123,39 @@ struct SkillDetailView: View {
             }
             .navigationTitle(skill.displayName)
             .toolbar {
-                ToolbarItemGroup {
-                    // 在 Finder 中定位。
-                    Button {
-                        viewModel.revealInFinder(skill: skill)
-                    } label: {
-                        Image(systemName: "folder")
-                    }
-                    .help("在 Finder 中显示")
+                if displayMode.showsManagementUI {
+                    ToolbarItemGroup {
+                        // 在 Finder 中定位。
+                        Button {
+                            viewModel.revealInFinder(skill: skill)
+                        } label: {
+                            Image(systemName: "folder")
+                        }
+                        .help("在 Finder 中显示")
 
-                    // 在 Terminal 中打开。
-                    Button {
-                        viewModel.openInTerminal(skill: skill)
-                    } label: {
-                        Image(systemName: "terminal")
-                    }
-                    .help("在 Terminal 中打开")
+                        // 在 Terminal 中打开。
+                        Button {
+                            viewModel.openInTerminal(skill: skill)
+                        } label: {
+                            Image(systemName: "terminal")
+                        }
+                        .help("在 Terminal 中打开")
 
-                    // 编辑按钮。
-                    Button {
-                        viewModel.startEditing(skill: skill)
-                    } label: {
-                        Image(systemName: "pencil")
-                    }
-                    .help("Edit SKILL.md")
+                        // 编辑按钮。
+                        Button {
+                            viewModel.startEditing(skill: skill)
+                        } label: {
+                            Image(systemName: "pencil")
+                        }
+                        .help("Edit SKILL.md")
 
-                    Button {
-                        viewModel.openInExternalEditor(skill: skill)
-                    } label: {
-                        Image(systemName: "square.and.arrow.up")
+                        Button {
+                            viewModel.openInExternalEditor(skill: skill)
+                        } label: {
+                            Image(systemName: "square.and.arrow.up")
+                        }
+                        .help("在外置编辑器中打开 SKILL.md")
                     }
-                    .help("在外置编辑器中打开 SKILL.md")
                 }
             }
         } else {

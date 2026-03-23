@@ -20,8 +20,8 @@ SkillsMaster 的目标，是把这些分散在文件系统、命令行和配置�
 
 - 自动检测本机 Agent，并扫描 `~/.skillsmaster/skills`、各 Agent 目录以及兼容目录中的 Skills
 - 统一展示 direct install 与 inherited install，并支持按 Agent 过滤查看
-- Dashboard 支持搜索、排序、删除，以及在 Finder / Terminal 中打开 Skill
-- 支持在 Sidebar 中按 `Agents > Skills / Files` 分层导航；`Agent Files` 仅对已安装或已有配置目录的 Agent 显示
+- Dashboard 支持搜索、排序、删除，以及在 Finder / Terminal 中打开 Skill；右侧详情保留完整管理能力
+- 支持在 Sidebar 中按 `Agents > Skills / Files` 分层导航；`Agents > Skills` 的详情页只读显示 Skill 标题、描述、Metadata 与 Markdown 正文，`Agent Files` 仅对已安装或已有配置目录的 Agent 显示
 - `Agent Files` 支持浏览 Agent 配置根目录，默认显示隐藏文件，并支持新建文件、新建文件夹、重命名、删除
 - `Agent Files` 中支持在右侧 detail pane 中编辑 `.json`、`.md`、`.toml` 等文本文件；切换文件、切换 Sidebar 或关闭编辑时会提示保存 / 放弃 / 取消
 - `Agent Files` 中可配置全局外置编辑器和全局默认终端，并支持在 Finder / 外置编辑器 / 终端中打开当前文件或目录

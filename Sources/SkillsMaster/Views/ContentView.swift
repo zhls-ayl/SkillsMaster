@@ -159,7 +159,11 @@ struct ContentView: View {
                     )
                 }
             } else if let skillID = selectedSkillID, let vm = detailVM {
-                SkillDetailView(skillID: skillID, viewModel: vm)
+                SkillDetailView(
+                    skillID: skillID,
+                    viewModel: vm,
+                    displayMode: SkillDetailView.DisplayMode.forSidebarSelection(selectedSidebarItem)
+                )
                     // `.id(skillID)` 会强制 SwiftUI 在选中 skill 变化时销毁并重建 detail view，
                     // 而不是复用旧实例并走隐式的 cross-fade transition。
                     // 如果没有这行，`NavigationSplitView` 在过渡动画期间会短暂保留旧内容，
