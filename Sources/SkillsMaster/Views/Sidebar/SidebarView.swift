@@ -14,18 +14,19 @@ enum SidebarItem: Hashable {
     /// Custom repository browser — each configured repo gets its own sidebar row.
     /// The associated UUID is the SkillRepository.id, used to look up the VM in ContentView.
     case customRepo(UUID)
-    case agent(AgentType)
+    case agentSkills(AgentType)
+    case agentFiles(AgentType)
     case settings
 
     /// Maps sidebar options to Agent filter values
     /// - .dashboard / .settings / .registry / .clawHub / .customRepo → nil (show all skills or different content)
-    /// - .agent(type) → type (only show skills for this Agent)
+    /// - .agentSkills(type) → type (only show skills for this Agent)
     /// This computed property is similar to Java's getter, executes switch calculation on each access
     var agentFilter: AgentType? {
         switch self {
-        case .agent(let agentType):
+        case .agentSkills(let agentType):
             return agentType
-        case .dashboard, .settings, .registry, .clawHub, .customRepo:
+        case .dashboard, .settings, .registry, .clawHub, .customRepo, .agentFiles:
             return nil
         }
     }
@@ -53,6 +54,19 @@ struct SidebarView: View {
     /// Uses `.sheet(item:)` binding: shows sheet when non-nil, closes when nil
     /// This way uses only one @State variable to control both sheet display and content, avoiding dual state synchronization timing issues
     @State private var installVM: SkillInstallViewModel?
+
+    private var skillAgentTypes: [AgentType] {
+        AgentType.displayNameLengthSortedCases
+    }
+
+    private var fileAgentTypes: [AgentType] {
+        let supported = Set(
+            skillManager.agents
+                .filter(\.supportsRootFileManagement)
+                .map(\.type)
+        )
+        return AgentType.displayNameLengthSortedCases.filter { supported.contains($0) }
+    }
 
     var body: some View {
         List(selection: $selection) {
@@ -114,23 +128,38 @@ struct SidebarView: View {
             }
 
             Section("Agents") {
-                ForEach(AgentType.displayNameLengthSortedCases) { agentType in
-                    let agent = skillManager.agents.first { $0.type == agentType }
+                DisclosureGroup("Skills") {
+                    ForEach(skillAgentTypes) { agentType in
+                        let agent = skillManager.agents.first { $0.type == agentType }
 
-                    sidebarRow {
-                        Label {
-                            Text(agentType.displayName)
-                        } icon: {
-                            AgentIconView(agentType: agentType, size: 16)
+                        sidebarRow {
+                            Label {
+                                Text(agentType.displayName)
+                            } icon: {
+                                AgentIconView(agentType: agentType, size: 16)
+                            }
                         }
+                        .badge(skillManager.skills(for: agentType).count)
+                        // Use skillManager.skills(for:) instead of agent?.skillCount,
+                        // because the latter only counts skills in Agent's own directory (from AgentDetector),
+                        // not including inherited installations (like Copilot inheriting skills from Claude directory)
+                        // opacity controls transparency: uninstalled Agents are shown semi-transparent
+                        .opacity(agent?.isInstalled == true ? 1.0 : 0.5)
+                        .tag(SidebarItem.agentSkills(agentType))
                     }
-                    .badge(skillManager.skills(for: agentType).count)
-                    // Use skillManager.skills(for:) instead of agent?.skillCount,
-                    // because the latter only counts skills in Agent's own directory (from AgentDetector),
-                    // not including inherited installations (like Copilot inheriting skills from Claude directory)
-                    // opacity controls transparency: uninstalled Agents are shown semi-transparent
-                    .opacity(agent?.isInstalled == true ? 1.0 : 0.5)
-                    .tag(SidebarItem.agent(agentType))
+                }
+
+                DisclosureGroup("Files") {
+                    ForEach(fileAgentTypes) { agentType in
+                        sidebarRow {
+                            Label {
+                                Text(agentType.displayName)
+                            } icon: {
+                                AgentIconView(agentType: agentType, size: 16)
+                            }
+                        }
+                        .tag(SidebarItem.agentFiles(agentType))
+                    }
                 }
             }
         }

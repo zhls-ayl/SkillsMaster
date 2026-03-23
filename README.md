@@ -1,6 +1,6 @@
 # SkillsMaster
 
-SkillsMaster 是一个面向 macOS 的原生应用，用统一的图形界面管理多种 AI 编程代理的 Skills。当前仓库围绕真实实现持续维护以下链路：本地扫描、Agent 分配、`SKILL.md` 编辑、更新检查、Registry / ClawHub / Custom Repository 安装，以及测试、打包、Release、Homebrew 分发。
+SkillsMaster 是一个面向 macOS 的原生应用，用统一的图形界面管理多种 AI 编程代理的 Skills 与 Agent 根目录文件。当前仓库围绕真实实现持续维护以下链路：本地扫描、Agent 分配、Agent Files 浏览、`SKILL.md` 编辑、更新检查、Registry / ClawHub / Custom Repository 安装，以及测试、打包、Release、Homebrew 分发。
 
 > 项目来源：本仓库源自 fork [crossoverJie/SkillDeck](https://github.com/crossoverJie/SkillDeck.git)，当前以 `SkillsMaster` 为产品名持续演进和维护。
 
@@ -21,6 +21,10 @@ SkillsMaster 的目标，是把这些分散在文件系统、命令行和配置�
 - 自动检测本机 Agent，并扫描 `~/.skillsmaster/skills`、各 Agent 目录以及兼容目录中的 Skills
 - 统一展示 direct install 与 inherited install，并支持按 Agent 过滤查看
 - Dashboard 支持搜索、排序、删除，以及在 Finder / Terminal 中打开 Skill
+- 支持在 Sidebar 中按 `Agents > Skills / Files` 分层导航；`Agent Files` 仅对已安装或已有配置目录的 Agent 显示
+- `Agent Files` 支持浏览 Agent 配置根目录，默认显示隐藏文件，并支持新建文件、新建文件夹、重命名、删除
+- `Agent Files` 中可用系统默认应用打开普通文本文件，并支持在 Finder / Terminal 中跳转当前文件或目录
+- `Agent Files` 中的 `skills/` 目录及其子内容只读显示，不允许新建、重命名、删除或外部编辑
 - 详情页支持查看 Frontmatter、Markdown 正文、lock file 信息和更新状态
 - 内置 `SKILL.md` 编辑器，可编辑 YAML frontmatter 与正文内容并保存回本地
 - 可为每个 Agent 单独设置默认安装方式：`symbolic link` 或 `physical copy`
@@ -62,6 +66,8 @@ SkillsMaster 的目标，是把这些分散在文件系统、命令行和配置�
 
 - `~/.skillsmaster/skills` 是 SkillsMaster 维护的事实源目录
 - Agent 目录中的 direct install 会按默认安装方式落为 symbolic link 或 physical copy
+- `Agent Files` 的根目录来自各 Agent 的配置目录，例如 `~/.codex`、`~/.claude`、`~/.gemini`
+- `Agent Files` 中的 `skills/` 是受保护路径，只允许浏览与跳转，不允许直接改写
 - `~/.agents/.skill-lock.json` 仍保留在旧位置，以兼容外部工具
 - Custom Repository 的本地 clone 目录是 SkillsMaster 管理的 cache，不是推荐的手工编辑工作区
 - 当前 ClawHub 入口明确面向 OpenClaw，不是面向所有 Agent 的通用 marketplace 安装入口
@@ -73,6 +79,7 @@ SkillsMaster 的目标，是把这些分散在文件系统、命令行和配置�
 - Project-level Skills 管理
 - Create Skill Wizard / 模板化创建流程
 - 更深入的批量操作能力
+- `Agent Files` 内置文本编辑器或可配置外部编辑器
 - 完整的签名、公证、DMG 分发体验
 
 ## 环境要求

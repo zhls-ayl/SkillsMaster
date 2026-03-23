@@ -42,6 +42,9 @@ struct ContentView: View {
     /// SkillRepository can change (user renames it), but the UUID stays stable.
     @State private var repoVMs: [UUID: RepositoryBrowserViewModel] = [:]
 
+    /// Agent root file browser ViewModels — one per file-manageable Agent.
+    @State private var agentFilesVMs: [AgentType: AgentFilesViewModel] = [:]
+
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
             // 左栏：sidebar navigation。
@@ -64,6 +67,10 @@ struct ContentView: View {
                     ClawHubBrowserView(viewModel: vm)
                         .navigationSplitViewColumnWidth(min: 300, ideal: 400, max: 600)
                 }
+            } else if case .agentFiles(let agentType) = selectedSidebarItem,
+                      let vm = agentFilesVMs[agentType] {
+                AgentFilesBrowserView(viewModel: vm)
+                    .navigationSplitViewColumnWidth(min: 280, ideal: 360, max: 520)
             } else if case .customRepo(let repoID) = selectedSidebarItem,
                       let vm = repoVMs[repoID] {
                 // Custom repository browser：展示当前选中 repository 中的 skills。
@@ -116,6 +123,9 @@ struct ContentView: View {
                         subtitle: "请从 ClawHub 中选择一个 Skill 查看详情"
                     )
                 }
+            } else if case .agentFiles(let agentType) = selectedSidebarItem,
+                      let vm = agentFilesVMs[agentType] {
+                AgentFileDetailView(viewModel: vm)
             } else if case .customRepo = selectedSidebarItem {
                 if case .customRepo(let repoID) = selectedSidebarItem,
                    let vm = repoVMs[repoID],
@@ -168,6 +178,7 @@ struct ContentView: View {
             await skillManager.refresh()
             // Build repoVMs for any repositories that were loaded during refresh
             rebuildRepoVMs()
+            rebuildAgentFilesVMs()
             // Auto-check for updates on app launch (subject to 4-hour interval limit, not every launch requests GitHub API)
             await skillManager.checkForAppUpdate()
         }
@@ -175,6 +186,9 @@ struct ContentView: View {
         // (e.g., user adds or removes a repository in Settings)
         .onChange(of: skillManager.repositories) { _, _ in
             rebuildRepoVMs()
+        }
+        .onChange(of: skillManager.agents) { _, _ in
+            rebuildAgentFilesVMs()
         }
     }
 
@@ -205,6 +219,25 @@ struct ContentView: View {
         let currentIDs = Set(skillManager.repositories.map(\.id))
         for id in repoVMs.keys where !currentIDs.contains(id) {
             repoVMs.removeValue(forKey: id)
+        }
+    }
+
+    /// Create or remove AgentFilesViewModel instances to match currently available file-manageable Agents.
+    private func rebuildAgentFilesVMs() {
+        let supportedTypes = Set(
+            skillManager.agents
+                .filter(\.supportsRootFileManagement)
+                .map(\.type)
+        )
+
+        for agentType in supportedTypes {
+            if agentFilesVMs[agentType] == nil {
+                agentFilesVMs[agentType] = AgentFilesViewModel(agentType: agentType)
+            }
+        }
+
+        for agentType in agentFilesVMs.keys where !supportedTypes.contains(agentType) {
+            agentFilesVMs.removeValue(forKey: agentType)
         }
     }
 }

@@ -154,6 +154,13 @@ enum AgentType: String, CaseIterable, Identifiable, Codable {
         }
     }
 
+    /// Resolved absolute configuration directory URL
+    var configDirectoryURL: URL? {
+        guard let configDirectoryPath else { return nil }
+        let expanded = NSString(string: configDirectoryPath).expandingTildeInPath
+        return URL(fileURLWithPath: expanded)
+    }
+
     /// CLI command used to detect if the Agent is installed
     var detectCommand: String {
         switch self {

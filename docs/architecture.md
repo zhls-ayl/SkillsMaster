@@ -1,7 +1,7 @@
 # 架构与实现边界
 
 ## 系统定位
-SkillsMaster 是一个基于 SwiftUI 的 macOS 应用，用于管理多代理 Skills 的本地生命周期。它不是通用包管理器，也不是云端服务；核心职责是把本地目录、symbolic link / physical copy、lock file、Git 来源与 UI 操作统一起来。
+SkillsMaster 是一个基于 SwiftUI 的 macOS 应用，用于管理多代理 Skills 的本地生命周期，以及各 Agent 配置根目录中的普通文件。它不是通用包管理器，也不是云端服务；核心职责是把本地目录、symbolic link / physical copy、lock file、Git 来源与 UI 操作统一起来。
 
 ## 实现结构
 - `Sources/SkillsMaster/App/`：应用入口、主题应用、启动激活
@@ -10,6 +10,12 @@ SkillsMaster 是一个基于 SwiftUI 的 macOS 应用，用于管理多代理 Sk
 - `Sources/SkillsMaster/Services/`：扫描、解析、lock file、Git、仓库、更新、迁移、文件监控
 - `Sources/SkillsMaster/Models/`：Agent、Skill、Repository、LockEntry 等核心模型
 - `Sources/SkillsMaster/Utilities/`：常量、扩展、版本比较等纯工具
+
+其中与 Agent 根目录文件管理直接相关的代码目前包括：
+- `Models/AgentType.swift`：定义各 Agent 的 `configDirectoryPath` 与 `skillsDirectoryPath`
+- `Services/AgentFileBrowserService.swift`：负责根目录树扫描、隐藏文件显示、只读保护与文件操作约束
+- `ViewModels/AgentFilesViewModel.swift`：负责 `Agent Files` 页面的加载、选择、刷新与系统跳转
+- `Views/AgentFiles/`：负责文件树和详情区域 UI
 
 ## 启动与刷新主流程
 1. `SkillsMasterApp` 注入全局 `SkillManager`
@@ -34,10 +40,13 @@ SkillsMaster 是一个基于 SwiftUI 的 macOS 应用，用于管理多代理 Sk
 - 每个 Agent 可以单独配置默认 direct install 方式：`symbolic link` 或 `physical copy`
 
 ## 代理与兼容策略
-`AgentType` 定义了当前受支持代理、检测命令、主目录与附加可读目录。不是所有代理都只读取自己的目录：
+`AgentType` 定义了当前受支持代理、检测命令、配置根目录、主技能目录与附加可读目录。不是所有代理都只读取自己的目录：
 - Codex、Gemini CLI 仍兼容读取 `~/.agents/skills`
 - OpenCode、Copilot、Cursor 等存在跨目录读取或继承关系
 - SkillsMaster 在 UI 中区分“直接安装”和“继承安装”，避免误删或误切换
+- `Agent Files` 的根目录以 `configDirectoryPath` 为准；例如 Codex 为 `~/.codex`，Claude Code 为 `~/.claude`
+- 只有 CLI 已安装或配置目录已存在的 Agent，才会在 Sidebar 的 `Agents > Files` 下显示
+- `skills/` 目录及其子树在 `Agent Files` 中视为受保护路径：允许浏览、允许 Finder / Terminal 跳转，但不允许新建、重命名、删除或通过系统默认编辑器打开
 
 处理代理相关问题时，应优先查看：
 - `Sources/SkillsMaster/Models/AgentType.swift`

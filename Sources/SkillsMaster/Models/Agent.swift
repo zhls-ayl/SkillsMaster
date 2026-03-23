@@ -13,4 +13,5 @@ struct Agent: Identifiable, Hashable {
     // Identifiable protocol: SwiftUI uses id to track each element in a list
     var id: String { type.id }
     var displayName: String { type.displayName }
+    var supportsRootFileManagement: Bool { isInstalled || configDirectoryExists }
 }
