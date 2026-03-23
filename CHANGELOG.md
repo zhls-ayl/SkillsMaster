@@ -7,6 +7,20 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.1.7] - 2026-03-23
+### Added
+- 新增 `Agent Files` 视图，支持按 Agent 浏览配置根目录文件树，并对 `skills/` 及其子树维持只读保护；同时提供隐藏文件显示、新建文件 / 文件夹、重命名、删除，以及在 Finder / 终端中打开当前项的能力。
+- 新增内置纯文本预览与编辑能力，覆盖 `SKILL.md`、`.md`、`.json`、`.toml`、`.txt`、`.yaml`、`.yml`、`.log` 等文本文件；支持全局外置编辑器和默认终端偏好设置，并可直接从应用内跳转。
+
+### Changed
+- 调整 `Agents > Skills` 详情模式：从 Agent 侧边栏进入时，详情页改为只读内容视图，仅展示标题、描述、Metadata 与 Markdown 正文；完整管理入口继续保留在 Dashboard 详情面板中。
+- 优化 `Agent Files` 文件树加载策略，改为按需 lazy load 子目录，减少首次展开大目录时的阻塞。
+- `Agent Files` 中的文本文件会优先在右侧 detail pane 直接预览；Markdown 使用原生渲染，其他文本使用等宽格式化预览，超过 10 MB 时自动降级为原始文本预览。
+
+### Fixed
+- 修复旧版 root-skill 安装遗留物不会自动清理的问题，应用启动时现在会清除已被 canonical `skills/` 目录取代的历史根层文件，避免 Agent 根目录长期残留重复产物。
+- 修复 `Agent Files` 对目录 symbolic link 的识别问题，当前可正确把目录链接视为可展开目录，而不是普通文件。
+
 ## [0.1.6] - 2026-03-22
 ### Fixed
 - 修复 Registry 中部分 Skill 的 `Skill Content` 无法加载并显示 `Network error: The network connection was lost` 的问题。`SkillContentFetcher` 现在会在 `raw.githubusercontent.com` 不可达时自动回退到 GitHub Contents API，避免正文加载链路被 raw CDN 连接问题直接中断。
