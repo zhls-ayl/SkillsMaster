@@ -34,8 +34,7 @@ let package = Package(
             // .icns files need to use .copy to preserve original format, as SPM doesn't recognize .icns type
             resources: [
                 .copy("Resources/AppIcon.icns"),
-                .copy("Resources/AgentIcons"),
-                .process("Resources/Assets.xcassets")
+                .copy("Resources/AgentIcons")
             ]
         ),
 
