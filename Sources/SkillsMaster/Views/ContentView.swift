@@ -18,26 +18,26 @@ struct ContentView: View {
     @State private var columnVisibility = NavigationSplitViewVisibility.all
 
     /// 当前选中的 sidebar item。
-    @State private var selectedSidebarItem: SidebarItem? = .dashboard
+    @State private var selectedSidebarItem: SidebarItem? = .allSkills
 
     /// 当前选中的 skill ID，用于驱动 detail 页面导航。
     @State private var selectedSkillID: String?
 
-    /// Dashboard 对应的 `ViewModel`。
-    @State private var dashboardVM: DashboardViewModel?
+    /// All Skills 对应的 `ViewModel`。
+    @State private var allSkillsVM: AllSkillsViewModel?
 
     /// Detail 对应的 `ViewModel`。
     @State private var detailVM: SkillDetailViewModel?
 
-    /// F09：Registry Browser 对应的 `ViewModel`。
+    /// F09：Skills.sh Browser 对应的 `ViewModel`。
     /// Created alongside other VMs in .task; manages leaderboard browsing and search
-    @State private var registryVM: RegistryBrowserViewModel?
+    @State private var skillsShVM: RegistryBrowserViewModel?
     /// ClawHub 浏览页面的 ViewModel。
     @State private var clawHubVM: ClawHubBrowserViewModel?
 
-    /// Custom repository ViewModels — one per configured repository, keyed by UUID.
+    /// Repository ViewModels — one per configured repository, keyed by UUID.
     ///
-    /// Dictionary lookup by UUID maps each `SidebarItem.customRepo(id)` selection to its VM.
+    /// Dictionary lookup by UUID maps each `SidebarItem.repository(id)` selection to its VM.
     /// Created/refreshed in .task whenever the repositories list changes.
     /// Using [UUID: RepositoryBrowserViewModel] instead of [SkillRepository: VM] because
     /// SkillRepository can change (user renames it), but the UUID stays stable.
@@ -61,10 +61,10 @@ struct ContentView: View {
                 .navigationSplitViewColumnWidth(min: 180, ideal: 220, max: 300)
         } content: {
             // 中栏：根据 sidebar selection 展示不同 content。
-            // F09：当选中 “Skills.sh” 时，显示 `RegistryBrowserView` 而不是 `DashboardView`。
-            if selectedSidebarItem == .registry {
+            // F09：当选中 “Skills.sh” 时，显示 `RegistryBrowserView` 而不是 `AllSkillsView`。
+            if selectedSidebarItem == .skillsSh {
                 // F09：skills.sh Browser，用于浏览和搜索 `skills.sh` catalog。
-                if let vm = registryVM {
+                if let vm = skillsShVM {
                     RegistryBrowserView(viewModel: vm)
                         // Skills.sh 页面需要更宽的中栏，以容纳 skill 信息和 install 按钮。
                         .navigationSplitViewColumnWidth(min: 300, ideal: 400, max: 600)
@@ -79,15 +79,15 @@ struct ContentView: View {
                 AgentFilesBrowserView(viewModel: vm)
                     .id("agent-files-browser-\(agentType.rawValue)")
                     .navigationSplitViewColumnWidth(min: 280, ideal: 360, max: 520)
-            } else if case .customRepo(let repoID) = selectedSidebarItem,
+            } else if case .repository(let repoID) = selectedSidebarItem,
                       let vm = repoVMs[repoID] {
-                // Custom repository browser：展示当前选中 repository 中的 skills。
+                // Repository browser：展示当前选中 repository 中的 skills。
                 RepositoryBrowserView(viewModel: vm)
                     .navigationSplitViewColumnWidth(min: 300, ideal: 400, max: 600)
             } else {
-                // 默认展示 skill dashboard 列表。
-                if let vm = dashboardVM {
-                    DashboardView(
+                // 默认展示 All Skills 列表。
+                if let vm = allSkillsVM {
+                    AllSkillsView(
                         viewModel: vm,
                         selectedSkillID: skillSelectionBinding,
                         selectedAgentFilter: selectedSidebarItem?.agentFilter
@@ -99,9 +99,9 @@ struct ContentView: View {
             }
         } detail: {
             // 右栏：根据 sidebar selection 展示不同 detail view。
-            if selectedSidebarItem == .registry {
+            if selectedSidebarItem == .skillsSh {
                 // F09: Show registry skill detail when a registry skill is selected
-                if let vm = registryVM, let skill = vm.selectedSkill {
+                if let vm = skillsShVM, let skill = vm.selectedSkill {
                     RegistrySkillDetailView(
                         skill: skill,
                         isInstalled: vm.isInstalled(skill),
@@ -135,8 +135,8 @@ struct ContentView: View {
                       let vm = agentFilesVMs[agentType] {
                 AgentFileDetailView(viewModel: vm)
                     .id("agent-files-detail-\(agentType.rawValue)")
-            } else if case .customRepo = selectedSidebarItem {
-                if case .customRepo(let repoID) = selectedSidebarItem,
+            } else if case .repository = selectedSidebarItem {
+                if case .repository(let repoID) = selectedSidebarItem,
                    let vm = repoVMs[repoID],
                    let skill = vm.selectedSkill {
                     RepositorySkillDetailView(
@@ -180,13 +180,13 @@ struct ContentView: View {
         }
         // `.task` 会在 `View` 首次出现时执行 async 任务，概念上类似 React 的 `useEffect([], ...)`。
         .task {
-            dashboardVM = DashboardViewModel(skillManager: skillManager)
+            allSkillsVM = AllSkillsViewModel(skillManager: skillManager)
             detailVM = SkillDetailViewModel(
                 skillManager: skillManager,
                 toolPreferences: toolPreferences
             )
-            // F09: Initialize registry browser ViewModel
-            registryVM = RegistryBrowserViewModel(skillManager: skillManager)
+            // F09: Initialize Skills.sh browser ViewModel
+            skillsShVM = RegistryBrowserViewModel(skillManager: skillManager)
             clawHubVM = ClawHubBrowserViewModel(skillManager: skillManager)
             // 先执行从旧路径（`~/.agents/`）到新路径（`~/.skillsmaster/`）的迁移。
             // 这一步必须发生在 `refresh()` 之前，否则 scanner 看不到新的 canonical 目录。

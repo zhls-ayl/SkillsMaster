@@ -19,7 +19,7 @@ struct SkillDetailView: View {
         }
 
         static func forSidebarSelection(_ selection: SidebarItem?) -> Self {
-            if case .agentSkills = selection {
+            if case .skillsByAgent = selection {
                 return .contentOnly
             }
             return .management

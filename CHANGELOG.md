@@ -7,6 +7,14 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.1.9] - 2026-03-23
+### Changed
+- 重组左侧 Sidebar 信息架构：顶层分组统一为 `Installed`、`Marketplace`、`Repositories`、`Agents`；其中主列表入口改名为 `All Skills`，在线来源改为 `Skills.sh` / `ClawHub`，并将 `Agent Files` 调整到 `Agents Skills` 之前，降低导航扫描成本。
+- 同步调整 `Agents` 分组中的命名与层级说明，使 `Agent Files`、`Agents Skills` 与对应详情模式保持一致，减少原有 `Dashboard` / `Registry` / `Custom Repos` 混用带来的理解成本。
+
+### Fixed
+- 对齐导航内部语义命名：将 `Dashboard`、`customRepo`、`agentSkills` 等旧选择态与视图 / ViewModel 命名统一到 `All Skills`、`repository`、`skillsByAgent` 等当前结构，降低后续维护时 UI 文案与代码语义再次漂移的风险。
+
 ## [0.1.8] - 2026-03-23
 ### Fixed
 - 修复 Dashboard Skill 详情页工具栏中的 Finder 文件夹按钮会错误打开无关目录的问题。现在详情页会稳定定位到当前 Skill 的实际目录，不再落到下载目录等偏移位置。

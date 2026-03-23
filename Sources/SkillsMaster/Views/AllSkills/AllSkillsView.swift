@@ -1,13 +1,13 @@
 import SwiftUI
 
-/// DashboardView is the skill list page (F02)
+/// AllSkillsView is the main installed skill list page (F02)
 ///
 /// Displays all installed skills, supporting search, filtering, and sorting
-struct DashboardView: View {
+struct AllSkillsView: View {
 
     /// @Bindable allows @Observable object properties to be prefixed with $ to create Binding
     /// For example, $viewModel.searchText creates a Binding<String>
-    @Bindable var viewModel: DashboardViewModel
+    @Bindable var viewModel: AllSkillsViewModel
     @Binding var selectedSkillID: String?
     /// Agent filter driven by sidebar selection in ContentView.
     /// Keeping this as an input value preserves one-way data flow from navigation state to list rendering.
@@ -60,7 +60,7 @@ struct DashboardView: View {
                 Menu {
                     // Section creates titled groups in menus, similar to Android's menu group
                     Section("Sort By") {
-                        ForEach(DashboardViewModel.SortOrder.allCases, id: \.self) { order in
+                        ForEach(AllSkillsViewModel.SortOrder.allCases, id: \.self) { order in
                             Button {
                                 if viewModel.sortOrder == order {
                                     // Click selected sort field → toggle ascending/descending

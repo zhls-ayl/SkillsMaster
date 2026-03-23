@@ -7,7 +7,7 @@ import SwiftUI
 /// 2. **Search**: Type-ahead search using the skills.sh API
 ///
 /// This view occupies the "content" column (middle pane) of the NavigationSplitView,
-/// replacing DashboardView when the "Skills.sh" sidebar item is selected.
+/// replacing AllSkillsView when the "Skills.sh" sidebar item is selected.
 ///
 /// @Bindable is used instead of @Binding for @Observable objects — it allows creating
 /// two-way bindings ($viewModel.property) from @Observable class properties.
@@ -160,7 +160,7 @@ struct RegistryBrowserView: View {
 
     /// Scrollable list of registry skills with selection support
     ///
-    /// Uses SwiftUI List with selection binding (same pattern as DashboardView).
+    /// Uses SwiftUI List with selection binding (same pattern as AllSkillsView).
     /// When a skill is clicked, selectedSkillID is set → detail pane shows RegistrySkillDetailView.
     /// The `selection:` parameter enables single-selection mode in the List.
     private var skillList: some View {

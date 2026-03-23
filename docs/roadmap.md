@@ -3,7 +3,7 @@
 ## 已落地能力
 根据当前代码实现，项目已经具备以下核心能力：
 - 多代理检测与本地 Skills 扫描
-- 三栏式 Dashboard / Detail / Sidebar 原生界面
+- 三栏式 All Skills / Detail / Sidebar 原生界面
 - 按 Agent 浏览配置根目录文件，并保护 `skills/` 子树只读
 - 纯文本内置编辑器，覆盖 `SKILL.md`、`.json`、`.md`、`.toml`
 - 全局外置编辑器与默认终端配置

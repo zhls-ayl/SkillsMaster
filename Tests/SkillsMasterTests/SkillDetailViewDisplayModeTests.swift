@@ -3,16 +3,16 @@ import XCTest
 
 final class SkillDetailViewDisplayModeTests: XCTestCase {
 
-    func testDashboardSelectionUsesManagementMode() {
+    func testAllSkillsSelectionUsesManagementMode() {
         XCTAssertEqual(
-            SkillDetailView.DisplayMode.forSidebarSelection(.dashboard),
+            SkillDetailView.DisplayMode.forSidebarSelection(.allSkills),
             .management
         )
     }
 
-    func testAgentSkillsSelectionUsesContentOnlyMode() {
+    func testSkillsByAgentSelectionUsesContentOnlyMode() {
         XCTAssertEqual(
-            SkillDetailView.DisplayMode.forSidebarSelection(.agentSkills(.claudeCode)),
+            SkillDetailView.DisplayMode.forSidebarSelection(.skillsByAgent(.claudeCode)),
             .contentOnly
         )
     }

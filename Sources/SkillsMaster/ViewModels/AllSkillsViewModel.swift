@@ -1,6 +1,6 @@
 import Foundation
 
-/// DashboardViewModel manages the state and interaction logic for the Dashboard page
+/// AllSkillsViewModel manages the state and interaction logic for the All Skills page
 ///
 /// In the MVVM architecture, the ViewModel acts as a bridge between View and Model:
 /// - View observes ViewModel state changes through data binding
@@ -11,7 +11,7 @@ import Foundation
 /// @MainActor ensures all state modifications happen on the main thread (UI-safe)
 @MainActor
 @Observable
-final class DashboardViewModel {
+final class AllSkillsViewModel {
 
     /// Search keyword
     var searchText = ""
@@ -79,7 +79,7 @@ final class DashboardViewModel {
 
     /// Calculate the list of skills to display based on current search, external filter, and sort conditions.
     ///
-    /// `agentFilter` is provided by the parent view (ContentView -> DashboardView),
+    /// `agentFilter` is provided by the parent view (ContentView -> AllSkillsView),
     /// which keeps sidebar navigation state as the single source of truth.
     /// This avoids maintaining duplicated filter state inside the ViewModel.
     ///

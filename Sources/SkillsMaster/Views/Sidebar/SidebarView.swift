@@ -3,30 +3,30 @@ import SwiftUI
 /// Sidebar navigation item enum
 ///
 /// Each case represents a clickable item in the sidebar.
-/// F09 adds `.registry` for browsing the skills.sh catalog.
-/// Custom repos: `.customRepo(UUID)` for user-configured GitHub/GitLab repositories.
+/// F09 adds `.skillsSh` for browsing the skills.sh catalog.
+/// Repository rows use `.repository(UUID)` for user-configured GitHub/GitLab repositories.
 enum SidebarItem: Hashable {
-    case dashboard
+    case allSkills
     /// F09: Browse skills.sh catalog (leaderboard + search)
-    case registry
+    case skillsSh
     /// Browse ClawHub marketplace
     case clawHub
-    /// Custom repository browser — each configured repo gets its own sidebar row.
+    /// Repository browser — each configured repo gets its own sidebar row.
     /// The associated UUID is the SkillRepository.id, used to look up the VM in ContentView.
-    case customRepo(UUID)
-    case agentSkills(AgentType)
+    case repository(UUID)
+    case skillsByAgent(AgentType)
     case agentFiles(AgentType)
     case settings
 
     /// Maps sidebar options to Agent filter values
-    /// - .dashboard / .settings / .registry / .clawHub / .customRepo → nil (show all skills or different content)
-    /// - .agentSkills(type) → type (only show skills for this Agent)
+    /// - .allSkills / .settings / .skillsSh / .clawHub / .repository → nil
+    /// - .skillsByAgent(type) → type (show only skills for this Agent)
     /// This computed property is similar to Java's getter, executes switch calculation on each access
     var agentFilter: AgentType? {
         switch self {
-        case .agentSkills(let agentType):
+        case .skillsByAgent(let agentType):
             return agentType
-        case .dashboard, .settings, .registry, .clawHub, .customRepo, .agentFiles:
+        case .allSkills, .settings, .skillsSh, .clawHub, .repository, .agentFiles:
             return nil
         }
     }
@@ -80,7 +80,7 @@ struct SidebarView: View {
                 // List(selection:) reads tags from the final row container.
                 // If .tag is applied inside sidebarRow() and then wrapped by
                 // .badge/.opacity/.listRowBackground, some rows become non-selectable.
-                .tag(SidebarItem.dashboard)
+                .tag(SidebarItem.allSkills)
 
             }
 
@@ -89,7 +89,7 @@ struct SidebarView: View {
                 sidebarRow {
                     Label("Skills.sh", systemImage: "globe")
                 }
-                .tag(SidebarItem.registry)
+                .tag(SidebarItem.skillsSh)
 
                 sidebarRow {
                     Label("ClawHub", systemImage: "shippingbox")
@@ -103,7 +103,7 @@ struct SidebarView: View {
             if !skillManager.repositories.isEmpty {
                 Section("Repositories") {
                     ForEach(skillManager.repositories) { repo in
-                        let item = SidebarItem.customRepo(repo.id)
+                        let item = SidebarItem.repository(repo.id)
                         let syncStatus = skillManager.repoSyncStatuses[repo.id] ?? .idle
 
                         sidebarRow {
@@ -161,7 +161,7 @@ struct SidebarView: View {
                         // not including inherited installations (like Copilot inheriting skills from Claude directory)
                         // opacity controls transparency: uninstalled Agents are shown semi-transparent
                         .opacity(agent?.isInstalled == true ? 1.0 : 0.5)
-                        .tag(SidebarItem.agentSkills(agentType))
+                        .tag(SidebarItem.skillsByAgent(agentType))
                     }
                 }
             }
