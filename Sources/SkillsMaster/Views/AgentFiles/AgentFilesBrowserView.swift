@@ -23,7 +23,7 @@ struct AgentFilesBrowserView: View {
                         : "使用工具栏新建文件或文件夹时，SkillsMaster 会自动创建该 Agent 的根目录。"
                 )
             } else {
-                List(selection: $viewModel.selectedItemID) {
+                List(selection: selectionBinding) {
                     AgentFileTreeRowsView(
                         entries: viewModel.entries,
                         depth: 0,
@@ -41,7 +41,7 @@ struct AgentFilesBrowserView: View {
                     Image(systemName: "doc.badge.plus")
                 }
                 .help("新建文件")
-                .disabled(!viewModel.canCreateInCurrentDirectory)
+                .disabled(!viewModel.canCreateInCurrentDirectory || viewModel.isEditingTextFile)
 
                 Button {
                     namePrompt = .newFolder
@@ -49,7 +49,7 @@ struct AgentFilesBrowserView: View {
                     Image(systemName: "folder.badge.plus")
                 }
                 .help("新建文件夹")
-                .disabled(!viewModel.canCreateInCurrentDirectory)
+                .disabled(!viewModel.canCreateInCurrentDirectory || viewModel.isEditingTextFile)
 
                 Button {
                     guard let selectedItem = viewModel.selectedItem else { return }
@@ -58,7 +58,7 @@ struct AgentFilesBrowserView: View {
                     Image(systemName: "pencil")
                 }
                 .help("重命名")
-                .disabled(!viewModel.canRenameSelectedItem)
+                .disabled(!viewModel.canRenameSelectedItem || viewModel.isEditingTextFile)
 
                 Button(role: .destructive) {
                     pendingDeleteItem = viewModel.selectedItem
@@ -66,7 +66,7 @@ struct AgentFilesBrowserView: View {
                     Image(systemName: "trash")
                 }
                 .help("删除")
-                .disabled(!viewModel.canDeleteSelectedItem)
+                .disabled(!viewModel.canDeleteSelectedItem || viewModel.isEditingTextFile)
 
                 Button {
                     viewModel.reload()
@@ -156,6 +156,15 @@ struct AgentFilesBrowserView: View {
         } message: {
             Text(localErrorMessage ?? viewModel.errorMessage ?? "未知错误")
         }
+    }
+
+    private var selectionBinding: Binding<String?> {
+        Binding(
+            get: { viewModel.selectedItemID },
+            set: { newSelection in
+                viewModel.requestSelectionChange(to: newSelection)
+            }
+        )
     }
 
     private func handleNamePrompt(_ prompt: NamePromptContext, name: String) {

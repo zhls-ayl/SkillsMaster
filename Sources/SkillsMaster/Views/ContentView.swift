@@ -12,6 +12,7 @@ import SwiftUI
 struct ContentView: View {
 
     @Environment(SkillManager.self) private var skillManager
+    @Environment(ToolPreferencesStore.self) private var toolPreferences
 
     /// `NavigationSplitView` 的栏位可见性状态。
     @State private var columnVisibility = NavigationSplitViewVisibility.all
@@ -44,13 +45,19 @@ struct ContentView: View {
 
     /// Agent root file browser ViewModels — one per file-manageable Agent.
     @State private var agentFilesVMs: [AgentType: AgentFilesViewModel] = [:]
+    @State private var pendingNavigationAction: PendingNavigationAction?
+
+    private enum PendingNavigationAction {
+        case sidebar(SidebarItem?)
+        case skill(String?)
+    }
 
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
             // 左栏：sidebar navigation。
             // navigationSplitViewColumnWidth constrains sidebar width range,
             // preventing content from being clipped when sidebar is too narrow after window restoration
-            SidebarView(selection: $selectedSidebarItem)
+            SidebarView(selection: sidebarSelectionBinding)
                 .navigationSplitViewColumnWidth(min: 180, ideal: 220, max: 300)
         } content: {
             // 中栏：根据 sidebar selection 展示不同 content。
@@ -82,7 +89,7 @@ struct ContentView: View {
                 if let vm = dashboardVM {
                     DashboardView(
                         viewModel: vm,
-                        selectedSkillID: $selectedSkillID,
+                        selectedSkillID: skillSelectionBinding,
                         selectedAgentFilter: selectedSidebarItem?.agentFilter
                     )
                         // 约束中栏（skill list）的宽度范围，
@@ -170,7 +177,10 @@ struct ContentView: View {
         // `.task` 会在 `View` 首次出现时执行 async 任务，概念上类似 React 的 `useEffect([], ...)`。
         .task {
             dashboardVM = DashboardViewModel(skillManager: skillManager)
-            detailVM = SkillDetailViewModel(skillManager: skillManager)
+            detailVM = SkillDetailViewModel(
+                skillManager: skillManager,
+                toolPreferences: toolPreferences
+            )
             // F09: Initialize registry browser ViewModel
             registryVM = RegistryBrowserViewModel(skillManager: skillManager)
             clawHubVM = ClawHubBrowserViewModel(skillManager: skillManager)
@@ -191,6 +201,32 @@ struct ContentView: View {
         }
         .onChange(of: skillManager.agents) { _, _ in
             rebuildAgentFilesVMs()
+        }
+        .confirmationDialog(
+            "未保存修改",
+            isPresented: Binding(
+                get: { pendingNavigationAction != nil },
+                set: { if !$0 { pendingNavigationAction = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("保存") {
+                Task {
+                    let didSave = await saveCurrentEditorForNavigation()
+                    if didSave {
+                        performPendingNavigationAction()
+                    }
+                }
+            }
+            Button("放弃修改", role: .destructive) {
+                discardCurrentEditorForNavigation()
+                performPendingNavigationAction()
+            }
+            Button("取消", role: .cancel) {
+                pendingNavigationAction = nil
+            }
+        } message: {
+            Text("当前编辑器有未保存修改。")
         }
     }
 
@@ -234,12 +270,110 @@ struct ContentView: View {
 
         for agentType in supportedTypes {
             if agentFilesVMs[agentType] == nil {
-                agentFilesVMs[agentType] = AgentFilesViewModel(agentType: agentType)
+                agentFilesVMs[agentType] = AgentFilesViewModel(
+                    agentType: agentType,
+                    toolPreferences: toolPreferences
+                )
             }
         }
 
         for agentType in agentFilesVMs.keys where !supportedTypes.contains(agentType) {
             agentFilesVMs.removeValue(forKey: agentType)
         }
+    }
+
+    private var sidebarSelectionBinding: Binding<SidebarItem?> {
+        Binding(
+            get: { selectedSidebarItem },
+            set: { newValue in
+                requestSidebarSelection(newValue)
+            }
+        )
+    }
+
+    private var skillSelectionBinding: Binding<String?> {
+        Binding(
+            get: { selectedSkillID },
+            set: { newValue in
+                requestSkillSelection(newValue)
+            }
+        )
+    }
+
+    private func requestSidebarSelection(_ newValue: SidebarItem?) {
+        guard newValue != selectedSidebarItem else { return }
+
+        if hasUnsavedChangesInCurrentEditor {
+            pendingNavigationAction = .sidebar(newValue)
+            return
+        }
+
+        discardCurrentEditorForNavigation()
+        selectedSidebarItem = newValue
+    }
+
+    private func requestSkillSelection(_ newValue: String?) {
+        guard newValue != selectedSkillID else { return }
+
+        if hasUnsavedChangesInCurrentEditor {
+            pendingNavigationAction = .skill(newValue)
+            return
+        }
+
+        discardCurrentEditorForNavigation()
+        selectedSkillID = newValue
+    }
+
+    private var hasUnsavedChangesInCurrentEditor: Bool {
+        if let skillDetailViewModel = detailVM, skillDetailViewModel.hasUnsavedChangesInEditor {
+            return true
+        }
+
+        if case .agentFiles(let agentType) = selectedSidebarItem,
+           let agentFilesViewModel = agentFilesVMs[agentType],
+           agentFilesViewModel.hasUnsavedChangesInEditor {
+            return true
+        }
+
+        return false
+    }
+
+    private func saveCurrentEditorForNavigation() async -> Bool {
+        if case .agentFiles(let agentType) = selectedSidebarItem,
+           let agentFilesViewModel = agentFilesVMs[agentType],
+           agentFilesViewModel.isEditingTextFile {
+            return await agentFilesViewModel.saveCurrentEditorAndClose()
+        }
+
+        if let skillDetailViewModel = detailVM, skillDetailViewModel.isEditingTextFile {
+            return await skillDetailViewModel.saveCurrentEditorAndClose()
+        }
+
+        return true
+    }
+
+    private func discardCurrentEditorForNavigation() {
+        if case .agentFiles(let agentType) = selectedSidebarItem,
+           let agentFilesViewModel = agentFilesVMs[agentType],
+           agentFilesViewModel.isEditingTextFile {
+            agentFilesViewModel.discardEditorForNavigation()
+        }
+
+        if let skillDetailViewModel = detailVM, skillDetailViewModel.isEditingTextFile {
+            skillDetailViewModel.discardEditorForNavigation()
+        }
+    }
+
+    private func performPendingNavigationAction() {
+        switch pendingNavigationAction {
+        case .sidebar(let sidebarItem):
+            selectedSidebarItem = sidebarItem
+        case .skill(let skillID):
+            selectedSkillID = skillID
+        case nil:
+            break
+        }
+
+        pendingNavigationAction = nil
     }
 }

@@ -9,6 +9,7 @@ final class AgentFilesViewModel {
     let agentType: AgentType
     let rootURL: URL
     let protectedURL: URL
+    let toolPreferences: ToolPreferencesStore
 
     var entries: [AgentFileItem] = []
     var selectedItemID: String?
@@ -18,25 +19,34 @@ final class AgentFilesViewModel {
     var errorMessage: String?
     var selectedItemDetails: AgentFileDetails?
     var isLoadingSelectedItemDetails = false
+    var editorViewModel: TextFileEditorViewModel?
+    var pendingNavigationAction: PendingNavigationAction?
 
     @ObservationIgnored private let service: AgentFileBrowserService
     @ObservationIgnored private let watcher = FileSystemWatcher()
     @ObservationIgnored private var cancellables = Set<AnyCancellable>()
     @ObservationIgnored private var hasLoadedOnce = false
-    @ObservationIgnored private var childrenByParentID: [String: [AgentFileItem]] = [:]
-    @ObservationIgnored private var loadingDirectoryIDs = Set<String>()
+    private var childrenByParentID: [String: [AgentFileItem]] = [:]
+    private var loadingDirectoryIDs = Set<String>()
     @ObservationIgnored private var watchBaseURL: URL
     @ObservationIgnored private var reloadTask: Task<Void, Never>?
     @ObservationIgnored private var directoryLoadTasks: [String: Task<Void, Never>] = [:]
     @ObservationIgnored private var detailsTask: Task<Void, Never>?
 
+    enum PendingNavigationAction {
+        case closeEditor
+        case selectItem(String?)
+    }
+
     init(
         agentType: AgentType,
+        toolPreferences: ToolPreferencesStore,
         service: AgentFileBrowserService = AgentFileBrowserService()
     ) {
         self.agentType = agentType
         self.rootURL = agentType.configDirectoryURL ?? agentType.skillsDirectoryURL.deletingLastPathComponent()
         self.protectedURL = agentType.skillsDirectoryURL
+        self.toolPreferences = toolPreferences
         self.watchBaseURL = self.rootURL
         self.service = service
         setupWatcher()
@@ -82,6 +92,26 @@ final class AgentFilesViewModel {
     var canOpenSelectedTextFile: Bool {
         guard let selectedItem else { return false }
         return !selectedItem.isProtected && selectedItemDetails?.isTextFile == true
+    }
+
+    var canEditSelectedInternally: Bool {
+        guard let selectedItem else { return false }
+        return !selectedItem.isProtected
+            && !selectedItem.isDirectory
+            && TextEditableFileKind.from(url: selectedItem.url) != nil
+    }
+
+    var canOpenSelectedInExternalEditor: Bool {
+        guard let selectedItem else { return false }
+        return !selectedItem.isProtected
+    }
+
+    var isEditingTextFile: Bool {
+        editorViewModel != nil
+    }
+
+    var hasUnsavedChangesInEditor: Bool {
+        editorViewModel?.hasUnsavedChanges == true
     }
 
     var canRevealSelectedOrRoot: Bool {
@@ -132,6 +162,8 @@ final class AgentFilesViewModel {
                 childrenByParentID = [:]
                 expandedDirectoryIDs = []
                 selectedItemDetails = nil
+                editorViewModel = nil
+                pendingNavigationAction = nil
                 hasLoadedOnce = true
 
                 if snapshot.rootExists {
@@ -149,6 +181,8 @@ final class AgentFilesViewModel {
                 childrenByParentID = [:]
                 expandedDirectoryIDs = []
                 selectedItemDetails = nil
+                editorViewModel = nil
+                pendingNavigationAction = nil
                 watchBaseURL = nearestExistingAncestor(for: rootURL)
                 restartWatcher()
                 errorMessage = error.localizedDescription
@@ -196,6 +230,7 @@ final class AgentFilesViewModel {
         isLoadingSelectedItemDetails = false
 
         guard let selectedItem else { return }
+        guard editorViewModel == nil else { return }
         guard !selectedItem.isDirectory, !selectedItem.isSymbolicLink else { return }
 
         detailsTask = Task { [service] in
@@ -286,30 +321,105 @@ final class AgentFilesViewModel {
         let targetURL = terminalTargetURL(for: selectedItem?.url ?? rootURL)
         guard pathExists(targetURL) else { return }
 
-        let escapedPath = targetURL.path.replacingOccurrences(of: "'", with: "'\\''")
-        let script = """
-        tell application "Terminal"
-            do script "cd '\(escapedPath)'"
-            activate
-        end tell
-        """
-
-        if let appleScript = NSAppleScript(source: script) {
-            var error: NSDictionary?
-            appleScript.executeAndReturnError(&error)
-            if let error {
-                errorMessage = error.description
-            }
+        do {
+            try ApplicationLauncher.openInTerminal(
+                directoryURL: targetURL,
+                preferences: toolPreferences
+            )
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
 
-    func openSelectedFileInDefaultApp() {
-        guard let selectedItem, canOpenSelectedTextFile else { return }
+    func openSelectedInExternalEditor() {
+        guard let selectedItem, canOpenSelectedInExternalEditor else { return }
 
-        guard NSWorkspace.shared.open(selectedItem.url) else {
-            errorMessage = "无法用系统默认应用打开该文件。"
+        do {
+            try ApplicationLauncher.openInExternalEditor(
+                itemURL: selectedItem.url,
+                preferences: toolPreferences
+            )
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func requestSelectionChange(to newSelection: String?) {
+        guard newSelection != selectedItemID else { return }
+
+        if hasUnsavedChangesInEditor {
+            pendingNavigationAction = .selectItem(newSelection)
             return
         }
+
+        closeEditor()
+        selectedItemID = newSelection
+        loadSelectedItemDetails()
+    }
+
+    func startEditingSelectedItem() {
+        guard let selectedItem, canEditSelectedInternally else { return }
+        errorMessage = nil
+        editorViewModel = TextFileEditorViewModel(fileURL: selectedItem.url)
+        selectedItemDetails = nil
+    }
+
+    func requestCloseEditor() {
+        guard let editorViewModel else { return }
+        if editorViewModel.hasUnsavedChanges {
+            pendingNavigationAction = .closeEditor
+            return
+        }
+        closeEditor()
+    }
+
+    func cancelPendingNavigationAction() {
+        pendingNavigationAction = nil
+    }
+
+    func discardPendingNavigationAction() {
+        switch pendingNavigationAction {
+        case .closeEditor:
+            closeEditor()
+        case .selectItem(let selection):
+            closeEditor()
+            selectedItemID = selection
+            loadSelectedItemDetails()
+        case nil:
+            break
+        }
+        pendingNavigationAction = nil
+    }
+
+    func saveCurrentEditorAndClose() async -> Bool {
+        guard let editorViewModel else { return false }
+        let didSave = await editorViewModel.save()
+        guard didSave else { return false }
+
+        closeEditor()
+        loadSelectedItemDetails()
+        return true
+    }
+
+    func savePendingNavigationAction() async -> Bool {
+        let pendingAction = pendingNavigationAction
+        guard let editorViewModel else { return false }
+
+        let didSave = await editorViewModel.save()
+        guard didSave else { return false }
+
+        self.editorViewModel = nil
+
+        if case .selectItem(let selection) = pendingAction {
+            selectedItemID = selection
+            loadSelectedItemDetails()
+        }
+        self.pendingNavigationAction = nil
+        return true
+    }
+
+    func discardEditorForNavigation() {
+        closeEditor()
     }
 
     private func loadChildren(for item: AgentFileItem) {
@@ -404,6 +514,7 @@ final class AgentFilesViewModel {
         guard let selectedItemID else { return }
         if findItem(withID: selectedItemID, in: entries) == nil {
             self.selectedItemID = nil
+            closeEditor()
         }
     }
 
@@ -444,6 +555,11 @@ final class AgentFilesViewModel {
 
     private func pathExists(_ url: URL) -> Bool {
         FileManager.default.fileExists(atPath: url.path) || SymlinkManager.isSymlink(at: url)
+    }
+
+    private func closeEditor() {
+        editorViewModel = nil
+        pendingNavigationAction = nil
     }
 
     private func nearestExistingAncestor(for url: URL) -> URL {

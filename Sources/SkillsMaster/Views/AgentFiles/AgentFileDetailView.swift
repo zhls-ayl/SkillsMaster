@@ -19,18 +19,52 @@ struct AgentFileDetailView: View {
     }()
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                if let selectedItem = viewModel.selectedItem {
-                    selectedItemSection(selectedItem)
-                } else {
-                    rootSection
+        Group {
+            if let editorViewModel = viewModel.editorViewModel {
+                TextFileEditorView(
+                    viewModel: editorViewModel,
+                    onSave: {
+                        _ = await viewModel.saveCurrentEditorAndClose()
+                    },
+                    onCancel: {
+                        viewModel.requestCloseEditor()
+                    }
+                )
+            } else {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        if let selectedItem = viewModel.selectedItem {
+                            selectedItemSection(selectedItem)
+                        } else {
+                            rootSection
+                        }
+                    }
+                    .padding()
                 }
             }
-            .padding()
         }
         .task(id: viewModel.selectedItemID) {
             viewModel.loadSelectedItemDetails()
+        }
+        .confirmationDialog(
+            "未保存修改",
+            isPresented: Binding(
+                get: { viewModel.pendingNavigationAction != nil },
+                set: { if !$0 { viewModel.cancelPendingNavigationAction() } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("保存") {
+                Task { _ = await viewModel.savePendingNavigationAction() }
+            }
+            Button("放弃修改", role: .destructive) {
+                viewModel.discardPendingNavigationAction()
+            }
+            Button("取消", role: .cancel) {
+                viewModel.cancelPendingNavigationAction()
+            }
+        } message: {
+            Text("当前文件有未保存修改。")
         }
     }
 
@@ -63,7 +97,8 @@ struct AgentFileDetailView: View {
             }
 
             actionSection(
-                canOpenTextFile: false,
+                canEditInternally: false,
+                canOpenInExternalEditor: false,
                 canRevealInFinder: viewModel.canRevealSelectedOrRoot,
                 canOpenInTerminal: viewModel.canOpenSelectedOrRootInTerminal
             )
@@ -132,7 +167,8 @@ struct AgentFileDetailView: View {
             }
 
             actionSection(
-                canOpenTextFile: viewModel.canOpenSelectedTextFile,
+                canEditInternally: viewModel.canEditSelectedInternally,
+                canOpenInExternalEditor: viewModel.canOpenSelectedInExternalEditor,
                 canRevealInFinder: viewModel.canRevealSelectedOrRoot,
                 canOpenInTerminal: viewModel.canOpenSelectedOrRootInTerminal
             )
@@ -141,7 +177,8 @@ struct AgentFileDetailView: View {
 
     @ViewBuilder
     private func actionSection(
-        canOpenTextFile: Bool,
+        canEditInternally: Bool,
+        canOpenInExternalEditor: Bool,
         canRevealInFinder: Bool,
         canOpenInTerminal: Bool
     ) -> some View {
@@ -150,11 +187,18 @@ struct AgentFileDetailView: View {
                 .font(.headline)
 
             HStack(spacing: 12) {
-                if canOpenTextFile {
-                    Button("系统打开文本文件") {
-                        viewModel.openSelectedFileInDefaultApp()
+                if canEditInternally {
+                    Button("编辑") {
+                        viewModel.startEditingSelectedItem()
                     }
                     .buttonStyle(.borderedProminent)
+                }
+
+                if canOpenInExternalEditor {
+                    Button("外置编辑器打开") {
+                        viewModel.openSelectedInExternalEditor()
+                    }
+                    .buttonStyle(.bordered)
                 }
 
                 Button("在 Finder 中显示") {

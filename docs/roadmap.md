@@ -5,6 +5,8 @@
 - 多代理检测与本地 Skills 扫描
 - 三栏式 Dashboard / Detail / Sidebar 原生界面
 - 按 Agent 浏览配置根目录文件，并保护 `skills/` 子树只读
+- 纯文本内置编辑器，覆盖 `SKILL.md`、`.json`、`.md`、`.toml`
+- 全局外置编辑器与默认终端配置
 - `SKILL.md` 解析、编辑与 Markdown 渲染
 - 从 Git 仓库安装 Skills，并写入规范目录与lock file
 - 注册表浏览与安装
@@ -21,7 +23,7 @@
 - 更完整的搜索与多维过滤
 - 菜单栏快速入口
 - 更深入的批量操作能力
-- `Agent Files` 内置文本编辑器或可配置外部编辑器
+- 语法高亮、LSP、diff-aware 的高级编辑能力
 - 进一步完善的发行分发体验（如签名、公证、DMG）
 
 这些项目在重新设计前，不应在 README 或对外文档中表述为“已支持”。

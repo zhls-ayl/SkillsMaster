@@ -14,8 +14,10 @@ SkillsMaster 是一个基于 SwiftUI 的 macOS 应用，用于管理多代理 Sk
 其中与 Agent 根目录文件管理直接相关的代码目前包括：
 - `Models/AgentType.swift`：定义各 Agent 的 `configDirectoryPath` 与 `skillsDirectoryPath`
 - `Services/AgentFileBrowserService.swift`：负责根目录树扫描、隐藏文件显示、只读保护与文件操作约束
-- `ViewModels/AgentFilesViewModel.swift`：负责 `Agent Files` 页面的加载、选择、刷新与系统跳转
-- `Views/AgentFiles/`：负责文件树和详情区域 UI
+- `Services/ToolPreferencesStore.swift` / `Services/ApplicationLauncher.swift`：负责外置编辑器、默认终端偏好和实际启动行为
+- `ViewModels/AgentFilesViewModel.swift`：负责 `Agent Files` 页面的加载、选择、编辑态切换、未保存保护与系统跳转
+- `ViewModels/TextFileEditorViewModel.swift`：负责纯文本编辑器的加载、保存与脏状态
+- `Views/AgentFiles/` 与 `Views/Editor/TextFileEditorView.swift`：负责文件树、详情和纯文本编辑 UI
 
 ## 启动与刷新主流程
 1. `SkillsMasterApp` 注入全局 `SkillManager`
@@ -46,7 +48,9 @@ SkillsMaster 是一个基于 SwiftUI 的 macOS 应用，用于管理多代理 Sk
 - SkillsMaster 在 UI 中区分“直接安装”和“继承安装”，避免误删或误切换
 - `Agent Files` 的根目录以 `configDirectoryPath` 为准；例如 Codex 为 `~/.codex`，Claude Code 为 `~/.claude`
 - 只有 CLI 已安装或配置目录已存在的 Agent，才会在 Sidebar 的 `Agents > Files` 下显示
-- `skills/` 目录及其子树在 `Agent Files` 中视为受保护路径：允许浏览、允许 Finder / Terminal 跳转，但不允许新建、重命名、删除或通过系统默认编辑器打开
+- `skills/` 目录及其子树在 `Agent Files` 中视为受保护路径：允许浏览、允许 Finder / Terminal 跳转，但不允许新建、重命名、删除、内置编辑或外置编辑
+- `Agent Files` 的可编辑格式当前限定为 `.json`、`.md`、`.toml`；`SKILL.md` 在 `Skill Detail` 中也复用同一套纯文本编辑器，但不会绕过 `Agent Files` 的只读保护规则
+- 外置编辑器是全局设置；默认终端也是全局设置，当前支持 Terminal / iTerm / Warp / Ghostty
 
 处理代理相关问题时，应优先查看：
 - `Sources/SkillsMaster/Models/AgentType.swift`

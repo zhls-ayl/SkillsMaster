@@ -7,9 +7,7 @@ import AppKit
 final class SkillDetailViewModel {
 
     let skillManager: SkillManager
-
-    /// Whether to show the editor
-    var isEditing = false
+    let toolPreferences: ToolPreferencesStore
 
     /// Operation feedback message
     var feedbackMessage: String?
@@ -37,8 +35,19 @@ final class SkillDetailViewModel {
     /// Error message from link operation
     var linkError: String?
 
-    init(skillManager: SkillManager) {
+    var editorViewModel: TextFileEditorViewModel?
+    var pendingEditorAction: PendingEditorAction?
+
+    init(
+        skillManager: SkillManager,
+        toolPreferences: ToolPreferencesStore
+    ) {
         self.skillManager = skillManager
+        self.toolPreferences = toolPreferences
+    }
+
+    enum PendingEditorAction {
+        case close
     }
 
     /// Gets the latest data for a specific skill
@@ -65,19 +74,74 @@ final class SkillDetailViewModel {
 
     /// Open skill directory in Terminal
     func openInTerminal(skill: Skill) {
-        let url = skill.canonicalURL
-        // AppleScript is macOS's automation scripting language, used here to open Terminal
-        let script = """
-        tell application "Terminal"
-            do script "cd '\(url.path)'"
-            activate
-        end tell
-        """
-        // NSAppleScript executes AppleScript code
-        if let appleScript = NSAppleScript(source: script) {
-            var error: NSDictionary?
-            appleScript.executeAndReturnError(&error)
+        do {
+            try ApplicationLauncher.openInTerminal(
+                directoryURL: skill.canonicalURL,
+                preferences: toolPreferences
+            )
+        } catch {
+            feedbackMessage = error.localizedDescription
         }
+    }
+
+    func openInExternalEditor(skill: Skill) {
+        do {
+            try ApplicationLauncher.openInExternalEditor(
+                itemURL: skill.skillMDURL,
+                preferences: toolPreferences
+            )
+        } catch {
+            feedbackMessage = error.localizedDescription
+        }
+    }
+
+    var isEditingTextFile: Bool {
+        editorViewModel != nil
+    }
+
+    var hasUnsavedChangesInEditor: Bool {
+        editorViewModel?.hasUnsavedChanges == true
+    }
+
+    func startEditing(skill: Skill) {
+        feedbackMessage = nil
+        editorViewModel = TextFileEditorViewModel(fileURL: skill.skillMDURL)
+    }
+
+    func requestCloseEditor() {
+        guard let editorViewModel else { return }
+        if editorViewModel.hasUnsavedChanges {
+            pendingEditorAction = .close
+            return
+        }
+        closeEditor()
+    }
+
+    func cancelPendingEditorAction() {
+        pendingEditorAction = nil
+    }
+
+    func discardPendingEditorAction() {
+        closeEditor()
+    }
+
+    func saveCurrentEditorAndClose() async -> Bool {
+        guard let editorViewModel else { return false }
+        let didSave = await editorViewModel.save()
+        guard didSave else { return false }
+
+        await skillManager.refresh()
+        closeEditor()
+        return true
+    }
+
+    func discardEditorForNavigation() {
+        closeEditor()
+    }
+
+    private func closeEditor() {
+        editorViewModel = nil
+        pendingEditorAction = nil
     }
 
     // MARK: - F12: Update Check

@@ -60,4 +60,13 @@ enum Constants {
 
     /// UserDefaults key prefix for per-Agent install mode preferences.
     static let agentInstallModeKeyPrefix = "agentInstallMode"
+
+    /// UserDefaults key for the configured external editor app path.
+    static let externalEditorAppPathKey = "externalEditorAppPath"
+
+    /// UserDefaults key for the configured default terminal type.
+    static let defaultTerminalAppKey = "defaultTerminalApp"
+
+    /// UserDefaults key for the preferred terminal app bundle path.
+    static let defaultTerminalAppPathKey = "defaultTerminalAppPath"
 }

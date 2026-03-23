@@ -45,6 +45,7 @@ struct SkillsMasterApp: App {
     /// `SkillManager` 是 app 的核心状态管理器。
     /// 使用 `@State` 可以让 SwiftUI 管理它的生命周期。
     @State private var skillManager = SkillManager()
+    @State private var toolPreferences = ToolPreferencesStore()
 
     /// 持久化保存到 `UserDefaults` 的外观模式。
     ///
@@ -76,6 +77,7 @@ struct SkillsMasterApp: App {
                 // 所有子视图都可以通过 `@Environment` 访问它。
                 // 概念上类似 React 的 Context Provider 或 Android 的 dependency injection。
                 .environment(skillManager)
+                .environment(toolPreferences)
                 // 为主窗口应用统一的外观策略。
                 // `.preferredColorScheme(nil)` 表示 follow system，
                 // `.light` / `.dark` 则表示强制指定外观。
@@ -92,6 +94,7 @@ struct SkillsMasterApp: App {
         Settings {
             SettingsView()
                 .environment(skillManager)
+                .environment(toolPreferences)
                 // Apply the same theme policy to Settings window,
                 // ensuring all app windows stay visually consistent.
                 .preferredColorScheme(appThemeMode.colorScheme)

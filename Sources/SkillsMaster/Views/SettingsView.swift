@@ -1,4 +1,6 @@
 import SwiftUI
+import AppKit
+import UniformTypeIdentifiers
 
 /// SettingsView is the app settings page (opened via Cmd+,)
 ///
@@ -23,8 +25,8 @@ struct SettingsView: View {
                     Label("关于", systemImage: "info.circle")
                 }
         }
-        // Widened and taller to accommodate repository management and per-Agent install mode settings
-        .frame(width: 560, height: 560)
+        // Widened and taller to accommodate repository management and editor / terminal settings.
+        .frame(width: 620, height: 640)
     }
 }
 
@@ -32,8 +34,10 @@ struct SettingsView: View {
 struct 通用SettingsView: View {
 
     @Environment(SkillManager.self) private var skillManager
+    @Environment(ToolPreferencesStore.self) private var toolPreferences
 
     @State private var installModeError: String?
+    @State private var toolPreferenceError: String?
 
     /// Persisted appearance mode in UserDefaults.
     ///
@@ -135,6 +139,86 @@ struct 通用SettingsView: View {
                 }
             }
 
+            Section("Editor & Terminal") {
+                LabeledContent("内置编辑器") {
+                    Text("支持 .json / .md / .toml / SKILL.md")
+                        .foregroundStyle(.secondary)
+                }
+
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(alignment: .top, spacing: 16) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("外置编辑器")
+                            Text(toolPreferences.externalEditorDisplayName)
+                                .foregroundStyle(.secondary)
+                            if let appURL = toolPreferences.externalEditorAppURL {
+                                Text(appURL.path)
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
+                                    .textSelection(.enabled)
+                            } else {
+                                Text("未配置时回退到系统默认应用")
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
+                            }
+                        }
+
+                        Spacer()
+
+                        HStack(spacing: 8) {
+                            Button("选择应用…") {
+                                chooseExternalEditorApp()
+                            }
+                            .buttonStyle(.bordered)
+
+                            Button("清除") {
+                                toolPreferences.setExternalEditorApp(url: nil)
+                                toolPreferenceError = nil
+                            }
+                            .buttonStyle(.bordered)
+                            .disabled(toolPreferences.externalEditorAppURL == nil)
+                        }
+                    }
+
+                    HStack(alignment: .top, spacing: 16) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("默认终端")
+                            Text(toolPreferences.effectiveTerminalDisplayName)
+                                .foregroundStyle(.secondary)
+                            Text("支持 Terminal / iTerm / Warp / Ghostty")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                        }
+
+                        Spacer()
+
+                        HStack(spacing: 8) {
+                            Button("选择终端…") {
+                                chooseDefaultTerminalApp()
+                            }
+                            .buttonStyle(.bordered)
+
+                            Button("恢复默认") {
+                                do {
+                                    try toolPreferences.setDefaultTerminalApp(url: nil)
+                                    toolPreferenceError = nil
+                                } catch {
+                                    toolPreferenceError = error.localizedDescription
+                                }
+                            }
+                            .buttonStyle(.bordered)
+                            .disabled(toolPreferences.defaultTerminalApp == nil)
+                        }
+                    }
+                }
+
+                if let toolPreferenceError {
+                    Label(toolPreferenceError, systemImage: "exclamationmark.triangle")
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                }
+            }
+
             Section("Paths") {
                 LabeledContent("Shared Skills") {
                     Text(Constants.sharedSkillsPath)
@@ -150,6 +234,37 @@ struct 通用SettingsView: View {
         }
         .formStyle(.grouped)
         .padding()
+    }
+
+    private func chooseExternalEditorApp() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.applicationBundle]
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+        panel.allowsMultipleSelection = false
+        panel.prompt = "选择"
+
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        toolPreferences.setExternalEditorApp(url: url)
+        toolPreferenceError = nil
+    }
+
+    private func chooseDefaultTerminalApp() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.applicationBundle]
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+        panel.allowsMultipleSelection = false
+        panel.prompt = "选择"
+
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+
+        do {
+            try toolPreferences.setDefaultTerminalApp(url: url)
+            toolPreferenceError = nil
+        } catch {
+            toolPreferenceError = error.localizedDescription
+        }
     }
 }
 

@@ -12,10 +12,6 @@ struct SkillDetailView: View {
 
     let skillID: String
     @Bindable var viewModel: SkillDetailViewModel
-    @Environment(SkillManager.self) private var skillManager
-
-    /// 编辑时才创建的 `Editor ViewModel`。
-    @State private var editorVM: SkillEditorViewModel?
 
     /// 复制路径按钮的反馈状态：为 `true` 时显示绿色勾选，1.5 秒后自动恢复。
     @State private var pathCopied = false
@@ -43,8 +39,38 @@ struct SkillDetailView: View {
     }
 
     var body: some View {
-        // 这里相当于 SwiftUI 版的 `guard let`：如果 skill 不存在，就直接展示 empty state。
-        if let skill = viewModel.skill(id: skillID) {
+        if let editorViewModel = viewModel.editorViewModel {
+            TextFileEditorView(
+                viewModel: editorViewModel,
+                onSave: {
+                    _ = await viewModel.saveCurrentEditorAndClose()
+                },
+                onCancel: {
+                    viewModel.requestCloseEditor()
+                }
+            )
+            .confirmationDialog(
+                "未保存修改",
+                isPresented: Binding(
+                    get: { viewModel.pendingEditorAction != nil },
+                    set: { if !$0 { viewModel.cancelPendingEditorAction() } }
+                ),
+                titleVisibility: .visible
+            ) {
+                Button("保存") {
+                    Task { _ = await viewModel.saveCurrentEditorAndClose() }
+                }
+                Button("放弃修改", role: .destructive) {
+                    viewModel.discardPendingEditorAction()
+                }
+                Button("取消", role: .cancel) {
+                    viewModel.cancelPendingEditorAction()
+                }
+            } message: {
+                Text("当前 `SKILL.md` 有未保存修改。")
+            }
+        } else if let skill = viewModel.skill(id: skillID) {
+            // 这里相当于 SwiftUI 版的 `guard let`：如果 skill 不存在，就直接展示 empty state。
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     // 头部信息区。
@@ -97,24 +123,18 @@ struct SkillDetailView: View {
 
                     // 编辑按钮。
                     Button {
-                        let vm = SkillEditorViewModel(skillManager: skillManager)
-                        vm.load(skill: skill)
-                        editorVM = vm
-                        viewModel.isEditing = true
+                        viewModel.startEditing(skill: skill)
                     } label: {
                         Image(systemName: "pencil")
                     }
                     .help("Edit SKILL.md")
-                }
-            }
-            // `sheet` 是 macOS 的 modal dialog。
-            .sheet(isPresented: $viewModel.isEditing) {
-                if let editorVM {
-                    SkillEditorView(
-                        viewModel: editorVM,
-                        isPresented: $viewModel.isEditing
-                    )
-                    .frame(minWidth: 700, minHeight: 500)
+
+                    Button {
+                        viewModel.openInExternalEditor(skill: skill)
+                    } label: {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                    .help("在外置编辑器中打开 SKILL.md")
                 }
             }
         } else {
