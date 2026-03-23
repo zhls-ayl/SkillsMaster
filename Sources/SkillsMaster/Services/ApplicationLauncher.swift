@@ -21,6 +21,25 @@ enum ApplicationLauncher {
     }
 
     @MainActor
+    static func revealInFinder(itemURL: URL, fileManager: FileManager = .default) {
+        NSWorkspace.shared.activateFileViewerSelecting([
+            finderRevealURL(for: itemURL, fileManager: fileManager)
+        ])
+    }
+
+    static func finderRevealURL(for itemURL: URL, fileManager: FileManager = .default) -> URL {
+        var candidateURL = itemURL.standardizedFileURL
+
+        while !fileManager.fileExists(atPath: candidateURL.path) {
+            let parentURL = candidateURL.deletingLastPathComponent().standardizedFileURL
+            guard parentURL.path != candidateURL.path else { break }
+            candidateURL = parentURL
+        }
+
+        return candidateURL
+    }
+
+    @MainActor
     static func openInExternalEditor(
         itemURL: URL,
         preferences: ToolPreferencesStore

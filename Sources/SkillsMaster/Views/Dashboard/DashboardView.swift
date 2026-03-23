@@ -39,10 +39,7 @@ struct DashboardView: View {
                         // contextMenu is macOS's right-click menu
                         .contextMenu {
                             Button("Open in Finder") {
-                                NSWorkspace.shared.selectFile(
-                                    nil,
-                                    inFileViewerRootedAtPath: skill.canonicalURL.path
-                                )
+                                ApplicationLauncher.revealInFinder(itemURL: skill.canonicalURL)
                             }
                             Divider()  // Menu separator
                             Button("Delete", role: .destructive) {

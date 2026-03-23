@@ -1,5 +1,4 @@
 import Foundation
-import AppKit
 
 /// SkillDetailViewModel manages the state for the Skill detail page
 @MainActor
@@ -66,10 +65,10 @@ final class SkillDetailViewModel {
         }
     }
 
-    /// Reveal skill directory in Finder
-    /// NSWorkspace is the system interaction class provided by macOS AppKit framework
+    /// 在 Finder 中定位 skill 目录。
+    /// 统一走 `ApplicationLauncher`，避免各处直接调用不同的 Finder API。
     func revealInFinder(skill: Skill) {
-        NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: skill.canonicalURL.path)
+        ApplicationLauncher.revealInFinder(itemURL: skill.canonicalURL)
     }
 
     /// Open skill directory in Terminal

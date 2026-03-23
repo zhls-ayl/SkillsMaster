@@ -7,6 +7,11 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.1.8] - 2026-03-23
+### Fixed
+- 修复 Dashboard Skill 详情页工具栏中的 Finder 文件夹按钮会错误打开无关目录的问题。现在详情页会稳定定位到当前 Skill 的实际目录，不再落到下载目录等偏移位置。
+- 统一 Dashboard 列表右键 `Open in Finder` 与 Skill 详情页文件夹按钮的 Finder 打开逻辑，改为复用同一条 reveal 链路，并在目标路径缺失时自动回退到最近存在的父目录。
+
 ## [0.1.7] - 2026-03-23
 ### Added
 - 新增 `Agent Files` 视图，支持按 Agent 浏览配置根目录文件树，并对 `skills/` 及其子树维持只读保护；同时提供隐藏文件显示、新建文件 / 文件夹、重命名、删除，以及在 Finder / 终端中打开当前项的能力。
