@@ -12,7 +12,7 @@ SkillsMaster 是一个面向 macOS 的原生应用，用统一的图形界面管
 - `SKILL.md` 需要手工维护，Frontmatter 和 Markdown 容易出错
 - symbolic link / physical copy、lock file、来源仓库和更新状态难以追踪
 - 不同 Agent 之间存在继承读取规则，是否“真的安装到该 Agent”不容易判断
-- 想从 Skills.sh、GitHub 仓库、ClawHub 或自定义仓库安装 Skill 时，缺少统一入口
+- 想从 Skills.sh、Git 仓库、ClawHub 或自定义仓库安装 Skill 时，缺少统一入口
 
 SkillsMaster 的目标，是把这些分散在文件系统、命令行和配置文件里的操作，收敛到一个原生 macOS UI 里完成。
 
@@ -20,7 +20,7 @@ SkillsMaster 的目标，是把这些分散在文件系统、命令行和配置�
 
 - 自动检测本机 Agent，并扫描 `~/.skillsmaster/skills`、各 Agent 目录以及兼容目录中的 Skills
 - 统一展示 direct install 与 inherited install，并支持按 Agent 过滤查看
-- `Installed > All Skills` 页面支持搜索、排序、删除，以及在 Finder / Terminal 中打开 Skill；右侧详情保留完整管理能力
+- `Installed > All Skills` 页面支持搜索、排序、删除和在 Finder 中定位 Skill；右侧详情保留 Terminal 打开、编辑、分配、更新检查等完整管理能力
 - 支持在 Sidebar 中按 `Installed / Marketplace / Repositories / Agents` 分组导航；`Agents > Agent Files` 仅对已安装或已有配置目录的 Agent 显示，`Agents > Agents Skills` 的详情页只读显示 Skill 标题、描述、Metadata 与 Markdown 正文
 - `Agent Files` 支持浏览 Agent 配置根目录，默认显示隐藏文件，并支持新建文件、新建文件夹、重命名、删除
 - `Agent Files` 中点击 `.md`、`.json`、`.toml`、`.txt`、`.yaml`、`.yml`、`.log` 等文本文件时，会先在右侧 detail pane 直接预览内容；其中 Markdown 走原生渲染，其余文本走等宽代码块预览，并保留单独的编辑入口
@@ -30,16 +30,16 @@ SkillsMaster 的目标，是把这些分散在文件系统、命令行和配置�
 - 详情页支持查看 Frontmatter、Markdown 正文、lock file 信息和更新状态
 - `Skill Detail` 中的 `SKILL.md` 编辑已统一为右侧 detail pane 纯文本编辑器
 - 可为每个 Agent 单独设置默认安装方式：`symbolic link` 或 `physical copy`
-- 从 GitHub 仓库扫描并安装 Skills，安装后落到 canonical 目录并写入 lock file
+- 从 Git 仓库扫描并安装 Skills（支持 `owner/repo`、`HTTPS`、`SSH` 输入），安装后落到 canonical 目录并写入 lock file
 - 浏览并安装 `Skills.sh` 中的 Skills
 - 浏览 ClawHub marketplace，查看详情、读取 `SKILL.md`，并安装到 OpenClaw
-- 管理 GitHub / GitLab Custom Repository，支持 `SSH` 和 `HTTPS + Token`
-- Custom Repository 支持 clone / pull、轻量索引缓存、按需加载详情和本地安装
+- 管理 GitHub / GitLab Custom Repository，支持 `SSH` 和 `HTTPS + Token`（Token 存储在 macOS Keychain）
+- Custom Repository 支持 clone / pull、轻量索引缓存、按需加载详情、本地安装，以及按仓库配置 `sync on launch` / `scan hidden paths`
 - 支持为未记录来源的本地 Skill 手动关联 Repository，随后执行更新检查
 - 支持批量检查 Git 来源 Skill 更新，并记录本地 / 远端 commit hash
 - 启动时执行从 `~/.agents` 到 `~/.skillsmaster` 的迁移，并保留对旧兼容路径的读取
 - 文件系统变化会触发自动刷新，尽量让 UI 与磁盘状态保持同步
-- 支持主题切换、应用版本检查、自更新入口、测试、打包、GitHub Release 和 Homebrew cask 链路
+- 支持主题切换、应用版本检查、自更新入口，以及 CI、测试、打包、GitHub Release 和 Homebrew cask 链路
 
 ## 支持的 Agents
 
@@ -74,6 +74,8 @@ SkillsMaster 的目标，是把这些分散在文件系统、命令行和配置�
 - 默认终端是全局设置；当前支持 Terminal / iTerm / Warp / Ghostty，未配置时回退到 Terminal
 - `~/.agents/.skill-lock.json` 仍保留在旧位置，以兼容外部工具
 - Custom Repository 的本地 clone 目录是 SkillsMaster 管理的 cache，不是推荐的手工编辑工作区
+- `HTTPS + Token` 的 Repository 凭据只存储在 macOS Keychain，不写入 `~/.skillsmaster/.skillsmaster-repos.json`
+- Custom Repository 默认不开启启动时自动同步，默认不扫描隐藏目录；可在 Repository 设置中按仓库开启
 - 当前 ClawHub 入口明确面向 OpenClaw，不是面向所有 Agent 的通用 marketplace 安装入口
 
 ## 当前边界
@@ -136,9 +138,9 @@ cd SkillsMaster
 
 ## 界面预览
 
-### Repositories 浏览页
+### Skill 详情页
 
-![SkillsMaster Repositories 浏览页](docs/screenshots/skill-detail.png)
+![SkillsMaster Skill 详情页](docs/screenshots/skill-detail.png)
 
 ### Agent 默认安装方式设置
 
