@@ -10,6 +10,11 @@ struct LockEntry: Codable, Equatable {
     var skillFolderHash: String  // Git hash, used for update detection
     var installedAt: String      // ISO 8601 timestamp
     var updatedAt: String        // ISO 8601 timestamp
+    var sourceVersion: String?
+    var sourceUpdatedAt: String?
+    var originSourceType: String?
+    var originSource: String?
+    var originSourceUrl: String?
 }
 
 /// LockFile corresponds to the entire .skill-lock.json file structure

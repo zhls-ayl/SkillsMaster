@@ -160,22 +160,22 @@ final class SkillDetailViewModel {
         showUpToDate = false
 
         do {
-            let (hasUpdate, remoteHash, remoteCommitHash) = try await skillManager.checkForUpdate(skill: skill)
+            let result = try await skillManager.checkForUpdate(skill: skill)
 
             // Update the corresponding skill state in SkillManager
             if let index = skillManager.skills.firstIndex(where: { $0.id == skill.id }) {
-                skillManager.skills[index].hasUpdate = hasUpdate
-                skillManager.skills[index].remoteTreeHash = remoteHash
-                // Store remote commit hash for UI hash comparison and GitHub link
-                skillManager.skills[index].remoteCommitHash = hasUpdate ? remoteCommitHash : nil
-                skillManager.updateStatuses[skill.id] = hasUpdate ? .hasUpdate : .upToDate
+                skillManager.skills[index].hasUpdate = result.hasUpdate
+                skillManager.skills[index].remoteTreeHash = result.remoteHash
+                skillManager.skills[index].remoteCommitHash = result.remoteCommitHash
+                skillManager.skills[index].remoteVersion = result.remoteVersion
+                skillManager.updateStatuses[skill.id] = result.hasUpdate ? .hasUpdate : .upToDate
 
                 // Update local commit hash (backfill may have been executed in checkForUpdate)
                 let cachedLocalHash = await skillManager.getCachedCommitHash(for: skill.id)
                 skillManager.skills[index].localCommitHash = cachedLocalHash
             }
 
-            if !hasUpdate {
+            if !result.hasUpdate {
                 showUpToDate = true
                 // Auto-hide "Up to Date" message after 2 seconds
                 // Task.sleep is similar to Go's time.Sleep but non-blocking
@@ -195,13 +195,19 @@ final class SkillDetailViewModel {
     ///
     /// Pull latest files from remote to overwrite local, update lock entry
     func updateSkill(_ skill: Skill) async {
-        guard let remoteHash = skill.remoteTreeHash else { return }
-
         isUpdating = true
         updateError = nil
 
         do {
-            try await skillManager.updateSkill(skill, remoteHash: remoteHash)
+            if skill.lockEntry?.sourceType == "skillhub" {
+                if let remoteVersion = skill.remoteVersion {
+                    try await skillManager.updateSkillsHubSkill(skill, remoteVersion: remoteVersion)
+                }
+            } else {
+                if let remoteHash = skill.remoteTreeHash {
+                    try await skillManager.updateSkill(skill, remoteHash: remoteHash)
+                }
+            }
         } catch {
             updateError = error.localizedDescription
         }

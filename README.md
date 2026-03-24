@@ -1,6 +1,6 @@
 # SkillsMaster
 
-SkillsMaster 是一个面向 macOS 的原生应用，用统一的图形界面管理多种 AI 编程代理的 Skills 与 Agent 根目录文件。当前仓库围绕真实实现持续维护以下链路：本地扫描、Agent 分配、Agent Files 浏览、内置文本编辑、外置编辑器 / 默认终端配置、更新检查、Skills.sh / ClawHub / Custom Repository 安装，以及测试、打包、Release、Homebrew 分发。
+SkillsMaster 是一个面向 macOS 的原生应用，用统一的图形界面管理多种 AI 编程代理的 Skills 与 Agent 根目录文件。当前仓库围绕真实实现持续维护以下链路：本地扫描、Agent 分配、Agent Files 浏览、内置文本编辑、外置编辑器 / 默认终端配置、更新检查、Skills.sh / ClawHub / SkillsHub / Custom Repository 安装，以及测试、打包、Release、Homebrew 分发。
 
 > 项目来源：本仓库源自 fork [crossoverJie/SkillDeck](https://github.com/crossoverJie/SkillDeck.git)，当前以 `SkillsMaster` 为产品名持续演进和维护。
 
@@ -12,7 +12,7 @@ SkillsMaster 是一个面向 macOS 的原生应用，用统一的图形界面管
 - `SKILL.md` 需要手工维护，Frontmatter 和 Markdown 容易出错
 - symbolic link / physical copy、lock file、来源仓库和更新状态难以追踪
 - 不同 Agent 之间存在继承读取规则，是否“真的安装到该 Agent”不容易判断
-- 想从 Skills.sh、Git 仓库、ClawHub 或自定义仓库安装 Skill 时，缺少统一入口
+- 想从 Skills.sh、ClawHub、SkillsHub、Git 仓库或自定义仓库安装 Skill 时，缺少统一入口
 
 SkillsMaster 的目标，是把这些分散在文件系统、命令行和配置文件里的操作，收敛到一个原生 macOS UI 里完成。
 
@@ -33,10 +33,11 @@ SkillsMaster 的目标，是把这些分散在文件系统、命令行和配置�
 - 从 Git 仓库扫描并安装 Skills（支持 `owner/repo`、`HTTPS`、`SSH` 输入），安装后落到 canonical 目录并写入 lock file
 - 浏览并安装 `Skills.sh` 中的 Skills
 - 浏览 ClawHub marketplace，查看详情、读取 `SKILL.md`，并安装到 OpenClaw
+- 浏览 SkillsHub marketplace，按分类 / 搜索 / 排序 / 分页查看 Skills，解析 archive 中的 `SKILL.md`，并安装到任意已支持 Agent
 - 管理 GitHub / GitLab Custom Repository，支持 `SSH` 和 `HTTPS + Token`（Token 存储在 macOS Keychain）
 - Custom Repository 支持 clone / pull、轻量索引缓存、按需加载详情、本地安装，以及按仓库配置 `sync on launch` / `scan hidden paths`
 - 支持为未记录来源的本地 Skill 手动关联 Repository，随后执行更新检查
-- 支持批量检查 Git 来源 Skill 更新，并记录本地 / 远端 commit hash
+- 支持批量检查 Git 来源与 SkillsHub 来源 Skill 更新；Git 来源记录本地 / 远端 commit hash，SkillsHub 来源记录 marketplace version
 - 启动时执行从 `~/.agents` 到 `~/.skillsmaster` 的迁移，并保留对旧兼容路径的读取
 - 文件系统变化会触发自动刷新，尽量让 UI 与磁盘状态保持同步
 - 支持主题切换、应用版本检查、自更新入口，以及 CI、测试、打包、GitHub Release 和 Homebrew cask 链路
@@ -77,6 +78,7 @@ SkillsMaster 的目标，是把这些分散在文件系统、命令行和配置�
 - `HTTPS + Token` 的 Repository 凭据只存储在 macOS Keychain，不写入 `~/.skillsmaster/.skillsmaster-repos.json`
 - Custom Repository 默认不开启启动时自动同步，默认不扫描隐藏目录；可在 Repository 设置中按仓库开启
 - 当前 ClawHub 入口明确面向 OpenClaw，不是面向所有 Agent 的通用 marketplace 安装入口
+- 当前 SkillsHub 入口是独立 marketplace，浏览使用 SkillsHub 网页接口，安装使用 SkillsHub archive 下载接口；lock file 中会同时记录 `skillhub` 来源和推断出的 upstream 来源（当前通常是 `clawhub`）
 
 ## 当前边界
 
@@ -157,6 +159,8 @@ cd SkillsMaster
 ### ClawHub 浏览页
 
 ![SkillsMaster ClawHub 浏览页](docs/screenshots/clawhub-browser.png)
+
+当前仓库已经接入 `SkillsHub`，但 README 里暂未附带对应截图；如需理解实现与数据来源，请直接查看 [`docs/skillhub.md`](docs/skillhub.md)。
 
 ### Repository 设置页
 

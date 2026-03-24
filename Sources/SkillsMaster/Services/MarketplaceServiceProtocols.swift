@@ -11,6 +11,17 @@ protocol ClawHubServiceProtocol {
     func downloadSkillArchive(slug: String, version: String) async throws -> Data
 }
 
+/// Abstraction for SkillsHub API calls used by `SkillsHubBrowserViewModel`.
+protocol SkillsHubServiceProtocol {
+    func clearCache() async
+    func fetchSkills(options: SkillsHubService.BrowseOptions) async throws -> SkillsHubService.BrowsePage
+    func fetchFeaturedSkills() async throws -> [SkillsHubSkill]
+    func searchSkills(query: String, limit: Int) async throws -> [SkillsHubSkill]
+    func fetchSkill(slug: String) async throws -> SkillsHubSkill
+    func fetchSkillDetail(slug: String, seed: SkillsHubSkill?) async throws -> SkillsHubSkillDetail
+    func downloadSkillArchive(slug: String) async throws -> Data
+}
+
 /// Abstraction for skills.sh registry calls used by `RegistryBrowserViewModel`.
 protocol SkillRegistryServiceProtocol {
     func search(query: String, limit: Int) async throws -> [RegistrySkill]
@@ -19,4 +30,5 @@ protocol SkillRegistryServiceProtocol {
 }
 
 extension ClawHubService: ClawHubServiceProtocol {}
+extension SkillsHubService: SkillsHubServiceProtocol {}
 extension SkillRegistryService: SkillRegistryServiceProtocol {}

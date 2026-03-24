@@ -55,6 +55,14 @@ final class SkillManager {
         case installedSkillMarkdownOnly
     }
 
+    /// 统一的更新检查结果，兼容 Git 与 marketplace 版本语义。
+    struct UpdateCheckResult {
+        let hasUpdate: Bool
+        let remoteHash: String?
+        let remoteCommitHash: String?
+        let remoteVersion: String?
+    }
+
     // MARK: - Published State (UI-bound state)
 
     /// 当前已发现的全部 skills（已去重）。
@@ -114,6 +122,8 @@ final class SkillManager {
     private let updateChecker = UpdateChecker()
     /// F10 / F12：用于安装与更新检查的 Git service。
     private let gitService = GitService()
+    /// SkillsHub marketplace service，用于版本检查与 archive 下载。
+    private let skillsHubService = SkillsHubService()
     /// F12：SkillsMaster 私有的 commit hash cache，与 `.skill-lock.json` 解耦。
     private let commitHashCache = CommitHashCache()
     /// 管理用户配置的 custom repositories。
@@ -148,6 +158,19 @@ final class SkillManager {
     func refresh() async {
         isLoading = true
         errorMessage = nil
+        let previousRemoteState = Dictionary(
+            uniqueKeysWithValues: skills.map {
+                (
+                    $0.id,
+                    (
+                        hasUpdate: $0.hasUpdate,
+                        remoteTreeHash: $0.remoteTreeHash,
+                        remoteCommitHash: $0.remoteCommitHash,
+                        remoteVersion: $0.remoteVersion
+                    )
+                )
+            }
+        )
 
         // Load custom repositories config from disk (fast — JSON read only)
         repositories = await repositoryManager.loadAll()
@@ -205,6 +228,11 @@ final class SkillManager {
             for i in skills.indices {
                 if let status = updateStatuses[skills[i].id] {
                     skills[i].hasUpdate = (status == .hasUpdate)
+                }
+                if let previous = previousRemoteState[skills[i].id] {
+                    skills[i].remoteTreeHash = previous.remoteTreeHash
+                    skills[i].remoteCommitHash = previous.remoteCommitHash
+                    skills[i].remoteVersion = previous.remoteVersion
                 }
                 // Read local commit hash from CommitHashCache
                 // Used for displaying hash comparison in UI and generating GitHub compare URL
@@ -490,6 +518,52 @@ final class SkillManager {
         return .installedSkillMarkdownOnly
     }
 
+    /// 安装 SkillsHub skill 到 canonical 目录，并按目标 Agent 的默认方式完成 direct install。
+    func installSkillsHubSkill(
+        skill: SkillsHubSkill,
+        version: String,
+        archiveData: Data,
+        targetAgents: Set<AgentType>
+    ) async throws {
+        let fm = FileManager.default
+        let tempRoot = fm.temporaryDirectory.appendingPathComponent("SkillsMaster-SkillsHub-\(UUID().uuidString)")
+        try fm.createDirectory(at: tempRoot, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: tempRoot) }
+
+        let archiveURL = tempRoot.appendingPathComponent("\(skill.slug).zip")
+        let extractedRoot = tempRoot.appendingPathComponent("extracted")
+        try archiveData.write(to: archiveURL)
+        try fm.createDirectory(at: extractedRoot, withIntermediateDirectories: true)
+        try extractZipArchive(at: archiveURL, to: extractedRoot)
+
+        guard let extractedSkillDir = try locateSkillDirectory(in: extractedRoot) else {
+            throw ImportError.skillMDNotFound("SkillsHub skill bundle for \(skill.slug)")
+        }
+
+        let now = ISO8601DateFormatter().string(from: Date())
+        let entry = LockEntry(
+            source: skill.slug,
+            sourceType: "skillhub",
+            sourceUrl: "https://skillhub.tencent.com/",
+            skillPath: "\(skill.slug)/SKILL.md",
+            skillFolderHash: "",
+            installedAt: now,
+            updatedAt: now,
+            sourceVersion: version,
+            sourceUpdatedAt: isoTimestamp(fromMilliseconds: skill.updatedAtMilliseconds),
+            originSourceType: skill.originSourceType,
+            originSource: skill.originSource,
+            originSourceUrl: skill.originSourceURL
+        )
+
+        try await persistInstalledSkillDirectory(
+            from: extractedSkillDir,
+            skillName: skill.slug,
+            targetAgents: targetAgents,
+            lockEntry: entry
+        )
+    }
+
     // MARK: - F12: Update Check
 
     /// 检查单个 skill 是否存在更新。
@@ -497,15 +571,22 @@ final class SkillManager {
     /// 主要步骤是：读取 `lockEntry`、决定 shallow / full clone、获取远端 hash、与本地 hash 对比，最后清理临时目录。
     ///
     /// - Parameter skill: 待检查的 skill（必须带有 `lockEntry`）
-    /// - Returns: `(是否有更新, 远端 tree hash, 远端 commit hash)`
-    func checkForUpdate(skill: Skill) async throws -> (hasUpdate: Bool, remoteHash: String?, remoteCommitHash: String?) {
+    func checkForUpdate(skill: Skill) async throws -> UpdateCheckResult {
         guard let lockEntry = skill.lockEntry else {
-            return (false, nil, nil)
+            return UpdateCheckResult(hasUpdate: false, remoteHash: nil, remoteCommitHash: nil, remoteVersion: nil)
         }
-        // ClawHub / Local 安装不走 Git 仓库更新检查。
-        guard lockEntry.sourceType != "local", lockEntry.sourceType != "clawhub" else {
-            return (false, nil, nil)
+
+        switch lockEntry.sourceType {
+        case "local", "clawhub":
+            return UpdateCheckResult(hasUpdate: false, remoteHash: nil, remoteCommitHash: nil, remoteVersion: nil)
+        case "skillhub":
+            return try await checkSkillsHubUpdate(skill: skill, lockEntry: lockEntry)
+        default:
+            return try await checkGitUpdate(skill: skill, lockEntry: lockEntry)
         }
+    }
+
+    private func checkGitUpdate(skill: Skill, lockEntry: LockEntry) async throws -> UpdateCheckResult {
 
         // 从 `skillPath` 推导出 folderPath。
         let folderPath = GitService.folderPath(for: lockEntry.skillPath)
@@ -541,7 +622,30 @@ final class SkillManager {
 
         // 对比本地与远端 hash。
         let hasUpdate = remoteHash != lockEntry.skillFolderHash
-        return (hasUpdate, remoteHash, remoteCommitHash)
+        return UpdateCheckResult(
+            hasUpdate: hasUpdate,
+            remoteHash: hasUpdate ? remoteHash : nil,
+            remoteCommitHash: hasUpdate ? remoteCommitHash : nil,
+            remoteVersion: nil
+        )
+    }
+
+    private func checkSkillsHubUpdate(skill: Skill, lockEntry: LockEntry) async throws -> UpdateCheckResult {
+        let slug = lockEntry.source.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? skill.id : lockEntry.source
+        let remoteSkill = try await skillsHubService.fetchSkill(slug: slug)
+        guard let remoteVersion = remoteSkill.latestVersion?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !remoteVersion.isEmpty else {
+            throw ImportError.parseFailed("SkillsHub did not provide a version for \(slug).")
+        }
+
+        let currentVersion = (lockEntry.sourceVersion ?? skill.metadata.version ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let hasUpdate = currentVersion.isEmpty || VersionComparator.isNewer(current: currentVersion, latest: remoteVersion)
+        return UpdateCheckResult(
+            hasUpdate: hasUpdate,
+            remoteHash: nil,
+            remoteCommitHash: nil,
+            remoteVersion: hasUpdate ? remoteVersion : nil
+        )
     }
 
     /// Batch check updates for all skills with lockEntry
@@ -568,7 +672,19 @@ final class SkillManager {
             updateStatuses[skill.id] = .checking
         }
 
-        let grouped = Dictionary(grouping: skillsWithLock) { $0.lockEntry!.sourceUrl }
+        let skillsHubSkills = skillsWithLock.filter { $0.lockEntry?.sourceType == "skillhub" }
+        for skill in skillsHubSkills {
+            do {
+                let result = try await checkForUpdate(skill: skill)
+                applyUpdateCheckResult(result, to: skill.id, localCommitHash: skill.localCommitHash)
+            } catch {
+                updateStatuses[skill.id] = .error(error.localizedDescription)
+            }
+        }
+
+        let grouped = Dictionary(
+            grouping: skillsWithLock.filter { $0.lockEntry?.sourceType != "skillhub" }
+        ) { $0.lockEntry!.sourceUrl }
 
         for (sourceUrl, groupSkills) in grouped {
             do {
@@ -599,9 +715,6 @@ final class SkillManager {
                         let remoteHash = try await gitService.getTreeHash(for: folderPath, in: repoDir)
                         let hasUpdate = remoteHash != lockEntry.skillFolderHash
 
-                        // Update status dictionary: use enum value instead of boolean
-                        updateStatuses[skill.id] = hasUpdate ? .hasUpdate : .upToDate
-
                         // Backfill: for skills lacking commit hash, search from git history
                         let localCached = await commitHashCache.getHash(for: skill.id)
                         var currentLocalHash = localCached
@@ -614,15 +727,16 @@ final class SkillManager {
                             }
                         }
 
-                        // Sync to skills array (find corresponding skill and update)
-                        if let index = skills.firstIndex(where: { $0.id == skill.id }) {
-                            skills[index].hasUpdate = hasUpdate
-                            skills[index].remoteTreeHash = hasUpdate ? remoteHash : nil
-                            // Store remote commit hash for generating GitHub compare URL
-                            skills[index].remoteCommitHash = hasUpdate ? remoteCommitHash : nil
-                            // Update local commit hash (may have just been obtained via backfill)
-                            skills[index].localCommitHash = currentLocalHash
-                        }
+                        applyUpdateCheckResult(
+                            UpdateCheckResult(
+                                hasUpdate: hasUpdate,
+                                remoteHash: hasUpdate ? remoteHash : nil,
+                                remoteCommitHash: hasUpdate ? remoteCommitHash : nil,
+                                remoteVersion: nil
+                            ),
+                            to: skill.id,
+                            localCommitHash: currentLocalHash
+                        )
                     } catch {
                         // Single skill check failed: mark as .error state, UI will show warning icon
                         updateStatuses[skill.id] = .error(error.localizedDescription)
@@ -642,6 +756,18 @@ final class SkillManager {
                 }
                 continue
             }
+        }
+    }
+
+    private func applyUpdateCheckResult(_ result: UpdateCheckResult, to skillID: String, localCommitHash: String?) {
+        updateStatuses[skillID] = result.hasUpdate ? .hasUpdate : .upToDate
+
+        if let index = skills.firstIndex(where: { $0.id == skillID }) {
+            skills[index].hasUpdate = result.hasUpdate
+            skills[index].remoteTreeHash = result.remoteHash
+            skills[index].remoteCommitHash = result.remoteCommitHash
+            skills[index].remoteVersion = result.remoteVersion
+            skills[index].localCommitHash = localCommitHash
         }
     }
 
@@ -690,6 +816,50 @@ final class SkillManager {
         updateStatuses[skill.id] = .notChecked
 
         // 7. Refresh UI
+        await refresh()
+    }
+
+    /// 使用 SkillsHub archive 覆盖本地 canonical 目录，并刷新 lock entry 的版本信息。
+    func updateSkillsHubSkill(_ skill: Skill, remoteVersion: String) async throws {
+        guard let lockEntry = skill.lockEntry else { return }
+
+        let slug = lockEntry.source.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? skill.id : lockEntry.source
+        let remoteSkill = try await skillsHubService.fetchSkill(slug: slug)
+        let archiveData = try await skillsHubService.downloadSkillArchive(slug: slug)
+
+        let fm = FileManager.default
+        let tempRoot = fm.temporaryDirectory.appendingPathComponent("SkillsMaster-SkillsHub-Update-\(UUID().uuidString)")
+        try fm.createDirectory(at: tempRoot, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: tempRoot) }
+
+        let archiveURL = tempRoot.appendingPathComponent("\(slug).zip")
+        let extractedRoot = tempRoot.appendingPathComponent("extracted")
+        try archiveData.write(to: archiveURL)
+        try fm.createDirectory(at: extractedRoot, withIntermediateDirectories: true)
+        try extractZipArchive(at: archiveURL, to: extractedRoot)
+
+        guard let extractedSkillDir = try locateSkillDirectory(in: extractedRoot) else {
+            throw ImportError.skillMDNotFound("SkillsHub skill bundle for \(slug)")
+        }
+
+        let canonicalDir = skill.canonicalURL
+        if fm.fileExists(atPath: canonicalDir.path) {
+            try fm.removeItem(at: canonicalDir)
+        }
+        try fm.copyItem(at: extractedSkillDir, to: canonicalDir)
+        try syncCopiedDirectInstallations(for: skill)
+
+        let now = ISO8601DateFormatter().string(from: Date())
+        var updatedEntry = lockEntry
+        updatedEntry.updatedAt = now
+        updatedEntry.sourceVersion = remoteVersion
+        updatedEntry.sourceUpdatedAt = isoTimestamp(fromMilliseconds: remoteSkill.updatedAtMilliseconds)
+        updatedEntry.originSourceType = remoteSkill.originSourceType
+        updatedEntry.originSource = remoteSkill.originSource
+        updatedEntry.originSourceUrl = remoteSkill.originSourceURL
+        try await lockFileManager.updateEntry(skillName: skill.id, entry: updatedEntry)
+
+        updateStatuses[skill.id] = .notChecked
         await refresh()
     }
 
@@ -918,6 +1088,14 @@ final class SkillManager {
         }
 
         return nil
+    }
+
+    private func isoTimestamp(fromMilliseconds milliseconds: Int64?) -> String? {
+        guard let milliseconds else { return nil }
+        let date = Date(timeIntervalSince1970: TimeInterval(milliseconds) / 1000)
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.string(from: date)
     }
 
     /// Filter skills by Agent

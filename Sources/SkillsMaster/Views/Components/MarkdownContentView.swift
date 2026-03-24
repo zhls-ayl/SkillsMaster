@@ -521,6 +521,8 @@ struct MarkdownTableView: View {
     /// Converted column alignments (from `Table.ColumnAlignment?` to `HorizontalAlignment`)
     let columnAlignments: [HorizontalAlignment]
 
+    private let minColumnWidth: CGFloat = 120
+
     var body: some View {
         // ScrollView(.horizontal) allows wide tables to scroll horizontally
         // instead of compressing columns or breaking the layout.
@@ -559,7 +561,9 @@ struct MarkdownTableView: View {
                 if let cell = child as? Markdown.Table.Cell {
                     cellText(cell)
                         .fontWeight(.semibold)
-                        .frame(maxWidth: .infinity, alignment: alignment(for: colIndex))
+                        .multilineTextAlignment(textAlignment(for: colIndex))
+                        .frame(minWidth: minColumnWidth, alignment: alignment(for: colIndex))
+                        .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 8)
                 }
@@ -583,7 +587,9 @@ struct MarkdownTableView: View {
             ForEach(Array(row.children.enumerated()), id: \.offset) { colIndex, child in
                 if let cell = child as? Markdown.Table.Cell {
                     cellText(cell)
-                        .frame(maxWidth: .infinity, alignment: alignment(for: colIndex))
+                        .multilineTextAlignment(textAlignment(for: colIndex))
+                        .frame(minWidth: minColumnWidth, alignment: alignment(for: colIndex))
+                        .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
                 }
@@ -615,6 +621,18 @@ struct MarkdownTableView: View {
     private func alignment(for columnIndex: Int) -> Alignment {
         guard columnIndex < columnAlignments.count else { return .leading }
         return Alignment(horizontal: columnAlignments[columnIndex], vertical: .center)
+    }
+
+    private func textAlignment(for columnIndex: Int) -> TextAlignment {
+        guard columnIndex < columnAlignments.count else { return .leading }
+        switch columnAlignments[columnIndex] {
+        case .center:
+            return .center
+        case .trailing:
+            return .trailing
+        default:
+            return .leading
+        }
     }
 
     /// Render a single inline node within a table cell as styled SwiftUI.Text

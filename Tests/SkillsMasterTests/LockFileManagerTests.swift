@@ -152,6 +152,33 @@ final class LockFileManagerTests: XCTestCase {
         XCTAssertEqual(lockFile.lastSelectedAgents, ["claude-code", "codex"])
     }
 
+    func testReadsAndWritesExtendedMarketplaceFields() async throws {
+        let newEntry = LockEntry(
+            source: "github",
+            sourceType: "skillhub",
+            sourceUrl: "https://skillhub.tencent.com/",
+            skillPath: "github/SKILL.md",
+            skillFolderHash: "",
+            installedAt: "2026-03-24T00:00:00.000Z",
+            updatedAt: "2026-03-24T00:00:00.000Z",
+            sourceVersion: "1.0.0",
+            sourceUpdatedAt: "2026-03-24T00:00:00.000Z",
+            originSourceType: "clawhub",
+            originSource: "steipete/github",
+            originSourceUrl: "https://clawhub.ai/steipete/github"
+        )
+
+        try await manager.updateEntry(skillName: "github", entry: newEntry)
+
+        await manager.invalidateCache()
+        let lockFile = try await manager.read()
+        let entry = try XCTUnwrap(lockFile.skills["github"])
+        XCTAssertEqual(entry.sourceType, "skillhub")
+        XCTAssertEqual(entry.sourceVersion, "1.0.0")
+        XCTAssertEqual(entry.originSourceType, "clawhub")
+        XCTAssertEqual(entry.originSourceUrl, "https://clawhub.ai/steipete/github")
+    }
+
     /// 测试文件不存在时的行为
     func testFileNotFound() async {
         let badManager = LockFileManager(

@@ -331,7 +331,7 @@ struct SkillDetailView: View {
                 Spacer()
 
                 // F12: 更新状态指示和操作按钮
-                if canCheckGitUpdate(skill) {
+                if canCheckUpdate(skill) {
                     updateStatusView(skill)
                 }
             }
@@ -347,7 +347,7 @@ struct SkillDetailView: View {
                     Text(lockEntry.source).textSelection(.enabled)
                 }
                 GridRow {
-                    Text(lockEntry.sourceType == "clawhub" ? "Marketplace" : "Repository").foregroundStyle(.secondary)
+                    Text(sourceLocationLabel(for: lockEntry)).foregroundStyle(.secondary)
                     // 如果 `sourceUrl` 是合法 URL，就展示为可点击链接，并在点击后交给系统默认浏览器打开。
                     if let url = URL(string: lockEntry.sourceUrl),
                        url.scheme != nil {
@@ -355,6 +355,18 @@ struct SkillDetailView: View {
                             .textSelection(.enabled)
                     } else {
                         Text(lockEntry.sourceUrl).textSelection(.enabled)
+                    }
+                }
+                if let sourceVersion = lockEntry.sourceVersion, !sourceVersion.isEmpty {
+                    GridRow {
+                        Text("Version").foregroundStyle(.secondary)
+                        Text(sourceVersion).textSelection(.enabled)
+                    }
+                }
+                if let originType = lockEntry.originSourceType, !originType.isEmpty {
+                    GridRow {
+                        Text("Upstream").foregroundStyle(.secondary)
+                        upstreamValueView(lockEntry)
                     }
                 }
                 // 优先展示 commit hash（可直接映射到 GitHub commit 页面），
@@ -514,38 +526,47 @@ struct SkillDetailView: View {
     @ViewBuilder
     private func updateDetailRow(_ skill: Skill) -> some View {
         HStack(spacing: 6) {
-            // 取前 7 位作为短哈希格式，与 `git log --oneline` 保持一致。
-            // `prefix(_:)` 返回的是 `Substring`，因此这里需要再包一层 `String()`。
-            let localShort = skill.localCommitHash.map { String($0.prefix(7)) }
-            let remoteShort = skill.remoteCommitHash.map { String($0.prefix(7)) }
-
-            if let localShort, let remoteShort {
-                // 本地和远端 commit hash 都存在时，展示 `abc1234 → def5678` 对比。
-                Text("\(localShort) → \(remoteShort)")
-                    .font(.system(.caption2, design: .monospaced))
-                    .foregroundStyle(.secondary)
-            } else if let remoteShort {
-                // 只有远端 commit hash 时，走降级展示（通常表示旧 skill 的 backfill 没成功）。
-                Text("→ \(remoteShort)")
-                    .font(.system(.caption2, design: .monospaced))
-                    .foregroundStyle(.secondary)
-            }
-
-            // GitHub compare 链接按钮。
-            if let url = githubCompareURL(skill) {
-                // 使用 link 风格按钮，点击后在浏览器中打开。
-                // `NSWorkspace.shared.open()` 是 macOS 中打开 URL 的标准方式。
-                Button {
-                    NSWorkspace.shared.open(url)
-                } label: {
-                    HStack(spacing: 2) {
-                        Text("在 GitHub 查看变更")
-                        // `arrow.up.right` 是常见的 external link 图标（↗）。
-                        Image(systemName: "arrow.up.right")
-                    }
-                    .font(.caption2)
+            if skill.lockEntry?.sourceType == "skillhub" {
+                let currentVersion = skill.lockEntry?.sourceVersion ?? "unknown"
+                if let remoteVersion = skill.remoteVersion {
+                    Text("\(currentVersion) → \(remoteVersion)")
+                        .font(.system(.caption2, design: .monospaced))
+                        .foregroundStyle(.secondary)
                 }
-                .buttonStyle(.link)
+            } else {
+                // 取前 7 位作为短哈希格式，与 `git log --oneline` 保持一致。
+                // `prefix(_:)` 返回的是 `Substring`，因此这里需要再包一层 `String()`。
+                let localShort = skill.localCommitHash.map { String($0.prefix(7)) }
+                let remoteShort = skill.remoteCommitHash.map { String($0.prefix(7)) }
+
+                if let localShort, let remoteShort {
+                    // 本地和远端 commit hash 都存在时，展示 `abc1234 → def5678` 对比。
+                    Text("\(localShort) → \(remoteShort)")
+                        .font(.system(.caption2, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                } else if let remoteShort {
+                    // 只有远端 commit hash 时，走降级展示（通常表示旧 skill 的 backfill 没成功）。
+                    Text("→ \(remoteShort)")
+                        .font(.system(.caption2, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                }
+
+                // GitHub compare 链接按钮。
+                if let url = githubCompareURL(skill) {
+                    // 使用 link 风格按钮，点击后在浏览器中打开。
+                    // `NSWorkspace.shared.open()` 是 macOS 中打开 URL 的标准方式。
+                    Button {
+                        NSWorkspace.shared.open(url)
+                    } label: {
+                        HStack(spacing: 2) {
+                            Text("在 GitHub 查看变更")
+                            // `arrow.up.right` 是常见的 external link 图标（↗）。
+                            Image(systemName: "arrow.up.right")
+                        }
+                        .font(.caption2)
+                    }
+                    .buttonStyle(.link)
+                }
             }
         }
     }
@@ -575,8 +596,48 @@ struct SkillDetailView: View {
     }
 
     /// 仅 Git 来源支持更新检查（custom repository 也属于 Git 语义）。
-    private func canCheckGitUpdate(_ skill: Skill) -> Bool {
+    private func canCheckUpdate(_ skill: Skill) -> Bool {
         guard let sourceType = skill.lockEntry?.sourceType else { return false }
         return sourceType != "local" && sourceType != "clawhub"
+    }
+
+    private func sourceLocationLabel(for lockEntry: LockEntry) -> String {
+        switch lockEntry.sourceType {
+        case "clawhub", "skillhub":
+            return "Marketplace"
+        default:
+            return "Repository"
+        }
+    }
+
+    @ViewBuilder
+    private func upstreamValueView(_ lockEntry: LockEntry) -> some View {
+        let label = {
+            switch lockEntry.originSourceType {
+            case "clawhub":
+                return "ClawHub"
+            default:
+                return lockEntry.originSourceType ?? "Unknown"
+            }
+        }()
+
+        if let urlString = lockEntry.originSourceUrl,
+           let url = URL(string: urlString),
+           url.scheme != nil {
+            HStack(spacing: 6) {
+                Text(label)
+                Text(lockEntry.originSource ?? urlString)
+                    .foregroundStyle(.secondary)
+                Link("打开", destination: url)
+            }
+            .textSelection(.enabled)
+        } else {
+            Text(lockEntry.originSource ?? label).textSelection(.enabled)
+        }
+    }
+
+    private func canCheckGitUpdate(_ skill: Skill) -> Bool {
+        guard let sourceType = skill.lockEntry?.sourceType else { return false }
+        return sourceType != "local" && sourceType != "clawhub" && sourceType != "skillhub"
     }
 }

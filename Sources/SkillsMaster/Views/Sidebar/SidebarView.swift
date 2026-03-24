@@ -11,6 +11,8 @@ enum SidebarItem: Hashable {
     case skillsSh
     /// Browse ClawHub marketplace
     case clawHub
+    /// Browse SkillsHub marketplace
+    case skillsHub
     /// Repository browser — each configured repo gets its own sidebar row.
     /// The associated UUID is the SkillRepository.id, used to look up the VM in ContentView.
     case repository(UUID)
@@ -26,7 +28,7 @@ enum SidebarItem: Hashable {
         switch self {
         case .skillsByAgent(let agentType):
             return agentType
-        case .allSkills, .settings, .skillsSh, .clawHub, .repository, .agentFiles:
+        case .allSkills, .settings, .skillsSh, .clawHub, .skillsHub, .repository, .agentFiles:
             return nil
         }
     }
@@ -95,6 +97,11 @@ struct SidebarView: View {
                     Label("ClawHub", systemImage: "shippingbox")
                 }
                 .tag(SidebarItem.clawHub)
+
+                sidebarRow {
+                    Label("SkillsHub", systemImage: "shippingbox.circle")
+                }
+                .tag(SidebarItem.skillsHub)
             }
 
             // Repositories section: shown only when at least one repository is configured

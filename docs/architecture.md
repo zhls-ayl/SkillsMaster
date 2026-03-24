@@ -65,16 +65,17 @@ SkillsMaster 是一个基于 SwiftUI 的 macOS 应用，用于管理多代理 Sk
 - `Sources/SkillsMaster/Services/SymlinkManager.swift`
 
 ## 仓库与安装链路
-当前安装来源分为三类：
+当前安装来源分为四类：
 - 注册表技能：通过 `SkillRegistryService` 获取索引，再进入安装流程
 - ClawHub：通过 `ClawHubService` 拉取 marketplace 列表、详情、`SKILL.md` 与 archive，由 `ClawHubBrowserViewModel` 编排浏览/安装，并通过 `SkillManager.installClawHubSkill(...)` 安装到 canonical 目录后按 `OpenClaw` 默认安装方式落盘；详细链路见 `docs/clawhub.md`
+- SkillsHub：通过 `SkillsHubService` 拉取 SkillsHub 列表、精选、轻量搜索与 archive，由 `SkillsHubBrowserViewModel` 编排浏览/安装，并通过 `SkillManager.installSkillsHubSkill(...)` 安装到 canonical 目录后按目标 Agent 集合落盘；详细链路见 `docs/skillhub.md`
 - 远程仓库安装：通过 `GitService` 克隆 / 扫描 / 拷贝到 canonical 目录
 - 自定义仓库：由 `RepositoryManager` 管理配置、同步与轻量索引缓存，由 `RepositoryBrowserViewModel` 驱动浏览与安装；列表使用缓存索引，详情页按需加载完整 `SKILL.md`。`~/.skillsmaster/repos` 下的 clone 目录视为 SkillsMaster 内部缓存，不作为用户手动编辑的工作目录；若检测到本地未提交改动，会跳过扫描缓存以避免展示过期索引。
 
 统一安装后都会落到 canonical 目录，再按各 Agent 的默认安装方式把 direct install 落到代理目录，并由 `LockFileManager` 更新 lock file。对于 physical copy，后续更新、重新安装和应用内编辑也会同步覆盖 Agent 目录副本。
 
 ## 更新链路
-- 技能更新：`GitService` + `SkillContentFetcher` + `CommitHashCache`
+- 技能更新：Git 来源由 `GitService` + `CommitHashCache` 负责；SkillsHub 来源由 `SkillsHubService` 提供 version 与 archive 更新语义；ClawHub / local 当前不走统一更新检查
 - 应用自更新：`UpdateChecker` 读取 GitHub Release，下载 zip 并替换 `.app`
 - 发布打包：`scripts/package-app.sh`、`scripts/release.sh`、`.github/workflows/release.yml`
 

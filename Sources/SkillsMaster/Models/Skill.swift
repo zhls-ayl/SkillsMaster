@@ -45,6 +45,9 @@ struct Skill: Identifiable, Hashable {
     /// GitHub compare URL requires commit hash to jump correctly.
     var remoteCommitHash: String?
 
+    /// Marketplace 来源的远端版本号（例如 SkillsHub）。
+    var remoteVersion: String?
+
     /// F12: Local commit hash (read from CommitHashCache)
     /// Used to show hash comparison like abc1234 → def5678 in UI,
     /// And generate GitHub compare URL compare/<local>...<remote>

@@ -7,6 +7,24 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-03-24
+### Added
+- 新增 `SkillsHub` 独立 marketplace 入口，位于 `Marketplace` 分组下，与 `Skills.sh`、`ClawHub` 并列；支持分类、搜索、排序和分页浏览。
+- 新增 SkillsHub archive 详情链路：详情页会直接解析下载包中的 `SKILL.md` 与 `_meta.json`，不再依赖网页摘要字段近似显示。
+- 新增 SkillsHub 安装链路，可将选中的 skill 安装到任意已支持 Agent，而不是受限于单一 Agent。
+- 新增 SkillsHub 专题文档 `docs/skillhub.md`，并补充对应的模型 / ViewModel / lock file 测试。
+
+### Changed
+- 扩展 `LockEntry`，新增 `sourceVersion`、`sourceUpdatedAt`、`originSourceType`、`originSource`、`originSourceUrl` 等 optional 字段，用于承载 marketplace 版本与 upstream 来源语义，同时保持对旧 lock file 的兼容读取。
+- 调整 Skill 详情页的包信息区与更新状态逻辑，使 marketplace 来源不再被强行按 Git repository 语义展示；`SkillsHub` 已安装 skill 会显示版本级更新信息而不是 Git hash。
+- `refresh()` 现在会保留已检查出的远端更新目标信息，避免刷新后出现“仍显示有更新，但目标版本 / hash 已丢失”的状态漂移。
+
+### Fixed
+- 修复 Homebrew cask 版本元数据与当前发布版本不同步的问题，更新至 `0.2.0` 并对齐新的 release zip `sha256`。
+- 修复 SkillsHub 详情页渲染参数与当前 `MarkdownContentView` 接口不一致的问题。
+- 修复 SkillsHub 详情页在 `Skill Metadata` 有内容时会被错误嵌套在 `Skill Content` section 下的问题；现在 `Skill Metadata` 会作为独立 section 显示，不再出现两个 section 标题直接相邻的布局错误。
+- 修复原生 Markdown 表格在横向滚动场景下使用无界宽度导致的高 CPU 布局热点。`MarkdownTableView` 现在改为最小列宽 + 有界对齐，避免像 `Multi Search Engine` 这类包含多张表格的 skill 在详情页触发 CPU 100% 卡死。
+
 ## [0.1.9] - 2026-03-23
 ### Changed
 - 重组左侧 Sidebar 信息架构：顶层分组统一为 `Installed`、`Marketplace`、`Repositories`、`Agents`；其中主列表入口改名为 `All Skills`，在线来源改为 `Skills.sh` / `ClawHub`，并将 `Agent Files` 调整到 `Agents Skills` 之前，降低导航扫描成本。
