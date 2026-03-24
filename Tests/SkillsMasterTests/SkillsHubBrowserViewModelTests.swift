@@ -131,6 +131,14 @@ final class SkillsHubBrowserViewModelTests: XCTestCase {
         )
     }
 
+    private func makeDirectInstall(agent: AgentType, skillID: String) -> SkillInstallation {
+        SkillInstallation(
+            agentType: agent,
+            path: agent.skillsDirectoryURL.appendingPathComponent(skillID),
+            isSymlink: true
+        )
+    }
+
     private func makeSkillsHubSkill(slug: String) -> SkillsHubSkill {
         SkillsHubSkill(
             slug: slug,
@@ -168,6 +176,44 @@ final class SkillsHubBrowserViewModelTests: XCTestCase {
         viewModel.syncInstalledSkills()
 
         XCTAssertFalse(viewModel.canReinstall(makeSkillsHubSkill(slug: "github")))
+    }
+
+    func testTargetSelectionSummaryReturnsUnselectedWhenEmpty() {
+        let skillManager = SkillManager()
+        let viewModel = SkillsHubBrowserViewModel(skillManager: skillManager)
+
+        XCTAssertEqual(viewModel.targetSelectionSummary(), "未选择 Agent")
+    }
+
+    func testDetailInstallButtonTitleReturnsMixedWhenSelectedAgentsArePartiallyInstalled() {
+        let skillManager = SkillManager()
+        var installedSkill = makeInstalledSkill(id: "github", source: "github")
+        installedSkill.installations = [makeDirectInstall(agent: .cursor, skillID: "github")]
+        skillManager.skills = [installedSkill]
+
+        let viewModel = SkillsHubBrowserViewModel(skillManager: skillManager)
+        viewModel.syncInstalledSkills()
+        viewModel.selectedTargetAgents = [.cursor, .claudeCode]
+
+        XCTAssertEqual(
+            viewModel.detailInstallButtonTitle(for: makeSkillsHubSkill(slug: "github")),
+            "Install / Reinstall"
+        )
+    }
+
+    func testSelectingInstalledSkillDefaultsToInstalledAgents() {
+        let skillManager = SkillManager()
+        var installedSkill = makeInstalledSkill(id: "github", source: "github")
+        installedSkill.installations = [makeDirectInstall(agent: .cursor, skillID: "github")]
+        skillManager.skills = [installedSkill]
+
+        let viewModel = SkillsHubBrowserViewModel(skillManager: skillManager)
+        viewModel.syncInstalledSkills()
+        viewModel.displayedSkills = [makeSkillsHubSkill(slug: "github")]
+
+        viewModel.selectedSkillID = "github"
+
+        XCTAssertEqual(viewModel.selectedTargetAgents, [.cursor])
     }
 
     func testOnAppearLoadsFeaturedAndFirstPage() async {

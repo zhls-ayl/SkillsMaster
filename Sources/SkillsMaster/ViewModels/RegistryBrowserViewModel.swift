@@ -13,6 +13,12 @@ import Foundation
 @Observable
 final class RegistryBrowserViewModel {
 
+    struct Notice: Identifiable {
+        let id = UUID()
+        let title: String
+        let message: String
+    }
+
     // MARK: - State
 
     /// 当前选中的 leaderboard category tab（All Time / Trending / Hot）。
@@ -52,13 +58,17 @@ final class RegistryBrowserViewModel {
     /// 这里保留按 `skillId` 回退匹配的逻辑，用于兼容手动安装、未经过 registry flow 的旧数据。
     private var installedSkillIDsNoSource: Set<String> = []
 
-    /// Install sheet 对应的 `ViewModel`（非 `nil` 时弹出 sheet）。
-    ///
-    /// 这里采用 `SkillInstallView` 已经建立的 `.sheet(item:)` 绑定模式：
-    /// - `installVM != nil` 时展示 sheet
-    /// - `installVM == nil` 时关闭 sheet
-    /// 这样可以避免 `.sheet(isPresented:)` 常见的双状态同步时序问题。
-    var installVM: SkillInstallViewModel?
+    /// 详情页内联安装的目标 Agent 选择。
+    var selectedTargetAgents: Set<AgentType> = []
+
+    /// 当前正在执行安装的 registry skill ID。
+    var installingSkillID: String?
+
+    /// 安装阶段展示在主按钮上的状态文案。
+    var installingStatusMessage: String?
+
+    /// Alert 弹窗提示。
+    var notice: Notice?
 
     // MARK: - Skill Content State
 
@@ -84,7 +94,12 @@ final class RegistryBrowserViewModel {
     ///
     /// 当用户在列表里点击某个 skill 时，这里会被设置为对应的 `id`，
     /// detail pane 随后展示 `RegistrySkillDetailView`。
-    var selectedSkillID: String?
+    var selectedSkillID: String? {
+        didSet {
+            guard oldValue != selectedSkillID else { return }
+            syncSelectedTargetAgentsForCurrentSelection()
+        }
+    }
 
     /// 便捷属性：返回当前选中的 `RegistrySkill`。
     ///
@@ -101,6 +116,10 @@ final class RegistryBrowserViewModel {
         normalizedSearchText != nil
     }
 
+    var targetAgentTypes: [AgentType] {
+        AgentType.displayNameLengthSortedCases
+    }
+
     // MARK: - Dependencies
 
     /// 用于 API 调用和 HTML scraping 的 registry service。
@@ -114,6 +133,7 @@ final class RegistryBrowserViewModel {
 
     /// `SkillManager` 引用，用于判断安装状态并触发安装流程。
     private let skillManager: SkillManager
+    private let gitService = GitService()
 
     // MARK: - Search Debounce
 
@@ -250,20 +270,14 @@ final class RegistryBrowserViewModel {
 
     // MARK: - Install
 
-    /// 为指定的 registry skill 启动安装流程。
-    ///
-    /// 这里会创建一个预填好 source repository 的 `SkillInstallViewModel`，
-    /// 并把 `autoFetch` 设为 `true`，让 install sheet 打开后自动开始扫描，
-    /// 用户不需要再手动点击 `Scan`。
     func installSkill(_ registrySkill: RegistrySkill) {
-        let vm = SkillInstallViewModel(skillManager: skillManager)
-        // 预填 repository 输入框，例如 `vercel-labs/agent-skills`。
-        vm.repoURLInput = registrySkill.source
-        // sheet 打开后自动触发 repository 扫描。
-        vm.autoFetch = true
-        // 只预选用户点击的那个 skill，而不是整个 repo 中的全部 skills。
-        vm.targetSkillId = registrySkill.skillId
-        installVM = vm
+        guard installingSkillID == nil else { return }
+        guard !selectedTargetAgents.isEmpty else {
+            notice = Notice(title: "无法安装", message: "请至少选择一个目标 Agent。")
+            return
+        }
+
+        Task { await performInstall(registrySkill) }
     }
 
     /// 判断某个 registry skill 是否已经在本地安装。
@@ -273,12 +287,42 @@ final class RegistryBrowserViewModel {
     /// 2. 如果本地 skill 没有 `lockEntry`，则回退到仅按 `skillId` 匹配
     /// 3. 其他情况返回 `false`
     func isInstalled(_ registrySkill: RegistrySkill) -> Bool {
-        // 优先检查 source 是否精确匹配。
-        if let installedSource = installedSkillSources[registrySkill.skillId] {
-            return installedSource == registrySkill.source
+        matchingInstalledSkill(for: registrySkill) != nil
+    }
+
+    func isInstalling(_ registrySkill: RegistrySkill) -> Bool {
+        installingSkillID == registrySkill.id
+    }
+
+    func toggleTargetAgent(_ agent: AgentType) {
+        if selectedTargetAgents.contains(agent) {
+            selectedTargetAgents.remove(agent)
+        } else {
+            selectedTargetAgents.insert(agent)
         }
-        // 回退逻辑：如果没有 source 追踪信息，就只按 `skillId` 匹配。
-        return installedSkillIDsNoSource.contains(registrySkill.skillId)
+    }
+
+    func isAgentDetected(_ agent: AgentType) -> Bool {
+        skillManager.agents.first { $0.type == agent }?.supportsRootFileManagement == true
+    }
+
+    func targetSelectionSummary() -> String {
+        let count = selectedTargetAgents.count
+        if count == 0 {
+            return "未选择 Agent"
+        }
+        return count == 1 ? "1 个 Agent 已选中" : "\(count) 个 Agent 已选中"
+    }
+
+    func detailInstallButtonTitle(for registrySkill: RegistrySkill) -> String {
+        if isInstalling(registrySkill) {
+            return installingStatusMessage ?? "Installing..."
+        }
+        return installAction(for: registrySkill).title
+    }
+
+    func detailInstallButtonSystemImage(for registrySkill: RegistrySkill) -> String {
+        installAction(for: registrySkill).systemImage
     }
 
     // MARK: - Pagination / List Loading
@@ -383,6 +427,105 @@ final class RegistryBrowserViewModel {
         }
         let triggerIndex = max(displayedSkills.count - loadMoreThreshold, 0)
         return index >= triggerIndex
+    }
+
+    private func performInstall(_ registrySkill: RegistrySkill) async {
+        let action = installAction(for: registrySkill)
+        let targetAgents = selectedTargetAgents
+        installingSkillID = registrySkill.id
+        installingStatusMessage = "Validating repository..."
+        defer {
+            installingSkillID = nil
+            installingStatusMessage = nil
+        }
+
+        do {
+            let (repoURL, repoSource) = try GitService.normalizeRepoURL(registrySkill.source)
+
+            installingStatusMessage = "Checking git..."
+            let gitAvailable = await gitService.checkGitAvailable()
+            guard gitAvailable else {
+                throw GitService.GitError.gitNotInstalled
+            }
+
+            installingStatusMessage = "Cloning repository..."
+            let repoDir = try await gitService.shallowClone(repoURL: repoURL)
+            defer {
+                Task { await self.gitService.cleanupTempDirectory(repoDir) }
+            }
+
+            installingStatusMessage = "Scanning skills..."
+            let discoveredSkills = await gitService.scanSkillsInRepo(repoDir: repoDir)
+            guard let discoveredSkill = discoveredSkills.first(where: { $0.id == registrySkill.skillId }) else {
+                throw SkillManager.ImportError.directoryNotFound(
+                    "Skill '\(registrySkill.skillId)' not found in repository."
+                )
+            }
+
+            installingStatusMessage = "Installing..."
+            try await skillManager.installSkill(
+                from: repoDir,
+                skill: discoveredSkill,
+                repoSource: repoSource,
+                repoURL: repoURL,
+                sourceType: "github",
+                targetAgents: targetAgents
+            )
+
+            syncInstalledSkills()
+            notice = Notice(
+                title: action.completionTitle,
+                message: "\(registrySkill.name) 已安装到 \(targetAgents.count) 个 Agent。"
+            )
+        } catch {
+            notice = Notice(title: "Installation Failed", message: error.localizedDescription)
+        }
+    }
+
+    private func installAction(for registrySkill: RegistrySkill) -> MarketplaceInstallAction {
+        let fallback: MarketplaceInstallAction = isInstalled(registrySkill) ? .reinstall : .install
+        return MarketplaceInstallAction.resolve(
+            selectedAgents: selectedTargetAgents,
+            directInstalledAgents: directInstalledAgents(for: registrySkill),
+            fallbackWhenSelectionEmpty: fallback
+        )
+    }
+
+    private func directInstalledAgents(for registrySkill: RegistrySkill) -> Set<AgentType> {
+        guard let installedSkill = matchingInstalledSkill(for: registrySkill) else {
+            return []
+        }
+
+        return Set(
+            installedSkill.installations
+                .filter { !$0.isInherited }
+                .map(\.agentType)
+        )
+    }
+
+    private func matchingInstalledSkill(for registrySkill: RegistrySkill) -> Skill? {
+        if let installedSource = installedSkillSources[registrySkill.skillId],
+           installedSource == registrySkill.source {
+            return skillManager.skills.first {
+                $0.id == registrySkill.skillId && $0.lockEntry?.source == registrySkill.source
+            }
+        }
+
+        if installedSkillIDsNoSource.contains(registrySkill.skillId) {
+            return skillManager.skills.first {
+                $0.id == registrySkill.skillId && $0.lockEntry == nil
+            }
+        }
+
+        return nil
+    }
+
+    private func syncSelectedTargetAgentsForCurrentSelection() {
+        guard let selectedSkill else {
+            selectedTargetAgents.removeAll()
+            return
+        }
+        selectedTargetAgents = directInstalledAgents(for: selectedSkill)
     }
 
     // MARK: - Skill Content Loading

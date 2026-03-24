@@ -8,12 +8,11 @@ struct RepositorySkillDetailView: View {
 
     let skill: GitService.DiscoveredSkill
     let repository: SkillRepository
+    let viewModel: RepositoryBrowserViewModel
     let content: SkillMDParser.ParseResult?
     let isLoadingContent: Bool
     let contentError: String?
     let isInstalled: Bool
-    let canInstall: Bool
-    let installDisabledReason: String?
     let onInstall: () -> Void
     let onLoadContent: () async -> Void
 
@@ -153,11 +152,32 @@ struct RepositorySkillDetailView: View {
             Button {
                 onInstall()
             } label: {
-                Label("安装 Skill", systemImage: "arrow.down.circle")
+                if viewModel.isInstalling(skill) {
+                    Label {
+                        Text(viewModel.detailInstallButtonTitle(for: skill))
+                    } icon: {
+                        ProgressView()
+                            .controlSize(.small)
+                    }
+                } else {
+                    Label(
+                        viewModel.detailInstallButtonTitle(for: skill),
+                        systemImage: viewModel.detailInstallButtonSystemImage(for: skill)
+                    )
+                }
             }
             .buttonStyle(.borderedProminent)
-            .disabled(isInstalled || !canInstall)
+            .disabled(viewModel.isInstalling(skill) || !viewModel.canInstallFromLocal)
             .help(installHelpText)
+
+            MarketplaceInstallTargetsView(
+                agentTypes: viewModel.targetAgentTypes,
+                selectedAgents: viewModel.selectedTargetAgents,
+                selectionSummary: viewModel.targetSelectionSummary(),
+                noteText: "安装时会先写入 SkillsMaster canonical 目录，再按各 Agent 的默认安装方式建立 direct install。",
+                isAgentDetected: viewModel.isAgentDetected(_:),
+                onToggle: viewModel.toggleTargetAgent(_:)
+            )
         }
     }
 
@@ -195,8 +215,7 @@ struct RepositorySkillDetailView: View {
     }
 
     private var installHelpText: String {
-        if isInstalled { return "Already installed" }
-        if let installDisabledReason { return installDisabledReason }
+        if let installDisabledReason = viewModel.installDisabledReason { return installDisabledReason }
         return "安装 this skill from local repository clone"
     }
 }

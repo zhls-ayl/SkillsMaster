@@ -7,6 +7,15 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-03-24
+### Changed
+- 统一 `Skills.sh`、`SkillsHub`、`ClawHub` 与 `Custom Repository` 的安装交互：移除列表行直接安装与 `skills.sh` / 自定义仓库的 sheet 流程，统一改为详情页内联 Agent 勾选安装。
+- 扩展 ClawHub 安装目标，不再固定为 `OpenClaw`，改为与其它来源一样支持多 Agent 选择。
+
+### Fixed
+- 修复不同来源下安装 / 重装按钮文案与实际勾选目标不一致的问题；主按钮现在会根据已选 Agent 的 direct install 状态显示 `Install`、`Reinstall` 或 `Install / Reinstall`。
+- 修复已显示 `Reinstall` 时默认不勾选已安装 Agent、导致用户难以判断影响范围的问题；现在进入详情页时会默认勾选该 Skill 已直接安装的 Agent。
+
 ## [0.2.0] - 2026-03-24
 ### Added
 - 新增 `SkillsHub` 独立 marketplace 入口，位于 `Marketplace` 分组下，与 `Skills.sh`、`ClawHub` 并列；支持分类、搜索、排序和分页浏览。

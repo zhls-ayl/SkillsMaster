@@ -112,6 +112,7 @@ struct ContentView: View {
                     RegistrySkillDetailView(
                         skill: skill,
                         isInstalled: vm.isInstalled(skill),
+                        isInstalling: vm.isInstalling(skill),
                         onInstall: { vm.installSkill(skill) },
                         viewModel: vm
                     )
@@ -165,12 +166,11 @@ struct ContentView: View {
                     RepositorySkillDetailView(
                         skill: skill,
                         repository: vm.repository,
+                        viewModel: vm,
                         content: vm.selectedSkillContent,
                         isLoadingContent: vm.isLoadingSelectedSkillContent,
                         contentError: vm.selectedSkillContentError,
                         isInstalled: vm.isInstalled(skill),
-                        canInstall: vm.canInstallFromLocal,
-                        installDisabledReason: vm.installDisabledReason,
                         onInstall: { vm.installSkill(skill) },
                         onLoadContent: { await vm.loadContent(for: skill) }
                     )

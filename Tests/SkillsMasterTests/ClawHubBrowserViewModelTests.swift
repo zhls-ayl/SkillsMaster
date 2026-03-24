@@ -111,6 +111,14 @@ final class ClawHubBrowserViewModelTests: XCTestCase {
         )
     }
 
+    private func makeDirectInstall(agent: AgentType, skillID: String) -> SkillInstallation {
+        SkillInstallation(
+            agentType: agent,
+            path: agent.skillsDirectoryURL.appendingPathComponent(skillID),
+            isSymlink: true
+        )
+    }
+
     private func makeClawHubSkill(slug: String) -> ClawHubSkill {
         ClawHubSkill(
             slug: slug,
@@ -185,7 +193,7 @@ final class ClawHubBrowserViewModelTests: XCTestCase {
         let skill = makeClawHubSkill(slug: "browser-use")
 
         XCTAssertEqual(viewModel.installButtonTitle(for: skill), "Reinstall")
-        XCTAssertEqual(viewModel.detailInstallButtonTitle(for: skill), "Reinstall to OpenClaw")
+        XCTAssertEqual(viewModel.detailInstallButtonTitle(for: skill), "Reinstall")
     }
 
     func testInstallButtonTitleReturnsInstallForNewSkill() {
@@ -194,7 +202,45 @@ final class ClawHubBrowserViewModelTests: XCTestCase {
         let skill = makeClawHubSkill(slug: "browser-use")
 
         XCTAssertEqual(viewModel.installButtonTitle(for: skill), "Install")
-        XCTAssertEqual(viewModel.detailInstallButtonTitle(for: skill), "Install to OpenClaw")
+        XCTAssertEqual(viewModel.detailInstallButtonTitle(for: skill), "Install")
+    }
+
+    func testTargetSelectionSummaryReturnsUnselectedWhenEmpty() {
+        let skillManager = SkillManager()
+        let viewModel = ClawHubBrowserViewModel(skillManager: skillManager)
+
+        XCTAssertEqual(viewModel.targetSelectionSummary(), "未选择 Agent")
+    }
+
+    func testDetailInstallButtonTitleReturnsMixedWhenSelectedAgentsArePartiallyInstalled() {
+        let skillManager = SkillManager()
+        var installedSkill = makeSkill(id: "browser-use", source: "browser-use")
+        installedSkill.installations = [makeDirectInstall(agent: .cursor, skillID: "browser-use")]
+        skillManager.skills = [installedSkill]
+
+        let viewModel = ClawHubBrowserViewModel(skillManager: skillManager)
+        viewModel.syncInstalledSkills()
+        viewModel.selectedTargetAgents = [.cursor, .claudeCode]
+
+        XCTAssertEqual(
+            viewModel.detailInstallButtonTitle(for: makeClawHubSkill(slug: "browser-use")),
+            "Install / Reinstall"
+        )
+    }
+
+    func testSelectingInstalledSkillDefaultsToInstalledAgents() {
+        let skillManager = SkillManager()
+        var installedSkill = makeSkill(id: "browser-use", source: "browser-use")
+        installedSkill.installations = [makeDirectInstall(agent: .cursor, skillID: "browser-use")]
+        skillManager.skills = [installedSkill]
+
+        let viewModel = ClawHubBrowserViewModel(skillManager: skillManager)
+        viewModel.syncInstalledSkills()
+        viewModel.displayedSkills = [makeClawHubSkill(slug: "browser-use")]
+
+        viewModel.selectedSkillID = "browser-use"
+
+        XCTAssertEqual(viewModel.selectedTargetAgents, [.cursor])
     }
 
     func testLoadMoreInBrowseModeIncreasesLimit() async {

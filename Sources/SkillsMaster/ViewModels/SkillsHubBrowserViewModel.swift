@@ -23,7 +23,12 @@ final class SkillsHubBrowserViewModel {
     var currentPage = 1
     var totalCount = 0
 
-    var selectedSkillID: String?
+    var selectedSkillID: String? {
+        didSet {
+            guard oldValue != selectedSkillID else { return }
+            syncSelectedTargetAgentsForCurrentSelection()
+        }
+    }
     var selectedSkillDetail: SkillsHubSkillDetail?
     var isLoadingDetail = false
     var detailError: String?
@@ -74,7 +79,6 @@ final class SkillsHubBrowserViewModel {
 
     func onAppear() async {
         syncInstalledSkills()
-        initializeSelectedAgentsIfNeeded()
 
         guard !hasLoadedInitialPage else { return }
         hasLoadedInitialPage = true
@@ -85,7 +89,6 @@ final class SkillsHubBrowserViewModel {
 
     func refresh() async {
         syncInstalledSkills()
-        initializeSelectedAgentsIfNeeded()
         await service.clearCache()
         await loadFeaturedIfNeeded(force: true)
         await reloadCurrentList()
@@ -152,10 +155,7 @@ final class SkillsHubBrowserViewModel {
     }
 
     func isInstalled(_ skill: SkillsHubSkill) -> Bool {
-        if installedSkillsHubSlugs.contains(skill.slug) {
-            return true
-        }
-        return installedSkillIDsNoSource.contains(skill.slug)
+        matchingInstalledSkill(for: skill) != nil
     }
 
     func canReinstall(_ skill: SkillsHubSkill) -> Bool {
@@ -174,20 +174,18 @@ final class SkillsHubBrowserViewModel {
         if isInstalling(skill) {
             return installingStatusMessage ?? "Installing..."
         }
-        if canReinstall(skill) {
-            return "Reinstall"
-        }
-        return "Install"
+        return installAction(for: skill).title
     }
 
     func detailInstallButtonTitle(for skill: SkillsHubSkill) -> String {
         if isInstalling(skill) {
             return installingStatusMessage ?? "Installing..."
         }
-        if canReinstall(skill) {
-            return "Reinstall"
-        }
-        return "Install"
+        return installAction(for: skill).title
+    }
+
+    func detailInstallButtonSystemImage(for skill: SkillsHubSkill) -> String {
+        installAction(for: skill).systemImage
     }
 
     func toggleTargetAgent(_ agent: AgentType) {
@@ -204,6 +202,9 @@ final class SkillsHubBrowserViewModel {
 
     func targetSelectionSummary() -> String {
         let count = selectedTargetAgents.count
+        if count == 0 {
+            return "未选择 Agent"
+        }
         return count == 1 ? "1 个 Agent 已选中" : "\(count) 个 Agent 已选中"
     }
 
@@ -237,7 +238,8 @@ final class SkillsHubBrowserViewModel {
     }
 
     private func performInstall(_ skill: SkillsHubSkill) async {
-        let wasReinstall = canReinstall(skill)
+        let action = installAction(for: skill)
+        let targetAgents = selectedTargetAgents
         installingSkillSlug = skill.slug
         installingStatusMessage = "Loading package..."
         defer {
@@ -259,13 +261,13 @@ final class SkillsHubBrowserViewModel {
                 skill: detail.skill,
                 version: version,
                 archiveData: archiveData,
-                targetAgents: selectedTargetAgents
+                targetAgents: targetAgents
             )
 
             syncInstalledSkills()
             notice = Notice(
-                title: wasReinstall ? "Reinstall Complete" : "Install Complete",
-                message: "\(skill.name) 已安装到 \(selectedTargetAgents.count) 个 Agent。"
+                title: action.completionTitle,
+                message: "\(skill.name) 已安装到 \(targetAgents.count) 个 Agent。"
             )
         } catch {
             notice = Notice(title: "Installation Failed", message: error.localizedDescription)
@@ -279,15 +281,51 @@ final class SkillsHubBrowserViewModel {
         return try await service.fetchSkillDetail(slug: skill.slug, seed: skill)
     }
 
-    private func initializeSelectedAgentsIfNeeded() {
-        guard selectedTargetAgents.isEmpty else { return }
-
-        let detected = Set(
-            skillManager.agents
-                .filter(\.supportsRootFileManagement)
-                .map(\.type)
+    private func installAction(for skill: SkillsHubSkill) -> MarketplaceInstallAction {
+        let fallback: MarketplaceInstallAction = isInstalled(skill) ? .reinstall : .install
+        return MarketplaceInstallAction.resolve(
+            selectedAgents: selectedTargetAgents,
+            directInstalledAgents: directInstalledAgents(for: skill),
+            fallbackWhenSelectionEmpty: fallback
         )
-        selectedTargetAgents = detected.isEmpty ? [.claudeCode] : detected
+    }
+
+    private func directInstalledAgents(for skill: SkillsHubSkill) -> Set<AgentType> {
+        guard let installedSkill = matchingInstalledSkill(for: skill) else {
+            return []
+        }
+
+        return Set(
+            installedSkill.installations
+                .filter { !$0.isInherited }
+                .map(\.agentType)
+        )
+    }
+
+    private func matchingInstalledSkill(for skill: SkillsHubSkill) -> Skill? {
+        if installedSkillsHubSlugs.contains(skill.slug) {
+            return skillManager.skills.first {
+                $0.id == skill.slug &&
+                $0.lockEntry?.sourceType == "skillhub" &&
+                $0.lockEntry?.source == skill.slug
+            }
+        }
+
+        if installedSkillIDsNoSource.contains(skill.slug) {
+            return skillManager.skills.first {
+                $0.id == skill.slug && $0.lockEntry == nil
+            }
+        }
+
+        return nil
+    }
+
+    private func syncSelectedTargetAgentsForCurrentSelection() {
+        guard let selectedSkill else {
+            selectedTargetAgents.removeAll()
+            return
+        }
+        selectedTargetAgents = directInstalledAgents(for: selectedSkill)
     }
 
     private func loadFeaturedIfNeeded(force: Bool = false) async {

@@ -185,9 +185,7 @@ struct SkillsHubSkillDetailView: View {
                     } else {
                         Label(
                             viewModel.detailInstallButtonTitle(for: skill),
-                            systemImage: viewModel.canReinstall(skill)
-                                ? "arrow.triangle.2.circlepath"
-                                : "arrow.down.circle"
+                            systemImage: viewModel.detailInstallButtonSystemImage(for: skill)
                         )
                     }
                 }
@@ -204,42 +202,14 @@ struct SkillsHubSkillDetailView: View {
                 }
             }
 
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Install Targets")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                LazyVGrid(
-                    columns: [GridItem(.adaptive(minimum: 120), alignment: .leading)],
-                    alignment: .leading,
-                    spacing: 8
-                ) {
-                    ForEach(viewModel.targetAgentTypes) { agentType in
-                        Toggle(isOn: Binding(
-                            get: { viewModel.selectedTargetAgents.contains(agentType) },
-                            set: { _ in viewModel.toggleTargetAgent(agentType) }
-                        )) {
-                            HStack(spacing: 6) {
-                                AgentIconView(agentType: agentType, size: 13)
-                                Text(agentType.displayName)
-                            }
-                            .font(.caption)
-                        }
-                        .toggleStyle(.checkbox)
-                        .opacity(viewModel.isAgentDetected(agentType) ? 1.0 : 0.5)
-                    }
-                }
-
-                Text(viewModel.targetSelectionSummary())
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                Text("安装时会先写入 SkillsMaster canonical 目录，再按各 Agent 的默认安装方式建立 direct install。")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(.top, 4)
+            MarketplaceInstallTargetsView(
+                agentTypes: viewModel.targetAgentTypes,
+                selectedAgents: viewModel.selectedTargetAgents,
+                selectionSummary: viewModel.targetSelectionSummary(),
+                noteText: "安装时会先写入 SkillsMaster canonical 目录，再按各 Agent 的默认安装方式建立 direct install。",
+                isAgentDetected: viewModel.isAgentDetected(_:),
+                onToggle: viewModel.toggleTargetAgent(_:)
+            )
         }
     }
 

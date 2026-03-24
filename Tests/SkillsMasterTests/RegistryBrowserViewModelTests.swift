@@ -82,6 +82,14 @@ final class RegistryBrowserViewModelTests: XCTestCase {
         )
     }
 
+    private func makeDirectInstall(agent: AgentType, skillID: String) -> SkillInstallation {
+        SkillInstallation(
+            agentType: agent,
+            path: agent.skillsDirectoryURL.appendingPathComponent(skillID),
+            isSymlink: true
+        )
+    }
+
     /// 创建一个最小可用的 `RegistrySkill`，用于 registry 场景测试。
     private func makeRegistrySkill(skillId: String, source: String) -> RegistrySkill {
         RegistrySkill(
@@ -151,6 +159,44 @@ final class RegistryBrowserViewModelTests: XCTestCase {
         // Registry skill with a completely different skillId should not be installed
         let registrySkill = makeRegistrySkill(skillId: "ui-ux-pro-max", source: "alice/skills")
         XCTAssertFalse(vm.isInstalled(registrySkill), "Should NOT be installed when skillId doesn't match any local skill")
+    }
+
+    func testTargetSelectionSummaryReturnsUnselectedWhenEmpty() {
+        let skillManager = SkillManager()
+        let vm = RegistryBrowserViewModel(skillManager: skillManager)
+
+        XCTAssertEqual(vm.targetSelectionSummary(), "未选择 Agent")
+    }
+
+    func testDetailInstallButtonTitleReturnsMixedWhenSelectedAgentsArePartiallyInstalled() {
+        let skillManager = SkillManager()
+        var installedSkill = makeSkill(id: "ui-ux-pro-max", source: "alice/skills")
+        installedSkill.installations = [makeDirectInstall(agent: .cursor, skillID: "ui-ux-pro-max")]
+        skillManager.skills = [installedSkill]
+
+        let vm = RegistryBrowserViewModel(skillManager: skillManager)
+        vm.syncInstalledSkills()
+        vm.selectedTargetAgents = [.cursor, .claudeCode]
+
+        XCTAssertEqual(
+            vm.detailInstallButtonTitle(for: makeRegistrySkill(skillId: "ui-ux-pro-max", source: "alice/skills")),
+            "Install / Reinstall"
+        )
+    }
+
+    func testSelectingInstalledSkillDefaultsToInstalledAgents() {
+        let skillManager = SkillManager()
+        var installedSkill = makeSkill(id: "ui-ux-pro-max", source: "alice/skills")
+        installedSkill.installations = [makeDirectInstall(agent: .cursor, skillID: "ui-ux-pro-max")]
+        skillManager.skills = [installedSkill]
+
+        let vm = RegistryBrowserViewModel(skillManager: skillManager)
+        vm.syncInstalledSkills()
+        vm.displayedSkills = [makeRegistrySkill(skillId: "ui-ux-pro-max", source: "alice/skills")]
+
+        vm.selectedSkillID = "alice/skills/ui-ux-pro-max"
+
+        XCTAssertEqual(vm.selectedTargetAgents, [.cursor])
     }
 
     func testLeaderboardModeUsesLocalPaginationAfterInitialFetch() async {

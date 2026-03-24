@@ -41,11 +41,66 @@ final class RepositoryBrowserViewModelTests: XCTestCase {
         XCTAssertNil(vm.scanNoticeMessage)
     }
 
+    func testIsInstalledReturnsTrueWhenRepositorySourceMatches() {
+        let skillManager = SkillManager()
+        skillManager.skills = [makeInstalledSkill(id: "repo-skill", source: "org/repo")]
+        let repository = makeRepository()
+        let vm = RepositoryBrowserViewModel(repository: repository, skillManager: skillManager)
+
+        XCTAssertTrue(vm.isInstalled(makeDiscoveredSkill(id: "repo-skill")))
+    }
+
+    func testIsInstalledReturnsFalseWhenRepositorySourceDiffers() {
+        let skillManager = SkillManager()
+        skillManager.skills = [makeInstalledSkill(id: "repo-skill", source: "other/repo")]
+        let repository = makeRepository()
+        let vm = RepositoryBrowserViewModel(repository: repository, skillManager: skillManager)
+
+        XCTAssertFalse(vm.isInstalled(makeDiscoveredSkill(id: "repo-skill")))
+    }
+
+    func testTargetSelectionSummaryReturnsUnselectedWhenEmpty() {
+        let skillManager = SkillManager()
+        let repository = makeRepository()
+        let vm = RepositoryBrowserViewModel(repository: repository, skillManager: skillManager)
+
+        XCTAssertEqual(vm.targetSelectionSummary(), "未选择 Agent")
+    }
+
+    func testDetailInstallButtonTitleReturnsMixedWhenSelectedAgentsArePartiallyInstalled() {
+        let skillManager = SkillManager()
+        var installedSkill = makeInstalledSkill(id: "repo-skill", source: "org/repo")
+        installedSkill.installations = [makeDirectInstall(agent: .cursor, skillID: "repo-skill")]
+        skillManager.skills = [installedSkill]
+        let repository = makeRepository()
+        let vm = RepositoryBrowserViewModel(repository: repository, skillManager: skillManager)
+        vm.selectedTargetAgents = [.cursor, .claudeCode]
+
+        XCTAssertEqual(
+            vm.detailInstallButtonTitle(for: makeDiscoveredSkill(id: "repo-skill")),
+            "Install / Reinstall"
+        )
+    }
+
+    func testSelectingInstalledSkillDefaultsToInstalledAgents() {
+        let skillManager = SkillManager()
+        var installedSkill = makeInstalledSkill(id: "repo-skill", source: "org/repo")
+        installedSkill.installations = [makeDirectInstall(agent: .cursor, skillID: "repo-skill")]
+        skillManager.skills = [installedSkill]
+        let repository = makeRepository()
+        let vm = RepositoryBrowserViewModel(repository: repository, skillManager: skillManager)
+        vm.allSkills = [makeDiscoveredSkill(id: "repo-skill")]
+
+        vm.selectedSkillID = "repo-skill"
+
+        XCTAssertEqual(vm.selectedTargetAgents, [.cursor])
+    }
+
     private func makeRepository() -> SkillRepository {
         SkillRepository(
             id: UUID(),
             name: "team-skills",
-            repoURL: "https://example.com/org/repo.git",
+            repoURL: "https://github.com/org/repo.git",
             authType: .httpsToken,
             platform: .github,
             isEnabled: true,
@@ -65,6 +120,38 @@ final class RepositoryBrowserViewModelTests: XCTestCase {
             skillMDPath: "skills/\(id)/SKILL.md",
             metadata: SkillMetadata(name: id, description: ""),
             markdownBody: ""
+        )
+    }
+
+    private func makeInstalledSkill(id: String, source: String? = nil) -> Skill {
+        let lockEntry: LockEntry? = source.map { src in
+            LockEntry(
+                source: src,
+                sourceType: "custom",
+                sourceUrl: "https://github.com/\(src).git",
+                skillPath: "skills/\(id)/SKILL.md",
+                skillFolderHash: "abc123",
+                installedAt: "2026-03-24T00:00:00.000Z",
+                updatedAt: "2026-03-24T00:00:00.000Z"
+            )
+        }
+
+        return Skill(
+            id: id,
+            canonicalURL: URL(fileURLWithPath: "/tmp/skills/\(id)"),
+            metadata: SkillMetadata(name: id, description: ""),
+            markdownBody: "",
+            scope: .shared,
+            installations: [],
+            lockEntry: lockEntry
+        )
+    }
+
+    private func makeDirectInstall(agent: AgentType, skillID: String) -> SkillInstallation {
+        SkillInstallation(
+            agentType: agent,
+            path: agent.skillsDirectoryURL.appendingPathComponent(skillID),
+            isSymlink: true
         )
     }
 }

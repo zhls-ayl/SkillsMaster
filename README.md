@@ -32,10 +32,11 @@ SkillsMaster 的目标，是把这些分散在文件系统、命令行和配置�
 - 可为每个 Agent 单独设置默认安装方式：`symbolic link` 或 `physical copy`
 - 从 Git 仓库扫描并安装 Skills（支持 `owner/repo`、`HTTPS`、`SSH` 输入），安装后落到 canonical 目录并写入 lock file
 - 浏览并安装 `Skills.sh` 中的 Skills
-- 浏览 ClawHub marketplace，查看详情、读取 `SKILL.md`，并安装到 OpenClaw
+- 浏览 ClawHub marketplace，查看详情、读取 `SKILL.md`，并安装到任意已支持 Agent
 - 浏览 SkillsHub marketplace，按分类 / 搜索 / 排序 / 分页查看 Skills，解析 archive 中的 `SKILL.md`，并安装到任意已支持 Agent
 - 管理 GitHub / GitLab Custom Repository，支持 `SSH` 和 `HTTPS + Token`（Token 存储在 macOS Keychain）
 - Custom Repository 支持 clone / pull、轻量索引缓存、按需加载详情、本地安装，以及按仓库配置 `sync on launch` / `scan hidden paths`
+- `Skills.sh`、ClawHub、SkillsHub 与 Custom Repository 均统一为“详情页内联勾选 Agent”安装；默认不预选 Agent，空选择点击主按钮会弹出提示，混合状态显示 `Install / Reinstall`
 - 支持为未记录来源的本地 Skill 手动关联 Repository，随后执行更新检查
 - 支持批量检查 Git 来源与 SkillsHub 来源 Skill 更新；Git 来源记录本地 / 远端 commit hash，SkillsHub 来源记录 marketplace version
 - 启动时执行从 `~/.agents` 到 `~/.skillsmaster` 的迁移，并保留对旧兼容路径的读取
@@ -77,7 +78,6 @@ SkillsMaster 的目标，是把这些分散在文件系统、命令行和配置�
 - Custom Repository 的本地 clone 目录是 SkillsMaster 管理的 cache，不是推荐的手工编辑工作区
 - `HTTPS + Token` 的 Repository 凭据只存储在 macOS Keychain，不写入 `~/.skillsmaster/.skillsmaster-repos.json`
 - Custom Repository 默认不开启启动时自动同步，默认不扫描隐藏目录；可在 Repository 设置中按仓库开启
-- 当前 ClawHub 入口明确面向 OpenClaw，不是面向所有 Agent 的通用 marketplace 安装入口
 - 当前 SkillsHub 入口是独立 marketplace，浏览使用 SkillsHub 网页接口，安装使用 SkillsHub archive 下载接口；lock file 中会同时记录 `skillhub` 来源和推断出的 upstream 来源（当前通常是 `clawhub`）
 
 ## 当前边界

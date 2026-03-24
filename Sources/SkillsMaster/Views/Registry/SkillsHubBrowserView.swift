@@ -206,11 +206,7 @@ struct SkillsHubBrowserView: View {
                 SkillsHubSkillRowView(
                     skill: skill,
                     isInstalled: viewModel.isInstalled(skill),
-                    canReinstall: viewModel.canReinstall(skill),
-                    isInstalling: viewModel.isInstalling(skill),
-                    isFeatured: viewModel.isFeatured(skill),
-                    buttonTitle: viewModel.installButtonTitle(for: skill),
-                    onInstall: { viewModel.installSkill(skill) }
+                    isFeatured: viewModel.isFeatured(skill)
                 )
                 .tag(skill.id)
             }
@@ -241,11 +237,7 @@ struct SkillsHubBrowserView: View {
 private struct SkillsHubSkillRowView: View {
     let skill: SkillsHubSkill
     let isInstalled: Bool
-    let canReinstall: Bool
-    let isInstalling: Bool
     let isFeatured: Bool
-    let buttonTitle: String
-    let onInstall: () -> Void
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -282,22 +274,6 @@ private struct SkillsHubSkillRowView: View {
             }
 
             Spacer(minLength: 12)
-
-            Button {
-                onInstall()
-            } label: {
-                if isInstalling {
-                    HStack(spacing: 6) {
-                        ProgressView()
-                            .controlSize(.small)
-                        Text(buttonTitle)
-                    }
-                } else {
-                    Text(buttonTitle)
-                }
-            }
-            .buttonStyle(.bordered)
-            .disabled(isInstalling || (isInstalled && !canReinstall))
         }
         .padding(.vertical, 4)
     }

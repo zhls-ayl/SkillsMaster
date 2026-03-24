@@ -17,6 +17,12 @@ import Foundation
 @Observable
 final class RepositoryBrowserViewModel {
 
+    struct Notice: Identifiable {
+        let id = UUID()
+        let title: String
+        let message: String
+    }
+
     // MARK: - State
 
     /// The repository this ViewModel represents.
@@ -64,6 +70,7 @@ final class RepositoryBrowserViewModel {
         didSet {
             guard oldValue != selectedSkillID else { return }
             resetSelectedSkillContent()
+            syncSelectedTargetAgentsForCurrentSelection()
         }
     }
 
@@ -84,9 +91,17 @@ final class RepositoryBrowserViewModel {
     /// Error message for selected skill content loading.
     var selectedSkillContentError: String?
 
-    /// Install sheet ViewModel — non-nil triggers the install sheet.
-    /// Same pattern as RegistryBrowserViewModel.installVM.
-    var installVM: SkillInstallViewModel?
+    /// 详情页内联安装的目标 Agent 选择。
+    var selectedTargetAgents: Set<AgentType> = []
+
+    /// 当前正在执行安装的 skill ID。
+    var installingSkillID: String?
+
+    /// 安装阶段展示在主按钮上的状态文案。
+    var installingStatusMessage: String?
+
+    /// Alert 弹窗提示。
+    var notice: Notice?
 
     /// Current sync status for this repository.
     var syncStatus: SkillRepository.SyncStatus {
@@ -112,6 +127,10 @@ final class RepositoryBrowserViewModel {
             return "安装前需要先同步 Repository。"
         }
         return nil
+    }
+
+    var targetAgentTypes: [AgentType] {
+        AgentType.displayNameLengthSortedCases
     }
 
     // MARK: - Private
@@ -226,23 +245,20 @@ final class RepositoryBrowserViewModel {
     /// - Parameter skill: The discovered skill to install
     func installSkill(_ skill: GitService.DiscoveredSkill) {
         if let reason = installDisabledReason {
-            errorMessage = reason
+            notice = Notice(title: "无法安装", message: reason)
             return
         }
         guard !allSkills.isEmpty else {
-            errorMessage = "当前没有可安装的 Skills，请先同步后重试。"
+            notice = Notice(title: "无法安装", message: "当前没有可安装的 Skills，请先同步后重试。")
+            return
+        }
+        guard installingSkillID == nil else { return }
+        guard !selectedTargetAgents.isEmpty else {
+            notice = Notice(title: "无法安装", message: "请至少选择一个目标 Agent。")
             return
         }
 
-        let vm = SkillInstallViewModel(skillManager: skillManager)
-        vm.prepareForLocalRepository(
-            repoDir: URL(fileURLWithPath: repository.localPath),
-            repoURL: repository.repoURL,
-            repoSource: sourceIdentifier(),
-            discoveredSkills: allSkills,
-            targetSkillId: skill.id
-        )
-        installVM = vm
+        Task { await performInstall(skill) }
     }
 
     /// Check if a discovered skill is already installed locally.
@@ -250,7 +266,42 @@ final class RepositoryBrowserViewModel {
     /// Matches by skill ID (directory name). The skill is considered installed
     /// if SkillManager already has a Skill with the same ID in its scanned list.
     func isInstalled(_ skill: GitService.DiscoveredSkill) -> Bool {
-        skillManager.skills.contains { $0.id == skill.id }
+        matchingInstalledSkill(for: skill) != nil
+    }
+
+    func isInstalling(_ skill: GitService.DiscoveredSkill) -> Bool {
+        installingSkillID == skill.id
+    }
+
+    func toggleTargetAgent(_ agent: AgentType) {
+        if selectedTargetAgents.contains(agent) {
+            selectedTargetAgents.remove(agent)
+        } else {
+            selectedTargetAgents.insert(agent)
+        }
+    }
+
+    func isAgentDetected(_ agent: AgentType) -> Bool {
+        skillManager.agents.first { $0.type == agent }?.supportsRootFileManagement == true
+    }
+
+    func targetSelectionSummary() -> String {
+        let count = selectedTargetAgents.count
+        if count == 0 {
+            return "未选择 Agent"
+        }
+        return count == 1 ? "1 个 Agent 已选中" : "\(count) 个 Agent 已选中"
+    }
+
+    func detailInstallButtonTitle(for skill: GitService.DiscoveredSkill) -> String {
+        if isInstalling(skill) {
+            return installingStatusMessage ?? "Installing..."
+        }
+        return installAction(for: skill).title
+    }
+
+    func detailInstallButtonSystemImage(for skill: GitService.DiscoveredSkill) -> String {
+        installAction(for: skill).systemImage
     }
 
     /// Sync this repository (git pull or clone).
@@ -292,11 +343,83 @@ final class RepositoryBrowserViewModel {
         }
     }
 
+    private func performInstall(_ skill: GitService.DiscoveredSkill) async {
+        let action = installAction(for: skill)
+        let targetAgents = selectedTargetAgents
+        installingSkillID = skill.id
+        installingStatusMessage = "Installing..."
+        defer {
+            installingSkillID = nil
+            installingStatusMessage = nil
+        }
+
+        do {
+            try await skillManager.installSkill(
+                from: URL(fileURLWithPath: repository.localPath),
+                skill: skill,
+                repoSource: sourceIdentifier(),
+                repoURL: repository.repoURL,
+                sourceType: "custom",
+                targetAgents: targetAgents
+            )
+
+            notice = Notice(
+                title: action.completionTitle,
+                message: "\(skill.metadata.name.isEmpty ? skill.id : skill.metadata.name) 已安装到 \(targetAgents.count) 个 Agent。"
+            )
+        } catch {
+            notice = Notice(title: "Installation Failed", message: error.localizedDescription)
+        }
+    }
+
     private func resetSelectedSkillContent() {
         selectedSkillContent = nil
         selectedSkillContentError = nil
         isLoadingSelectedSkillContent = false
         loadingContentSkillID = nil
+    }
+
+    private func installAction(for skill: GitService.DiscoveredSkill) -> MarketplaceInstallAction {
+        let fallback: MarketplaceInstallAction = isInstalled(skill) ? .reinstall : .install
+        return MarketplaceInstallAction.resolve(
+            selectedAgents: selectedTargetAgents,
+            directInstalledAgents: directInstalledAgents(for: skill),
+            fallbackWhenSelectionEmpty: fallback
+        )
+    }
+
+    private func directInstalledAgents(for skill: GitService.DiscoveredSkill) -> Set<AgentType> {
+        guard let installedSkill = matchingInstalledSkill(for: skill) else {
+            return []
+        }
+
+        return Set(
+            installedSkill.installations
+                .filter { !$0.isInherited }
+                .map(\.agentType)
+        )
+    }
+
+    private func matchingInstalledSkill(for skill: GitService.DiscoveredSkill) -> Skill? {
+        let repositorySource = sourceIdentifier()
+
+        if let exactSourceMatch = skillManager.skills.first(where: {
+            $0.id == skill.id && $0.lockEntry?.source == repositorySource
+        }) {
+            return exactSourceMatch
+        }
+
+        return skillManager.skills.first {
+            $0.id == skill.id && $0.lockEntry == nil
+        }
+    }
+
+    private func syncSelectedTargetAgentsForCurrentSelection() {
+        guard let selectedSkill else {
+            selectedTargetAgents.removeAll()
+            return
+        }
+        selectedTargetAgents = directInstalledAgents(for: selectedSkill)
     }
 
     private func sourceIdentifier() -> String {

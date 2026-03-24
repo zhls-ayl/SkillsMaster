@@ -18,9 +18,6 @@ struct RegistryBrowserView: View {
     /// @Bindable creates two-way bindings for @Observable object properties
     @Bindable var viewModel: RegistryBrowserViewModel
 
-    /// SkillManager from environment (needed to pass into install sheet)
-    @Environment(SkillManager.self) private var skillManager
-
     var body: some View {
         VStack(spacing: 0) {
             // Category tabs (All Time / Trending 24h / Hot)
@@ -83,19 +80,12 @@ struct RegistryBrowserView: View {
         .task {
             await viewModel.onAppear()
         }
-        // Install sheet — reuses the existing SkillInstallView (F10)
-        // .sheet(item:) shows the sheet when installVM is non-nil
-        // onDismiss is called when the sheet closes (cleanup temp files + sync installed status)
-        .sheet(item: $viewModel.installVM, onDismiss: {
-            viewModel.installVM?.cleanup()
-            viewModel.installVM = nil
-            // Sync installed skill IDs so badges update immediately after install
-            viewModel.syncInstalledSkills()
-        }) { vm in
-            SkillInstallView(viewModel: vm)
-                // .environment() injects SkillManager into the sheet's view tree
-                // Sheets create a new view hierarchy, so environment must be re-injected
-                .environment(skillManager)
+        .alert(item: $viewModel.notice) { notice in
+            Alert(
+                title: Text(notice.title),
+                message: Text(notice.message),
+                dismissButton: .default(Text("OK"))
+            )
         }
     }
 
@@ -168,8 +158,7 @@ struct RegistryBrowserView: View {
             ForEach(viewModel.displayedSkills) { skill in
                 RegistrySkillRowView(
                     skill: skill,
-                    isInstalled: viewModel.isInstalled(skill),
-                    onInstall: { viewModel.installSkill(skill) }
+                    isInstalled: viewModel.isInstalled(skill)
                 )
                 // .tag associates this row with a selection value (the skill's id)
                 // When user clicks this row, selectedSkillID is set to skill.id

@@ -96,6 +96,11 @@ SkillsHub 功能按以下层次实现：
 - 安装状态：`selectedTargetAgents`、`installingSkillSlug`、`installingStatusMessage`
 - 用户提示：`notice`
 
+SkillsHub 详情页当前采用内联 Agent 勾选安装：
+- 默认不预选 Agent
+- 空选择点击主按钮会弹 alert
+- 若已选 Agent 同时包含“已直接安装”和“未直接安装”的目标，主按钮显示 `Install / Reinstall`
+
 ### 4. Manager / 文件系统层
 SkillsHub 不直接写 SkillsMaster 的 canonical 目录。真正的落盘动作由 `SkillManager.installSkillsHubSkill(...)` 执行，职责包括：
 - 下载并解压 zip archive

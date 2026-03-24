@@ -197,14 +197,12 @@ struct ClawHubSkillDetailView: View {
                     } else {
                         Label(
                             viewModel.detailInstallButtonTitle(for: skill),
-                            systemImage: viewModel.canReinstall(skill)
-                                ? "arrow.triangle.2.circlepath"
-                                : "arrow.down.circle"
+                            systemImage: viewModel.detailInstallButtonSystemImage(for: skill)
                         )
                     }
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(isInstalling || (isInstalled && !viewModel.canReinstall(skill)))
+                .disabled(isInstalling)
 
                 Button {
                     NSWorkspace.shared.open(detailPageURL)
@@ -214,20 +212,14 @@ struct ClawHubSkillDetailView: View {
                 .buttonStyle(.bordered)
             }
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Install Target")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                Text("OpenClaw（通过 SkillsMaster canonical 目录分配，按默认安装方式落盘）")
-                    .font(.system(.callout, design: .monospaced))
-                    .textSelection(.enabled)
-                    .padding(8)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color(nsColor: .textBackgroundColor))
-                    .clipShape(.rect(cornerRadius: 6))
-            }
-            .padding(.top, 4)
+            MarketplaceInstallTargetsView(
+                agentTypes: viewModel.targetAgentTypes,
+                selectedAgents: viewModel.selectedTargetAgents,
+                selectionSummary: viewModel.targetSelectionSummary(),
+                noteText: "安装时会先写入 SkillsMaster canonical 目录，再按各 Agent 的默认安装方式建立 direct install。",
+                isAgentDetected: viewModel.isAgentDetected(_:),
+                onToggle: viewModel.toggleTargetAgent(_:)
+            )
         }
     }
 

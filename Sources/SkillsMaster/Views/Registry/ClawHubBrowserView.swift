@@ -223,11 +223,7 @@ struct ClawHubBrowserView: View {
             ForEach(viewModel.displayedSkills) { skill in
                 ClawHubSkillRowView(
                     skill: skill,
-                    isInstalled: viewModel.isInstalled(skill),
-                    canReinstall: viewModel.canReinstall(skill),
-                    isInstalling: viewModel.isInstalling(skill),
-                    buttonTitle: viewModel.installButtonTitle(for: skill),
-                    onInstall: { viewModel.installSkill(skill) }
+                    isInstalled: viewModel.isInstalled(skill)
                 )
                 .tag(skill.id)
                 .onAppear {
@@ -383,10 +379,6 @@ struct ClawHubBrowserView: View {
 private struct ClawHubSkillRowView: View {
     let skill: ClawHubSkill
     let isInstalled: Bool
-    let canReinstall: Bool
-    let isInstalling: Bool
-    let buttonTitle: String
-    let onInstall: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -414,15 +406,6 @@ private struct ClawHubSkillRowView: View {
                 }
 
                 Spacer(minLength: 12)
-
-                Button(buttonTitle) {
-                    onInstall()
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .disabled(isInstalling || (isInstalled && !canReinstall))
-                .lineLimit(2)
-                .multilineTextAlignment(.center)
             }
 
             HStack(spacing: 12) {

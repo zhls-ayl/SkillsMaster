@@ -2,12 +2,10 @@ import SwiftUI
 
 /// RegistrySkillRowView displays a single skill from the skills.sh registry
 ///
-/// Shows: skill name, source repo, install count, daily change (if available), and install button.
+/// Shows: skill name, source repo, install count, and daily change.
 /// Layout follows the existing SkillRowView/SkillInstallView patterns for visual consistency.
 ///
 /// `let` properties make this a stateless, reusable component — all data flows in from the parent.
-/// The `onInstall` closure enables the parent to handle the install action (Callback pattern,
-/// similar to Java's OnClickListener or React's onClick prop).
 struct RegistrySkillRowView: View {
 
     /// Skill data from the registry
@@ -15,11 +13,6 @@ struct RegistrySkillRowView: View {
 
     /// Whether this skill is already installed locally
     let isInstalled: Bool
-
-    /// Closure called when user clicks the "Install" button
-    /// `() -> Void` is a function type that takes no arguments and returns nothing
-    /// — similar to Java's Runnable or Go's func()
-    let onInstall: () -> Void
 
     var body: some View {
         HStack(spacing: 12) {
@@ -85,16 +78,6 @@ struct RegistrySkillRowView: View {
                 }
             }
 
-            // Install button
-            Button("Install") {
-                onInstall()
-            }
-            // .bordered gives the button a visible border (macOS standard secondary button style)
-            .buttonStyle(.bordered)
-            // .controlSize(.small) makes the button compact — appropriate for list rows
-            .controlSize(.small)
-            // Disabled when skill is already installed (prevents duplicate installs)
-            .disabled(isInstalled)
         }
         .padding(.vertical, 4)
     }

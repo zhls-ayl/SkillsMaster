@@ -26,13 +26,20 @@ final class ClawHubBrowserViewModel {
     var loadMoreErrorMessage: String?
     private(set) var hasMoreResults = true
 
-    var selectedSkillID: String?
+    var selectedSkillID: String? {
+        didSet {
+            guard oldValue != selectedSkillID else { return }
+            syncSelectedTargetAgentsForCurrentSelection()
+        }
+    }
     var selectedSkillDetail: ClawHubSkillDetail?
     var fetchedContent: SkillMDParser.ParseResult?
     var isLoadingDetail = false
     var isLoadingContent = false
     var detailError: String?
     var contentError: String?
+
+    var selectedTargetAgents: Set<AgentType> = []
 
     var installingSkillSlug: String?
     var installingStatusMessage: String?
@@ -45,6 +52,10 @@ final class ClawHubBrowserViewModel {
     var selectedSkill: ClawHubSkill? {
         guard let selectedSkillID else { return nil }
         return displayedSkills.first { $0.id == selectedSkillID }
+    }
+
+    var targetAgentTypes: [AgentType] {
+        AgentType.displayNameLengthSortedCases
     }
 
     private let service: any ClawHubServiceProtocol
@@ -145,10 +156,7 @@ final class ClawHubBrowserViewModel {
     }
 
     func isInstalled(_ skill: ClawHubSkill) -> Bool {
-        if installedClawHubSlugs.contains(skill.slug) {
-            return true
-        }
-        return installedSkillIDsNoSource.contains(skill.slug)
+        matchingInstalledSkill(for: skill) != nil
     }
 
     func canReinstall(_ skill: ClawHubSkill) -> Bool {
@@ -163,20 +171,38 @@ final class ClawHubBrowserViewModel {
         if isInstalling(skill) {
             return installingStatusMessage ?? "Installing..."
         }
-        if canReinstall(skill) {
-            return "Reinstall"
-        }
-        return "Install"
+        return installAction(for: skill).title
     }
 
     func detailInstallButtonTitle(for skill: ClawHubSkill) -> String {
         if isInstalling(skill) {
             return installingStatusMessage ?? "Installing..."
         }
-        if canReinstall(skill) {
-            return "Reinstall to OpenClaw"
+        return installAction(for: skill).title
+    }
+
+    func detailInstallButtonSystemImage(for skill: ClawHubSkill) -> String {
+        installAction(for: skill).systemImage
+    }
+
+    func toggleTargetAgent(_ agent: AgentType) {
+        if selectedTargetAgents.contains(agent) {
+            selectedTargetAgents.remove(agent)
+        } else {
+            selectedTargetAgents.insert(agent)
         }
-        return "Install to OpenClaw"
+    }
+
+    func isAgentDetected(_ agent: AgentType) -> Bool {
+        skillManager.agents.first { $0.type == agent }?.supportsRootFileManagement == true
+    }
+
+    func targetSelectionSummary() -> String {
+        let count = selectedTargetAgents.count
+        if count == 0 {
+            return "未选择 Agent"
+        }
+        return count == 1 ? "1 个 Agent 已选中" : "\(count) 个 Agent 已选中"
     }
 
     // MARK: - Detail loading
@@ -226,10 +252,16 @@ final class ClawHubBrowserViewModel {
 
     func installSkill(_ skill: ClawHubSkill) {
         guard installingSkillSlug == nil else { return }
+        guard !selectedTargetAgents.isEmpty else {
+            notice = Notice(title: "无法安装", message: "请至少选择一个目标 Agent。")
+            return
+        }
         Task { await performInstall(skill) }
     }
 
     private func performInstall(_ skill: ClawHubSkill) async {
+        let action = installAction(for: skill)
+        let targetAgents = selectedTargetAgents
         installingSkillSlug = skill.slug
         installingStatusMessage = "Loading package info..."
         defer {
@@ -271,7 +303,7 @@ final class ClawHubBrowserViewModel {
                 detailPageURL: detail.skill.browserURL.absoluteString,
                 skillContent: skillContent,
                 archiveData: archiveData,
-                targetAgents: [.openClaw]
+                targetAgents: targetAgents
             )
 
             syncInstalledSkills()
@@ -281,12 +313,12 @@ final class ClawHubBrowserViewModel {
                     "ClawHub did not return a downloadable archive for this skill version."
                 notice = Notice(
                     title: "Installed with limited files",
-                    message: "SkillsMaster installed SKILL.md for OpenClaw, but auxiliary files were not included. Reason: \(reason)"
+                    message: "\(skill.name) 已安装到 \(targetAgents.count) 个 Agent，但辅助文件缺失。原因：\(reason)"
                 )
             } else {
                 notice = Notice(
-                    title: "Installed",
-                    message: "\(skill.name) is now available to OpenClaw."
+                    title: action.completionTitle,
+                    message: "\(skill.name) 已安装到 \(targetAgents.count) 个 Agent。"
                 )
             }
         } catch {
@@ -295,6 +327,53 @@ final class ClawHubBrowserViewModel {
     }
 
     // MARK: - Private helpers
+
+    private func installAction(for skill: ClawHubSkill) -> MarketplaceInstallAction {
+        let fallback: MarketplaceInstallAction = isInstalled(skill) ? .reinstall : .install
+        return MarketplaceInstallAction.resolve(
+            selectedAgents: selectedTargetAgents,
+            directInstalledAgents: directInstalledAgents(for: skill),
+            fallbackWhenSelectionEmpty: fallback
+        )
+    }
+
+    private func directInstalledAgents(for skill: ClawHubSkill) -> Set<AgentType> {
+        guard let installedSkill = matchingInstalledSkill(for: skill) else {
+            return []
+        }
+
+        return Set(
+            installedSkill.installations
+                .filter { !$0.isInherited }
+                .map(\.agentType)
+        )
+    }
+
+    private func matchingInstalledSkill(for skill: ClawHubSkill) -> Skill? {
+        if installedClawHubSlugs.contains(skill.slug) {
+            return skillManager.skills.first {
+                $0.id == skill.slug &&
+                $0.lockEntry?.sourceType == "clawhub" &&
+                $0.lockEntry?.source == skill.slug
+            }
+        }
+
+        if installedSkillIDsNoSource.contains(skill.slug) {
+            return skillManager.skills.first {
+                $0.id == skill.slug && $0.lockEntry == nil
+            }
+        }
+
+        return nil
+    }
+
+    private func syncSelectedTargetAgentsForCurrentSelection() {
+        guard let selectedSkill else {
+            selectedTargetAgents.removeAll()
+            return
+        }
+        selectedTargetAgents = directInstalledAgents(for: selectedSkill)
+    }
 
     private var browseOptions: ClawHubService.BrowseOptions {
         ClawHubService.BrowseOptions(

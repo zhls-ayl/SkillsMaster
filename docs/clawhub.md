@@ -8,9 +8,7 @@ ClawHub 在 SkillsMaster 中是一个独立的在线来源，不复用 `Skills.s
 - 搜索、排序、筛选并查看 skill 详情
 - 拉取 `SKILL.md` 供详情页渲染
 - 将选中的 ClawHub skill 安装到 SkillsMaster canonical 目录
-- 按 `OpenClaw` 的默认安装方式，把 skill 落到其目录中，使其可直接使用该 skill
-
-当前实现明确面向 `OpenClaw`，不是面向所有 Agent 的通用安装入口。
+- 按用户在详情页中勾选的目标 Agent 集合，把 skill 落到对应目录中
 
 ## 入口与界面组织
 ClawHub 通过 `SidebarItem.clawHub` 作为独立导航项暴露在侧边栏，位于 `Marketplace` 分组下，与 `Skills.sh` 同级。
@@ -18,7 +16,7 @@ ClawHub 通过 `SidebarItem.clawHub` 作为独立导航项暴露在侧边栏，�
 对应 UI 结构如下：
 - 左栏：`SidebarView` 提供 `ClawHub` 导航项
 - 中栏：`ClawHubBrowserView` 展示浏览列表、搜索框、排序/筛选控件、分页状态
-- 右栏：`ClawHubSkillDetailView` 展示选中 skill 的 package 信息、解析后的 `SKILL.md` metadata、正文内容与安装按钮
+- 右栏：`ClawHubSkillDetailView` 展示选中 skill 的 package 信息、解析后的 `SKILL.md` metadata、正文内容，以及内联 Agent 勾选和安装按钮
 
 `ContentView` 会在应用初始化时创建 `ClawHubBrowserViewModel`，并在用户切换到 `ClawHub` 页面时复用该 ViewModel。
 
@@ -97,7 +95,7 @@ ClawHub 功能按以下层次实现：
 - 列表结果状态：`displayedSkills`、`isLoading`、`errorMessage`
 - 分页状态：`isLoadingMore`、`loadMoreErrorMessage`、`hasMoreResults`、`nextBrowseCursor`、`currentSearchLimit`
 - 详情状态：`selectedSkillID`、`selectedSkillDetail`、`fetchedContent`、`detailError`、`contentError`
-- 安装状态：`installingSkillSlug`
+- 安装状态：`selectedTargetAgents`、`installingSkillSlug`、`installingStatusMessage`
 - 用户提示：`notice`
 
 ### 4. Manager / 文件系统层
@@ -277,7 +275,10 @@ View 层对错误的呈现分为三类：
 这避免了右侧详情内容串页。
 
 ## 安装流程
-安装入口位于详情页，按钮文案固定为 `Install to OpenClaw`。这对应当前实现的真实限制：ClawHub 安装目标只有 `OpenClaw`。
+安装入口位于详情页，并与 `Skills.sh`、`SkillsHub`、`Custom Repository` 保持一致：
+- 默认不预选 Agent
+- 空选择点击主按钮会弹 alert
+- 若已选 Agent 同时包含“已直接安装”和“未直接安装”的目标，主按钮显示 `Install / Reinstall`
 
 完整安装链路如下：
 
@@ -323,7 +324,7 @@ View 层对错误的呈现分为三类：
 
 这是当前实现中一个很重要的容错策略，避免因 ClawHub 未提供 zip 而完全无法安装。
 
-如果后续限流恢复，已通过 ClawHub 安装的 skill 可以再次点击安装按钮执行 `Reinstall`，用于补齐先前因 rate limit 缺失的辅助文件。
+如果后续限流恢复，已通过 ClawHub 安装的 skill 可以再次点击安装按钮执行 `Reinstall`，用于补齐先前因 rate limit 缺失的辅助文件。这里的 `Reinstall` 语义与仓库其他来源保持一致：先覆盖共享 canonical，再覆盖当前勾选的 direct install；若未勾选的 Agent 使用的是 symlink，它们也会随着 canonical 一起看到新内容。
 
 ### 4. 统一落盘
 无论是 archive 还是 markdown-only，最终都走 `persistInstalledSkillDirectory(...)`：
@@ -336,12 +337,12 @@ View 层对错误的呈现分为三类：
 因此，ClawHub skill 的“真实副本”不直接放在 Agent 目录里，而是放在 SkillsMaster canonical 目录里。
 
 ### 5. Agent 侧生效方式
-当前安装目标写死为 `targetAgents: [.openClaw]`。
+当前安装目标来自详情页中的 `selectedTargetAgents`。
 
 这意味着：
 - canonical 目录在 `~/.skillsmaster/skills`
-- OpenClaw skills 目录在 `~/.openclaw/skills`
-- 最终由 SkillsMaster 按 OpenClaw 当前默认安装方式，把 canonical 内容 materialize 到 OpenClaw 目录
+- 被勾选的每个 Agent 都会按各自当前默认安装方式，把 canonical 内容 materialize 到自己的 skills 目录
+- 详情页的按钮文案按“已选 Agent 的 direct install 状态”动态显示为 `Install`、`Reinstall` 或 `Install / Reinstall`
 
 这与项目整体的“真实文件以 canonical 目录为事实源，Agent 目录可以是 symbolic link 或同步 physical copy”的架构保持一致。
 
@@ -367,7 +368,7 @@ ClawHub 虽然是独立功能，但它仍然复用项目的底层公共机制：
 - `SkillMDParser`：解析 ClawHub 拉回的 `SKILL.md`
 - `SkillManager`：统一安装与 refresh
 - `SkillScanner`：扫描 canonical 目录和 Agent 目录，生成本地 Skill 列表
-- `SymlinkManager`：识别 OpenClaw 目录中的 symbolic link / physical copy 以及继承关系
+- `SymlinkManager`：识别各 Agent 目录中的 symbolic link / physical copy 以及继承关系
 - `LockFileManager`：写入 `~/.agents/.skill-lock.json`
 
 这意味着 ClawHub 在产品层面是单独链路，但在本地生命周期管理层面仍遵守 SkillsMaster 的主架构。
@@ -375,23 +376,14 @@ ClawHub 虽然是独立功能，但它仍然复用项目的底层公共机制：
 ## 当前限制与边界
 当前实现存在以下明确限制，修改前应先确认：
 
-### 1. 仅支持安装到 OpenClaw
-安装按钮、ViewModel 参数和最终 `targetAgents` 都明确写死为 `OpenClaw`。
-
-如果将来要扩展为多 Agent 安装，需要同时修改：
-- 详情页文案
-- ViewModel 安装参数
-- 安装结果提示
-- 可能的 Agent 兼容规则与 UI 选择器
-
-### 2. 不参与 Git 更新检查
+### 1. 不参与 Git 更新检查
 ClawHub / Local 安装的 skill 不走 `checkForUpdate`：
 - 单个更新检查会直接跳过 `sourceType == "clawhub"`
 - 批量更新检查同样排除 `sourceType == "clawhub"`
 
 原因是当前 lock file 记录的是 marketplace 来源，而不是 Git 仓库 tree hash。
 
-### 3. lock file 只记录来源，不记录版本演进语义
+### 2. lock file 只记录来源，不记录版本演进语义
 当前 `LockEntry` 中：
 - `source` 记录 slug
 - `sourceUrl` 记录详情页地址
@@ -399,7 +391,7 @@ ClawHub / Local 安装的 skill 不走 `checkForUpdate`：
 
 因此当前实现只能表达“这个 skill 来自 ClawHub”，不能表达“本地安装的是 ClawHub 的哪个已知可更新版本”。
 
-### 4. archive 缺失时允许退化安装
+### 3. archive 缺失时允许退化安装
 这是产品上的有意选择，不是异常分支：
 - 目标是尽量让 skill 可用
 - 代价是辅助文件可能缺失
@@ -429,7 +421,7 @@ ClawHub / Local 安装的 skill 不走 `checkForUpdate`：
 - 改 ClawHub API 字段映射时，先同步检查 `ClawHubSkill` / DTO 转换和对应测试
 - 改 browse API 时，优先核对当前网站 bundle 使用的 Convex function 与返回结构，再决定是否调整 DTO
 - 改分页方式时，先区分 browse 的 cursor 和 search 的 limit，不要把两条链路重新混成一种策略
-- 改安装目标时，先确认是否仍保持 `OpenClaw` 专用，还是升级为多 Agent 选择
+- 改安装目标或按钮文案时，先确认是否仍与其它来源保持“详情页内联 Agent 勾选”一致
 - 改 lock file 记录方式时，先评估是否要把 ClawHub 版本信息纳入更新语义
 - 改 markdown-only fallback 时，先确认产品预期是“尽量安装成功”还是“宁可失败也要完整文件”
 

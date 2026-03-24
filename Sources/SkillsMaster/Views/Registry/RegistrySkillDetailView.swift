@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 /// RegistrySkillDetailView displays detailed information for a selected skills.sh registry skill
 ///
@@ -19,6 +20,9 @@ struct RegistrySkillDetailView: View {
 
     /// Whether this skill is already installed locally
     let isInstalled: Bool
+
+    /// Whether this skill is currently being installed
+    let isInstalling: Bool
 
     /// Closure called when user clicks the "安装" button
     let onInstall: () -> Void
@@ -228,23 +232,29 @@ struct RegistrySkillDetailView: View {
                 .font(.headline)
 
             HStack(spacing: 12) {
-                // 安装 button — triggers the install flow via the parent's on安装 callback
                 Button {
                     onInstall()
                 } label: {
-                    Label("安装 Skill", systemImage: "arrow.down.circle")
+                    if isInstalling {
+                        Label {
+                            Text(viewModel.detailInstallButtonTitle(for: skill))
+                        } icon: {
+                            ProgressView()
+                                .controlSize(.small)
+                        }
+                    } else {
+                        Label(
+                            viewModel.detailInstallButtonTitle(for: skill),
+                            systemImage: viewModel.detailInstallButtonSystemImage(for: skill)
+                        )
+                    }
                 }
-                // .borderedProminent gives the button a filled, prominent appearance
-                // This is the macOS equivalent of a "primary" button
                 .buttonStyle(.borderedProminent)
-                .disabled(isInstalled)
+                .disabled(isInstalling)
 
-                // Open on skills.sh — opens the skill's detail page in the browser
-                // URL format: https://skills.sh/{source}/{skillId}
                 Button {
                     let urlString = "https://skills.sh/\(skill.source)/\(skill.skillId)"
                     if let url = URL(string: urlString) {
-                        // NSWorkspace.shared.open() opens the URL in the default browser
                         NSWorkspace.shared.open(url)
                     }
                 } label: {
@@ -252,6 +262,15 @@ struct RegistrySkillDetailView: View {
                 }
                 .buttonStyle(.bordered)
             }
+
+            MarketplaceInstallTargetsView(
+                agentTypes: viewModel.targetAgentTypes,
+                selectedAgents: viewModel.selectedTargetAgents,
+                selectionSummary: viewModel.targetSelectionSummary(),
+                noteText: "安装时会先写入 SkillsMaster canonical 目录，再按各 Agent 的默认安装方式建立 direct install。",
+                isAgentDetected: viewModel.isAgentDetected(_:),
+                onToggle: viewModel.toggleTargetAgent(_:)
+            )
 
             // CLI install hint — shows the npx command for reference
             VStack(alignment: .leading, spacing: 4) {
