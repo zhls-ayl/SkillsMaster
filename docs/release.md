@@ -27,6 +27,12 @@
 ./run release v1.2.3 --remote zhls-ayl
 ```
 
+若在自动化环境中发布（或不希望交互确认），可以追加 `--yes` 进入 non-interactive 模式：
+
+```bash
+./run release v1.2.3 --remote zhls-ayl --yes
+```
+
 需要特别注意：
 - GitHub 的 `Tags` 列表本身不直接承载安装包；实际下载的是该 tag 关联的 GitHub Release 附件
 - 如果 `origin` 指向内部镜像、代码托管或其他非 GitHub 远端，必须确认 Release tag 被推送到真正触发 GitHub Actions 的 GitHub remote
@@ -38,6 +44,7 @@
 - `./run dev` 或无参数调用时，最终调用 `scripts/run.sh`
 - CI、GitHub Actions、单独排查脚本问题时，仍可直接调用 `scripts/*.sh`
 - `scripts/release.sh` 支持 `--remote <name>`，也支持通过 `RELEASE_REMOTE=<name>` 显式指定发布目标 remote
+- `scripts/release.sh` 支持 `--yes`，用于跳过“非 main/master 分支确认”与“推送 tag 前确认”两个交互步骤
 
 ## GitHub Actions
 - `.github/workflows/ci.yml`
