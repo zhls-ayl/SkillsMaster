@@ -15,7 +15,7 @@
 
 set -euo pipefail
 
-VERSION="0.0.0-dev"
+VERSION="0.0.0"
 CREATE_ZIP="false"
 OUTPUT_DIR="build"
 APP_NAME="SkillsMaster"
@@ -103,6 +103,11 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
+
+if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    echo "Error: Invalid version '${VERSION}'. Expected X.Y.Z (e.g. 1.2.3)."
+    exit 1
+fi
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"

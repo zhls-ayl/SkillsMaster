@@ -124,13 +124,14 @@ detect_release_remote() {
 # ── Parse Arguments ──────────────────────────────────────────────────
 # $# is bash special variable, representing number of arguments passed
 usage() {
-    echo "Usage: $0 <version> [--remote <name>] [--dry]"
+    echo "Usage: $0 <version> [--remote <name>] [--dry] [--yes]"
     echo ""
     echo "Examples:"
     echo "  $0 1.0.0                    # Create and push v1.0.0 to the only GitHub remote"
     echo "  $0 v1.0.0                   # Same as above (v prefix is optional)"
     echo "  $0 1.0.0 --remote zhls-ayl  # Push Release tag to a specific GitHub remote"
     echo "  $0 1.0.0 --dry              # Dry run, check only"
+    echo "  $0 1.0.0 --yes              # Non-interactive mode, auto-confirm prompts"
     echo ""
     echo "Recent tags:"
     git tag --sort=-creatordate | head -5 || echo "  (no tags yet)"
@@ -143,12 +144,17 @@ fi
 
 INPUT=""
 DRY_RUN=false
+AUTO_CONFIRM=false
 RELEASE_REMOTE="${RELEASE_REMOTE:-}"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --dry)
             DRY_RUN=true
+            shift
+            ;;
+        --yes)
+            AUTO_CONFIRM=true
             shift
             ;;
         --remote)
@@ -242,11 +248,15 @@ info "Current branch: ${BRANCH}"
 # Usually recommended to Release from main branch, but not enforced
 if [[ "$BRANCH" != "main" && "$BRANCH" != "master" ]]; then
     warn "Not on main/master branch (current: ${BRANCH})"
-    # -r allows read backslash, -p shows prompt
-    read -r -p "  Continue anyway? [y/N] " confirm
-    if [[ "$confirm" != [yY] ]]; then
-        echo "Aborted."
-        exit 0
+    if $AUTO_CONFIRM; then
+        warn "Auto-confirm enabled: continue from non-main/master branch."
+    else
+        # -r allows read backslash, -p shows prompt
+        read -r -p "  Continue anyway? [y/N] " confirm
+        if [[ "$confirm" != [yY] ]]; then
+            echo "Aborted."
+            exit 0
+        fi
     fi
 fi
 
@@ -309,10 +319,14 @@ if $DRY_RUN; then
 fi
 
 # ── Confirm Release ──────────────────────────────────────────────────
-read -r -p "Create and push ${TAG}? [y/N] " confirm
-if [[ "$confirm" != [yY] ]]; then
-    echo "Aborted."
-    exit 0
+if $AUTO_CONFIRM; then
+    info "Auto-confirm enabled: creating and pushing ${TAG}."
+else
+    read -r -p "Create and push ${TAG}? [y/N] " confirm
+    if [[ "$confirm" != [yY] ]]; then
+        echo "Aborted."
+        exit 0
+    fi
 fi
 
 # ── Create annotated tag ──────────────────────────────────────────

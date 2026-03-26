@@ -130,6 +130,12 @@ cd SkillsMaster
 ./run release v1.2.3 --remote zhls-ayl
 ```
 
+若需要在自动化环境中执行发布并跳过交互确认，可追加 `--yes`：
+
+```bash
+./run release v1.2.3 --remote zhls-ayl --yes
+```
+
 推送 `v1.2.3` 这类版本 tag 到 GitHub 后，Actions 会自动在对应 GitHub Release 下上传 `SkillsMaster-v1.2.3-universal.zip`。用户通常是从 `Tags` 列表进入对应版本，再在关联的 Release 附件里下载可用安装包。
 
 ## 常用命令
@@ -145,6 +151,7 @@ cd SkillsMaster
 ./run package --version 1.2.3 --zip
 ./run release v1.2.3
 ./run release v1.2.3 --remote zhls-ayl
+./run release v1.2.3 --remote zhls-ayl --yes
 ```
 
 ## 界面预览
