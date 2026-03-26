@@ -10,12 +10,12 @@
 #   6. Pushing will automatically trigger .github/workflows/release.yml workflow
 #
 # Usage:
-#   ./scripts/release.sh 1.0.0        # Create and push v1.0.0 tag
-#   ./scripts/release.sh 1.0.0 --dry  # Dry run, only check, no execution
+#   ./scripts/release.sh 1.0.0                  # Auto-detect GitHub remote and push v1.0.0 tag
+#   ./scripts/release.sh 1.0.0 --remote zhls-ayl
+#   ./scripts/release.sh 1.0.0 --dry           # Dry run, only check, no execution
 #
 # Dependencies:
 #   - git (version control)
-#   - gh (GitHub CLI, for displaying Actions links, optional)
 
 set -euo pipefail
 
@@ -34,29 +34,157 @@ ok()    { echo -e "${GREEN}  ✓ ${NC}$1"; }
 warn()  { echo -e "${YELLOW}  ⚠ ${NC}$1"; }
 error() { echo -e "${RED}  ✗ ${NC}$1" >&2; }
 
+git_remote_url() {
+    git config --get "remote.$1.url" 2>/dev/null || true
+}
+
+is_github_remote_url() {
+    case "$1" in
+        https://github.com/*|http://github.com/*|git@github.com:*|ssh://git@github.com/*)
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+github_repo_url_from_remote() {
+    local url="$1"
+    local path=""
+
+    case "$url" in
+        https://github.com/*)
+            path="${url#https://github.com/}"
+            ;;
+        http://github.com/*)
+            path="${url#http://github.com/}"
+            ;;
+        git@github.com:*)
+            path="${url#git@github.com:}"
+            ;;
+        ssh://git@github.com/*)
+            path="${url#ssh://git@github.com/}"
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+
+    path="${path%.git}"
+    echo "https://github.com/${path}"
+}
+
+detect_release_remote() {
+    local requested_remote="$1"
+    local remote=""
+    local remote_url=""
+    local github_remotes=()
+
+    if [[ -n "$requested_remote" ]]; then
+        remote_url="$(git_remote_url "$requested_remote")"
+        if [[ -z "$remote_url" ]]; then
+            error "Remote '${requested_remote}' does not exist."
+            exit 1
+        fi
+        if ! is_github_remote_url "$remote_url"; then
+            error "Remote '${requested_remote}' is not a GitHub remote: ${remote_url}"
+            exit 1
+        fi
+        echo "$requested_remote"
+        return 0
+    fi
+
+    while IFS= read -r remote; do
+        [[ -z "$remote" ]] && continue
+        remote_url="$(git_remote_url "$remote")"
+        if is_github_remote_url "$remote_url"; then
+            github_remotes+=("$remote")
+        fi
+    done < <(git remote)
+
+    if [[ ${#github_remotes[@]} -eq 1 ]]; then
+        echo "${github_remotes[0]}"
+        return 0
+    fi
+
+    if [[ ${#github_remotes[@]} -gt 1 ]]; then
+        error "Multiple GitHub remotes found. Please specify one with --remote."
+        echo "  GitHub remotes:"
+        for remote in "${github_remotes[@]}"; do
+            echo "    ${remote}: $(git_remote_url "$remote")"
+        done
+        exit 1
+    fi
+
+    error "No GitHub remote found. Add a GitHub remote or pass --remote <name>."
+    exit 1
+}
+
 # ── Parse Arguments ──────────────────────────────────────────────────
 # $# is bash special variable, representing number of arguments passed
-if [[ $# -lt 1 ]]; then
-    echo "Usage: $0 <version> [--dry]"
+usage() {
+    echo "Usage: $0 <version> [--remote <name>] [--dry]"
     echo ""
     echo "Examples:"
-    echo "  $0 1.0.0        # Create and push v1.0.0 tag"
-    echo "  $0 v1.0.0       # Same as above (v prefix is optional)"
-    echo "  $0 1.0.0 --dry  # Dry run, check only"
+    echo "  $0 1.0.0                    # Create and push v1.0.0 to the only GitHub remote"
+    echo "  $0 v1.0.0                   # Same as above (v prefix is optional)"
+    echo "  $0 1.0.0 --remote zhls-ayl  # Push Release tag to a specific GitHub remote"
+    echo "  $0 1.0.0 --dry              # Dry run, check only"
     echo ""
     echo "Recent tags:"
-    # git tag --sort=-creatordate: List tags sorted by creation date descending
-    # head -5: Show only latest 5
     git tag --sort=-creatordate | head -5 || echo "  (no tags yet)"
+}
+
+if [[ $# -lt 1 ]]; then
+    usage
     exit 1
 fi
 
-INPUT="$1"
+INPUT=""
 DRY_RUN=false
+RELEASE_REMOTE="${RELEASE_REMOTE:-}"
 
-# Check if --dry argument is passed
-if [[ "${2:-}" == "--dry" ]]; then
-    DRY_RUN=true
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --dry)
+            DRY_RUN=true
+            shift
+            ;;
+        --remote)
+            if [[ $# -lt 2 ]]; then
+                error "--remote requires a value"
+                usage
+                exit 1
+            fi
+            RELEASE_REMOTE="$2"
+            shift 2
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        -*)
+            error "Unknown argument: $1"
+            usage
+            exit 1
+            ;;
+        *)
+            if [[ -n "$INPUT" ]]; then
+                error "Multiple version arguments provided: '${INPUT}' and '$1'"
+                usage
+                exit 1
+            fi
+            INPUT="$1"
+            shift
+            ;;
+    esac
+done
+
+if [[ -z "$INPUT" ]]; then
+    error "Version is required"
+    usage
+    exit 1
 fi
 
 # ── Validate Version Format ────────────────────────────────────────────
@@ -95,9 +223,20 @@ fi
 
 ok "Working directory is clean"
 
+# ── Detect release remote ──────────────────────────────────────────────
+RELEASE_REMOTE="$(detect_release_remote "$RELEASE_REMOTE")"
+RELEASE_REMOTE_URL="$(git_remote_url "$RELEASE_REMOTE")"
+REPO_URL="$(github_repo_url_from_remote "$RELEASE_REMOTE_URL")"
+
+ok "Release remote: ${RELEASE_REMOTE} (${RELEASE_REMOTE_URL})"
+
 # ── Check current branch ──────────────────────────────────────────────
 # git branch --show-current shows current branch name
 BRANCH=$(git branch --show-current)
+if [[ -z "$BRANCH" ]]; then
+    error "Detached HEAD is not supported. Checkout a branch before creating a Release."
+    exit 1
+fi
 info "Current branch: ${BRANCH}"
 
 # Usually recommended to Release from main branch, but not enforced
@@ -111,45 +250,50 @@ if [[ "$BRANCH" != "main" && "$BRANCH" != "master" ]]; then
     fi
 fi
 
-# ── Check if local is ahead of remote ──────────────────────────────────────
-# Ensure all code is pushed to remote, avoid tag pointing to commit not on remote
-# git rev-parse HEAD gets local latest commit hash
-# git rev-parse @{u} gets upstream (remote tracking branch) latest commit hash
-# @{u} is git shorthand, equivalent to origin/<branch>
+# ── Check if local is in sync with release remote ──────────────────────────
+# Ensure the Release tag points to a commit already available on the GitHub remote.
 LOCAL_HEAD=$(git rev-parse HEAD)
-REMOTE_HEAD=$(git rev-parse "@{u}" 2>/dev/null || echo "")
+REMOTE_HEAD="$(git ls-remote --heads "$RELEASE_REMOTE" "refs/heads/${BRANCH}" | awk '{print $1}')"
 
 if [[ -z "$REMOTE_HEAD" ]]; then
-    error "No upstream branch set. Push your branch first:"
-    echo "  git push -u origin ${BRANCH}"
+    error "Branch '${BRANCH}' does not exist on remote '${RELEASE_REMOTE}'."
+    echo "  Push it first:"
+    echo "    git push ${RELEASE_REMOTE} ${BRANCH}"
     exit 1
 fi
 
 if [[ "$LOCAL_HEAD" != "$REMOTE_HEAD" ]]; then
-    error "Local branch is out of sync with remote."
-    echo "  Please push or pull first:"
-    echo "    git push origin ${BRANCH}"
+    error "Local branch is out of sync with ${RELEASE_REMOTE}/${BRANCH}."
+    echo "  Please push the Release commit first:"
+    echo "    git push ${RELEASE_REMOTE} ${BRANCH}"
     exit 1
 fi
 
-ok "Branch is in sync with remote"
+ok "Branch is in sync with ${RELEASE_REMOTE}/${BRANCH}"
 
-# ── Check if tag already exists ───────────────────────────────────────
-# git rev-parse checks if tag exists, output discarded to /dev/null
+# ── Check if tag already exists locally or on release remote ──────────
 if git rev-parse "$TAG" > /dev/null 2>&1; then
     error "Tag '${TAG}' already exists!"
     echo "  To delete and recreate:"
     echo "    git tag -d ${TAG}"
-    echo "    git push origin :refs/tags/${TAG}"
+    echo "    git push ${RELEASE_REMOTE} :refs/tags/${TAG}"
     exit 1
 fi
 
-ok "Tag '${TAG}' is available"
+if [[ -n "$(git ls-remote --tags "$RELEASE_REMOTE" "refs/tags/${TAG}" "refs/tags/${TAG}^{}")" ]]; then
+    error "Tag '${TAG}' already exists on remote '${RELEASE_REMOTE}'!"
+    echo "  To delete and recreate:"
+    echo "    git push ${RELEASE_REMOTE} :refs/tags/${TAG}"
+    exit 1
+fi
+
+ok "Tag '${TAG}' is available locally and on ${RELEASE_REMOTE}"
 
 # ── Show Release Summary ──────────────────────────────────────────────
 echo ""
 info "Release Summary"
 echo "  Tag:      ${TAG}"
+echo "  Remote:   ${RELEASE_REMOTE}"
 echo "  Branch:   ${BRANCH}"
 # git rev-parse --short HEAD outputs 7-char short hash, more readable
 echo "  Commit:   $(git rev-parse --short HEAD)"
@@ -181,8 +325,8 @@ ok "Tag created"
 
 # ── Push tag to remote ───────────────────────────────────────────
 # Push only specific tag, not --tags (avoid pushing all local tags)
-info "Pushing ${TAG} to origin ..."
-git push origin "$TAG"
+info "Pushing ${TAG} to ${RELEASE_REMOTE} ..."
+git push "$RELEASE_REMOTE" "$TAG"
 ok "Tag pushed"
 
 # ── Show Results ──────────────────────────────────────────────────
@@ -190,19 +334,9 @@ echo ""
 echo -e "${GREEN}==> Release ${TAG} triggered! ${NC}"
 echo ""
 
-# Try to use gh CLI to show Actions run link (gh is GitHub official CLI tool)
-# command -v checks if command exists (similar to which, but more reliable)
-if command -v gh > /dev/null 2>&1; then
-    # gh api calls GitHub REST API to get repo info
-    # --jq uses jq syntax to extract fields from JSON response
-    REPO_URL=$(gh api repos/:owner/:repo --jq '.html_url' 2>/dev/null || echo "")
-    if [[ -n "$REPO_URL" ]]; then
-        echo "  Actions:  ${REPO_URL}/actions"
-        echo "  Release:  ${REPO_URL}/releases/tag/${TAG}"
-    fi
-else
-    echo "  Tip: Install GitHub CLI (gh) to see direct links to Actions."
-fi
+echo "  Actions:  ${REPO_URL}/actions"
+echo "  Release:  ${REPO_URL}/releases/tag/${TAG}"
+echo "  Tags:     ${REPO_URL}/tags"
 
 echo ""
 echo "  The Release workflow will:"

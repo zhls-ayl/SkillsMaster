@@ -1,6 +1,6 @@
 # SkillsMaster
 
-SkillsMaster 是一个面向 macOS 的原生应用，用统一的图形界面管理多种 AI 编程代理的 Skills 与 Agent 根目录文件。当前仓库围绕真实实现持续维护以下链路：本地扫描、Agent 分配、Agent Files 浏览、内置文本编辑、外置编辑器 / 默认终端配置、更新检查、Skills.sh / ClawHub / SkillsHub / Custom Repository 安装，以及测试、打包、Release、Homebrew 分发。
+SkillsMaster 是一个面向 macOS 的原生应用，用统一的图形界面管理多种 AI 编程代理的 Skills 与 Agent 根目录文件。当前仓库围绕真实实现持续维护以下链路：本地扫描、Agent 分配、Agent Files 浏览、内置文本编辑、外置编辑器 / 默认终端配置、更新检查、Skills.sh / ClawHub / SkillsHub / Custom Repository 安装，以及测试、打包与 GitHub Release 分发。
 
 > 项目来源：本仓库源自 fork [crossoverJie/SkillDeck](https://github.com/crossoverJie/SkillDeck.git)，当前以 `SkillsMaster` 为产品名持续演进和维护。
 
@@ -41,7 +41,7 @@ SkillsMaster 的目标，是把这些分散在文件系统、命令行和配置�
 - 支持批量检查 Git 来源与 SkillsHub 来源 Skill 更新；Git 来源记录本地 / 远端 commit hash，SkillsHub 来源记录 marketplace version
 - 启动时执行从 `~/.agents` 到 `~/.skillsmaster` 的迁移，并保留对旧兼容路径的读取
 - 文件系统变化会触发自动刷新，尽量让 UI 与磁盘状态保持同步
-- 支持主题切换、应用版本检查、自更新入口，以及 CI、测试、打包、GitHub Release 和 Homebrew cask 链路
+- 支持主题切换、应用版本检查、自更新入口，以及 CI、测试、打包与 GitHub Release 链路
 
 ## 支持的 Agents
 
@@ -124,6 +124,14 @@ cd SkillsMaster
 ./run release v1.2.3
 ```
 
+发布脚本会优先自动识别当前仓库里唯一的 GitHub remote；如果本地同时配置了多个 GitHub remote，可以显式指定：
+
+```bash
+./run release v1.2.3 --remote zhls-ayl
+```
+
+推送 `v1.2.3` 这类版本 tag 到 GitHub 后，Actions 会自动在对应 GitHub Release 下上传 `SkillsMaster-v1.2.3-universal.zip`。用户通常是从 `Tags` 列表进入对应版本，再在关联的 Release 附件里下载可用安装包。
+
 ## 常用命令
 
 `./run` 是仓库统一入口。无参数时默认等价于 `./run dev`，并会把 Swift / clang module cache 固定到仓库内 `.build/`，降低路径迁移和系统缓存造成的问题。
@@ -136,6 +144,7 @@ cd SkillsMaster
 ./run clean
 ./run package --version 1.2.3 --zip
 ./run release v1.2.3
+./run release v1.2.3 --remote zhls-ayl
 ```
 
 ## 界面预览
@@ -185,7 +194,7 @@ cd SkillsMaster
 - `scripts/`：本地运行、打包、Release 脚本
 - `docs/`：架构、开发、发布、能力边界文档
 - `.github/workflows/`：CI / Release workflow
-- `homebrew/skillsmaster.rb`：Homebrew cask 模板
+- `homebrew/skillsmaster.rb`：Homebrew cask 预留模板（当前未接入自动发布）
 
 ## 相关说明
 

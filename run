@@ -31,6 +31,7 @@ Examples:
   ./run build -c release
   ./run package --version 1.2.3 --zip
   ./run release v1.2.3
+  ./run release v1.2.3 --remote zhls-ayl
 EOF
 }
 

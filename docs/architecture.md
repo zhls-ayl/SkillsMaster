@@ -86,7 +86,7 @@ SkillsMaster 是一个基于 SwiftUI 的 macOS 应用，用于管理多代理 Sk
 - `SymlinkManager.swift`：symbolic link 创建、解析、删除与 direct install / 继承识别
 - `RepositoryManager.swift` / `RepositoryCredentialStore.swift`：仓库配置与凭据存储
 - `UpdateChecker.swift`：应用下载、替换、重启流程
-- `scripts/` 与 `.github/workflows/`：打包、发布、Homebrew 自动更新
+- `scripts/` 与 `.github/workflows/`：打包与 GitHub Release 发布
 
 ## 文档边界
 本文件只回答“系统如何工作、哪些路径和链路是权威实现”。
