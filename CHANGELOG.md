@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- 发布链路新增多产物矩阵：GitHub Release 现在可以同时提供 `universal.zip`、`arm64.zip`、`x86_64.zip` 与 `universal.dmg`，为通用安装、单架构下载和 DMG 拖拽安装提供不同选择。
+
+### Changed
+- 打包脚本新增单架构与整套 release 产物输出能力；应用内自更新在多 zip 资产场景下会继续优先选择 `universal.zip`，避免误下载到单架构包。
 
 ## [0.2.4] - 2026-03-27
 ### Fixed

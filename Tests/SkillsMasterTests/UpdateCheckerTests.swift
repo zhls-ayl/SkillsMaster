@@ -3,6 +3,32 @@ import XCTest
 
 final class UpdateCheckerTests: XCTestCase {
 
+    func testAppUpdateInfoPrefersUniversalZipAsset() {
+        let info = AppUpdateInfo(
+            tagName: "v0.2.4",
+            htmlUrl: "https://example.com/release",
+            name: nil,
+            body: nil,
+            publishedAt: nil,
+            assets: [
+                .init(
+                    name: "SkillsMaster-v0.2.4-arm64.zip",
+                    browserDownloadUrl: "https://example.com/arm64.zip"
+                ),
+                .init(
+                    name: "SkillsMaster-v0.2.4-universal.zip",
+                    browserDownloadUrl: "https://example.com/universal.zip"
+                ),
+                .init(
+                    name: "SkillsMaster-v0.2.4-x86_64.zip",
+                    browserDownloadUrl: "https://example.com/x86.zip"
+                )
+            ]
+        )
+
+        XCTAssertEqual(info.downloadURL, "https://example.com/universal.zip")
+    }
+
     func testResolveInstallationContextForWritableAppBundle() throws {
         let fileManager = FileManager.default
         let tempRoot = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString)

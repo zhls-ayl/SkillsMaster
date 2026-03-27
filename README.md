@@ -43,6 +43,7 @@ SkillsMaster 的目标，是把这些分散在文件系统、命令行和配置�
 - 文件系统变化会触发自动刷新，尽量让 UI 与磁盘状态保持同步
 - 支持主题切换、应用版本检查、自更新入口，以及 CI、测试、打包与 GitHub Release 链路
 - 应用自更新现在会在 `Settings > 关于` 中真实下载并替换当前 `.app`；若当前安装在 `/Applications` 等受保护目录，会请求管理员授权；若仍处于 App Translocation 或只读卷，会明确提示先移动到可写目录
+- GitHub Release 当前会同时发布 `universal.zip`、`arm64.zip`、`x86_64.zip` 与 `universal.dmg`，为通用安装、单架构下载和 DMG 拖拽安装提供不同选择
 
 ## 支持的 Agents
 
@@ -125,6 +126,12 @@ cd SkillsMaster
 ./run package --version 1.2.3 --zip
 ```
 
+若需要一次性生成当前 release 矩阵产物，可使用：
+
+```bash
+./run package --version 1.2.3 --release-assets
+```
+
 ### 发布版本
 
 ```bash
@@ -143,7 +150,14 @@ cd SkillsMaster
 ./run release v1.2.3 --remote zhls-ayl --yes
 ```
 
-推送 `v1.2.3` 这类版本 tag 到 GitHub 后，Actions 会自动在对应 GitHub Release 下上传 `SkillsMaster-v1.2.3-universal.zip`。用户通常是从 `Tags` 列表进入对应版本，再在关联的 Release 附件里下载可用安装包。
+推送 `v1.2.3` 这类版本 tag 到 GitHub 后，Actions 会自动在对应 GitHub Release 下上传以下附件：
+
+- `SkillsMaster-v1.2.3-universal.zip`
+- `SkillsMaster-v1.2.3-arm64.zip`
+- `SkillsMaster-v1.2.3-x86_64.zip`
+- `SkillsMaster-v1.2.3-universal.dmg`
+
+应用内更新会优先使用 `universal.zip`；用户通常是从 `Tags` 列表进入对应版本，再在关联的 Release 附件里选择适合自己的安装包。
 
 ## 常用命令
 
@@ -156,6 +170,10 @@ cd SkillsMaster
 ./run build -c release
 ./run clean
 ./run package --version 1.2.3 --zip
+./run package --version 1.2.3 --arch arm64 --zip
+./run package --version 1.2.3 --arch x86_64 --zip
+./run package --version 1.2.3 --dmg
+./run package --version 1.2.3 --release-assets
 ./run release v1.2.3
 ./run release v1.2.3 --remote zhls-ayl
 ./run release v1.2.3 --remote zhls-ayl --yes

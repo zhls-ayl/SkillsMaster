@@ -56,6 +56,11 @@ struct AppUpdateInfo: Codable, Sendable {
     /// Benefit of getting URL from assets: works regardless of zip filename changes
     /// (e.g. from SkillsMaster.zip to SkillsMaster-v1.0.0-universal.zip).
     var downloadURL: String {
+        // When multiple zip assets are published, prefer the universal archive so in-app updates
+        // keep matching the current "download zip -> replace .app" flow across both Intel and Apple Silicon.
+        if let universalZipAsset = assets?.first(where: { $0.name.hasSuffix("-universal.zip") }) {
+            return universalZipAsset.browserDownloadUrl
+        }
         // first(where:) finds first asset ending with .zip (similar to Java Stream's findFirst + filter)
         // hasSuffix checks string suffix (similar to Java's endsWith)
         if let zipAsset = assets?.first(where: { $0.name.hasSuffix(".zip") }) {
