@@ -38,6 +38,8 @@ brew tap zhls-ayl/skillsmaster
 brew install --cask skillsmaster
 ```
 
+适合大多数用户：安装路径、升级方式和卸载行为都更稳定。
+
 ### GitHub Release
 
 也可以直接从 GitHub Release 下载：
@@ -64,6 +66,8 @@ git clone https://github.com/zhls-ayl/SkillsMaster.git
 cd SkillsMaster
 ./run
 ```
+
+更适合准备参与开发、调试或验证改动的使用场景。
 
 ## 环境要求
 
@@ -119,21 +123,29 @@ SkillsMaster 当前围绕四条主要使用路径设计：
 
 ![SkillsMaster Skill 详情页](docs/screenshots/skill-detail.png)
 
-### Skills.sh 浏览页
+### Skills.sh
 
-![SkillsMaster Skills.sh 浏览页](docs/screenshots/registry-browser.png)
+![SkillsMaster Skills.sh](docs/screenshots/Skills.sh.png)
 
-### ClawHub 浏览页
+### ClawHub
 
-![SkillsMaster ClawHub 浏览页](docs/screenshots/clawhub-browser.png)
+![SkillsMaster ClawHub](docs/screenshots/clawhub.png)
 
-### Repository 设置页
+### SkillsHub
 
-![SkillsMaster Repository 设置页](docs/screenshots/repository-settings.png)
+![SkillsMaster SkillsHub](docs/screenshots/SkillsHub.png)
 
-### 内置文本编辑器
+### Repositories
 
-![SkillsMaster 内置文本编辑器](docs/screenshots/skill-editor.png)
+![SkillsMaster Repositories](docs/screenshots/Repositories.png)
+
+### Agent Files
+
+![SkillsMaster Agent Files](docs/screenshots/AgentFiles.png)
+
+### Agent Skills
+
+![SkillsMaster Agent Skills](docs/screenshots/AgentSkills.png)
 
 ## 当前边界
 
