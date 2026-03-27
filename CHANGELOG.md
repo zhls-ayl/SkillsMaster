@@ -6,13 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.2.5] - 2026-03-28
 ### Added
 - 发布链路新增多产物矩阵：GitHub Release 现在可以同时提供 `universal.zip`、`arm64.zip`、`x86_64.zip` 与 `universal.dmg`，为通用安装、单架构下载和 DMG 拖拽安装提供不同选择。
+- 新增自有 Homebrew tap `zhls-ayl/homebrew-skillsmaster`，用户现在可以通过 `brew tap zhls-ayl/skillsmaster && brew install --cask skillsmaster` 安装 SkillsMaster。
 
 ### Changed
 - 打包脚本新增单架构与整套 release 产物输出能力；应用内自更新在多 zip 资产场景下会继续优先选择 `universal.zip`，避免误下载到单架构包。
 - Release workflow 已改为通过 `gh` CLI 创建 / 更新 GitHub Release，并升级 `actions/checkout`，以规避 GitHub Actions 上 Node 20 JavaScript action 弃用告警。
 - `homebrew/skillsmaster.rb` 已对齐到 `v0.2.4` 的真实 `universal.zip` 资产与 `sha256`，可直接作为自有 tap 的 cask 基础文件。
+- 重构 `README.md` 信息结构，改为更面向开源用户的首页叙事，并补充新的界面截图与 Homebrew 安装路径说明。
 
 ## [0.2.4] - 2026-03-27
 ### Fixed
