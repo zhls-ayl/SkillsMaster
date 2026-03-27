@@ -104,6 +104,57 @@
 - `brew tap <user>/<repo>` 默认要求仓库名满足 `homebrew-<name>` 约定
 - 把 cask 单独放在 tap 仓库里，升级和校验都会更清晰
 
+### 自有 tap 仓库最小结构
+```text
+homebrew-skillsmaster/
+├── Casks/
+│   └── skillsmaster.rb
+└── README.md
+```
+
+首发时建议的 `README.md` 最小内容：
+
+```text
+# homebrew-skillsmaster
+
+brew tap zhls-ayl/skillsmaster
+brew install --cask skillsmaster
+```
+
+### 首次发布到自有 tap
+假设你已经在 GitHub 上创建了 `zhls-ayl/homebrew-skillsmaster`：
+
+```bash
+git clone https://github.com/zhls-ayl/homebrew-skillsmaster.git
+cd homebrew-skillsmaster
+mkdir -p Casks
+cp /path/to/SkillsMaster/homebrew/skillsmaster.rb Casks/skillsmaster.rb
+git add Casks/skillsmaster.rb README.md
+git commit -m "cask: add skillsmaster 0.2.4"
+git push origin main
+```
+
+### 后续版本更新 tap 的固定流程
+1. 先确认 GitHub Release 已经完成，并且 `universal.zip` 已上传成功
+2. 取对应版本 `universal.zip` 的真实 `sha256`
+3. 更新 tap 仓库里的 `Casks/skillsmaster.rb`
+4. 提交并推送 tap 仓库
+
+如果本机已安装 `gh`，可以直接用下面的命令取某个版本 `universal.zip` 的 digest：
+
+```bash
+gh release view v0.2.4 --repo zhls-ayl/SkillsMaster --json assets | \
+  ruby -rjson -e 'data=JSON.parse(STDIN.read); asset=data.fetch("assets").find { |a| a["name"] == "SkillsMaster-v0.2.4-universal.zip" }; puts asset.fetch("digest")'
+```
+
+得到的结果形如：
+
+```text
+sha256:5e547ff4171192b77828dbd7945421f40bb23bd2b9d8f39b654cfb1657dfe7a0
+```
+
+把前缀 `sha256:` 去掉后，填回 `Casks/skillsmaster.rb` 的 `sha256` 字段即可。
+
 后续单独接入 Homebrew 时，再额外确认：
 - 下载 URL 模式是否仍匹配 Release 产物
 - SHA256 计算对象是否未变化
