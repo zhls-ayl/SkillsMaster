@@ -11,6 +11,13 @@ import Combine
 @Observable
 final class SkillManager {
 
+    enum TranslationAvailability: Equatable {
+        case unknown
+        case installed
+        case supportedButNotInstalled
+        case unavailable
+    }
+
     // MARK: - Error Types
 
     /// 手动关联 repository 时使用的错误类型。
@@ -112,6 +119,18 @@ final class SkillManager {
     /// 更新流程中的错误信息。
     var updateError: String?
 
+    /// 当前中文翻译能力状态。
+    /// 仅当系统支持且已安装英文 -> 简体中文离线翻译包时，详情页才会展示逐段中文译文。
+    var translationAvailability: TranslationAvailability = .unknown
+
+    struct TranslationPackPrompt: Identifiable {
+        let id = UUID()
+        let title: String
+        let message: String
+    }
+
+    var translationPackPrompt: TranslationPackPrompt?
+
     // MARK: - Dependencies
 
     private let scanner = SkillScanner()
@@ -129,6 +148,10 @@ final class SkillManager {
     /// 管理用户配置的 custom repositories。
     let repositoryManager = RepositoryManager()
     private let installModeStore: AgentInstallModeStore
+    private let translationService = TranslationService()
+    private let translationPackAvailabilityChecker = TranslationPackAvailabilityChecker()
+    private static let dontShowTranslationPackPromptKey = "translationPackPromptDontShowAgain"
+    private var hasShownTranslationPackPromptThisLaunch = false
     private var cancellables = Set<AnyCancellable>()
 
     // MARK: - Initialization
@@ -137,6 +160,53 @@ final class SkillManager {
         self.installModeStore = installModeStore
         self.defaultInstallModes = installModeStore.loadAll()
         setupFileWatcher()
+    }
+
+    var shouldShowChineseTranslation: Bool {
+        translationAvailability == .installed
+    }
+
+    func translateEnglishParagraphToChinese(_ text: String) async throws -> String {
+        try await translationService.translateEnglishToChinese(text)
+    }
+
+    func prepareSkillContentTranslationIfNeeded(translationEnabledOnThisScreen: Bool) async {
+        guard translationEnabledOnThisScreen else { return }
+
+        if translationAvailability == .unknown || translationAvailability == .supportedButNotInstalled {
+            let availability = await translationPackAvailabilityChecker.englishToSimplifiedChinese()
+            translationAvailability = switch availability {
+            case .installed:
+                .installed
+            case .supportedButNotInstalled:
+                .supportedButNotInstalled
+            case .unavailable:
+                .unavailable
+            }
+        }
+
+        let dontShowAgain = UserDefaults.standard.bool(forKey: Self.dontShowTranslationPackPromptKey)
+        let shouldShowPrompt = TranslationPackPromptPolicy.shouldShowPrompt(
+            translationEnabledOnThisScreen: translationAvailability == .supportedButNotInstalled,
+            dontShowAgain: dontShowAgain,
+            hasShownThisLaunch: hasShownTranslationPackPromptThisLaunch
+        )
+        guard shouldShowPrompt else { return }
+
+        hasShownTranslationPackPromptThisLaunch = true
+        translationPackPrompt = TranslationPackPrompt(
+            title: "需要安装本地翻译包",
+            message: "要显示 Skill 文档的中文译文，请先在系统里安装英文到简体中文的离线翻译语言包。安装后重新打开详情页即可看到逐段中文翻译。"
+        )
+    }
+
+    func dismissTranslationPackPrompt() {
+        translationPackPrompt = nil
+    }
+
+    func dontShowTranslationPackPromptAgain() {
+        UserDefaults.standard.set(true, forKey: Self.dontShowTranslationPackPromptKey)
+        translationPackPrompt = nil
     }
 
     /// 建立 file system 监控，在目录变化时自动触发 `refresh()`。

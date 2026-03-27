@@ -6,6 +6,42 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- 发布链路新增多产物矩阵：GitHub Release 现在可以同时提供 `universal.zip`、`arm64.zip`、`x86_64.zip` 与 `universal.dmg`，为通用安装、单架构下载和 DMG 拖拽安装提供不同选择。
+
+### Changed
+- 打包脚本新增单架构与整套 release 产物输出能力；应用内自更新在多 zip 资产场景下会继续优先选择 `universal.zip`，避免误下载到单架构包。
+
+## [0.2.4] - 2026-03-27
+### Fixed
+- 修复应用内“立即更新”在真实安装场景下不会真正替换当前 `.app` 的问题。更新器现在会在退出当前进程后执行带回滚的 bundle 替换；安装在 `/Applications` 等受保护目录时会申请管理员权限，而在 App Translocation / 只读卷 / 非 `.app` 启动场景下会明确报错，不再静默失败。
+
+## [0.2.3] - 2026-03-27
+### Added
+- 各类 Skill 详情页新增手动 `翻译` 按钮，为不启用自动翻译的用户提供按需查看当前 Skill 中文译文的入口；点击后会复用现有内联翻译链路，但不会修改全局自动翻译设置。
+
+### Changed
+- 手动翻译现在覆盖 `Installed` 下的 `All Skills` 与 `Agents Skills`，以及 `Skills.sh`、ClawHub、SkillsHub、`Repositories` 的详情页；翻译状态在同一详情视图内切换 Skill 时会保留，再次点击工具栏中的 `翻译` 按钮可恢复原文。
+- 手动翻译按钮在显示译文时会进入高亮态，帮助用户识别当前处于“已开启翻译、再次点击可恢复原文”的交互状态。
+
+## [0.2.2] - 2026-03-27
+### Added
+- 新增 Skill 详情页内联中文翻译能力：本地 Skill、`Skills.sh`、ClawHub、SkillsHub 与 Custom Repository 的 Markdown 文档在系统支持且已安装 English -> Simplified Chinese 离线翻译包时，会在英文段落下方显示中文译文。
+- 新增本地翻译相关基础能力与测试，包括翻译服务缓存、Markdown 段落纯文本提取、语言包提示策略，以及并发去重 / 串行化测试。
+- 在 `Settings > 通用` 中新增 `自动翻译` 开关，可直接关闭详情页 Markdown 文档的内联中文翻译。
+- 在 `Settings` 中新增独立的“翻译”设置页，位于 `Repositories` 之后、`关于` 之前，用于集中管理自动翻译配置。
+- 自动翻译新增细粒度生效范围设置，支持分别控制 `Installed`、`Skills.sh`、`ClawHub`、`SkillsHub`、`Repositories` 与 `Agents Skills`。
+
+### Changed
+- 调整详情页 Markdown 渲染策略：仅在启用中文翻译时退回稳定的非 lazy 栈布局，并关闭这一路径上的隐式动画，降低滚动过程中的动态高度重排风险。
+- 更新 README 中对详情页中文翻译能力和额外系统要求的说明。
+- Skill 详情页的自动翻译能力现在同时受系统翻译包可用性和用户设置控制；关闭开关后会立即回退为只显示原始文档。
+- 自动翻译默认值改为关闭，且各翻译范围默认均为关闭；用户需在新设置页中显式启用后才会生效。
+- `Agent Files` 中的文件预览明确不纳入自动翻译范围，仅各类 Skill 详情页会参与范围判断。
+
+### Fixed
+- 修复启用中文翻译后在 Skill 详情页滚动长文档时容易触发重复翻译任务、布局抖动，进而在 `Skills.sh -> vercel-react-best-practices` 等长内容详情页出现卡死的问题。
+- 修复同一段文本在并发场景下可能被重复提交给本地翻译框架的问题；现在会对相同文本做 in-flight 去重，并对不同段落的翻译请求做串行化收敛。
 
 ## [0.2.1] - 2026-03-24
 ### Changed

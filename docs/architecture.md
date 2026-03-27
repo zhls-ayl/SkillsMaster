@@ -76,7 +76,8 @@ SkillsMaster 是一个基于 SwiftUI 的 macOS 应用，用于管理多代理 Sk
 
 ## 更新链路
 - 技能更新：Git 来源由 `GitService` + `CommitHashCache` 负责；SkillsHub 来源由 `SkillsHubService` 提供 version 与 archive 更新语义；ClawHub / local 当前不走统一更新检查
-- 应用自更新：`UpdateChecker` 读取 GitHub Release，下载 zip 并替换 `.app`
+- 应用自更新：`UpdateChecker` 读取 GitHub Release，优先选择 `universal.zip` 下载并替换当前 `.app`；若安装在 `/Applications` 等受保护目录，会先申请管理员权限，再由外部脚本在应用退出后完成替换与重启
+- 应用自更新的前置限制：必须从真实 `.app` bundle 启动；若当前实例处于 App Translocation、DMG 或其他只读卷，更新器会先报错而不是静默失败
 - 发布打包：`scripts/package-app.sh`、`scripts/release.sh`、`.github/workflows/release.yml`
 
 ## 高风险区域

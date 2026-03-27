@@ -33,6 +33,7 @@ struct RegistrySkillDetailView: View {
     /// that drive the content section's three states (loading / error / loaded).
     /// Passed from ContentView where the ViewModel is already available.
     let viewModel: RegistryBrowserViewModel
+    @State private var manuallyShowsChineseTranslation = false
 
     var body: some View {
         ScrollView {
@@ -71,6 +72,15 @@ struct RegistrySkillDetailView: View {
         // Similar to React's useEffect with a dependency array: useEffect(() => { ... }, [skill.id])
         .task(id: skill.id) {
             await viewModel.loadSkillContent(for: skill)
+        }
+        .toolbar {
+            ToolbarItemGroup {
+                ManualTranslationToolbarButton(
+                    isActive: manuallyShowsChineseTranslation
+                ) {
+                    manuallyShowsChineseTranslation.toggle()
+                }
+            }
         }
     }
 
@@ -349,7 +359,11 @@ struct RegistrySkillDetailView: View {
                 // and renders each block element (headings, paragraphs, code blocks, etc.)
                 // as native SwiftUI views.
                 if !content.markdownBody.isEmpty {
-                    MarkdownContentView(markdownText: content.markdownBody)
+                    MarkdownContentView(
+                        markdownText: content.markdownBody,
+                        translationScope: .skillsSh,
+                        manuallyShowsChineseTranslation: manuallyShowsChineseTranslation
+                    )
                 } else {
                     Text("No content available.")
                         .foregroundStyle(.secondary)

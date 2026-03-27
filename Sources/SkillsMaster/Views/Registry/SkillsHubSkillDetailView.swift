@@ -8,6 +8,7 @@ struct SkillsHubSkillDetailView: View {
     let isInstalling: Bool
     let onInstall: () -> Void
     let viewModel: SkillsHubBrowserViewModel
+    @State private var manuallyShowsChineseTranslation = false
 
     var body: some View {
         ScrollView {
@@ -33,6 +34,15 @@ struct SkillsHubSkillDetailView: View {
         .navigationTitle(skill.name)
         .task(id: skill.id) {
             await viewModel.loadSelection(for: skill)
+        }
+        .toolbar {
+            ToolbarItemGroup {
+                ManualTranslationToolbarButton(
+                    isActive: manuallyShowsChineseTranslation
+                ) {
+                    manuallyShowsChineseTranslation.toggle()
+                }
+            }
         }
     }
 
@@ -249,7 +259,11 @@ struct SkillsHubSkillDetailView: View {
                     }
                 }
             } else if let detail = viewModel.selectedSkillDetail {
-                MarkdownContentView(markdownText: detail.content.markdownBody)
+                MarkdownContentView(
+                    markdownText: detail.content.markdownBody,
+                    translationScope: .skillsHub,
+                    manuallyShowsChineseTranslation: manuallyShowsChineseTranslation
+                )
                     .textSelection(.enabled)
             } else {
                 Text("请选择一个 SkillsHub skill 查看详情。")

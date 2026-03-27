@@ -27,7 +27,7 @@ SkillsMaster 的目标，是把这些分散在文件系统、命令行和配置�
 - `Agent Files` 的文本预览超过 10 MB 时会回退为原始文本预览，不再执行 Markdown 渲染或结构化格式化
 - `Agent Files` 中可配置全局外置编辑器和全局默认终端，并支持在 Finder / 外置编辑器 / 终端中打开当前文件或目录
 - `Agent Files` 中的 `skills/` 目录及其子内容只读显示，不允许新建、重命名、删除或外部编辑
-- 详情页支持查看 Frontmatter、Markdown 正文、lock file 信息和更新状态
+- 详情页支持查看 Frontmatter、Markdown 正文、lock file 信息和更新状态；若系统支持且已安装英文到简体中文离线翻译包，可按设置在英文段落下方显示中文译文，并可在 `Settings > 翻译` 中控制总开关与 `Installed / Skills.sh / ClawHub / SkillsHub / Repositories / Agents Skills` 的生效范围
 - `Skill Detail` 中的 `SKILL.md` 编辑已统一为右侧 detail pane 纯文本编辑器
 - 可为每个 Agent 单独设置默认安装方式：`symbolic link` 或 `physical copy`
 - 从 Git 仓库扫描并安装 Skills（支持 `owner/repo`、`HTTPS`、`SSH` 输入），安装后落到 canonical 目录并写入 lock file
@@ -42,6 +42,8 @@ SkillsMaster 的目标，是把这些分散在文件系统、命令行和配置�
 - 启动时执行从 `~/.agents` 到 `~/.skillsmaster` 的迁移，并保留对旧兼容路径的读取
 - 文件系统变化会触发自动刷新，尽量让 UI 与磁盘状态保持同步
 - 支持主题切换、应用版本检查、自更新入口，以及 CI、测试、打包与 GitHub Release 链路
+- 应用自更新现在会在 `Settings > 关于` 中真实下载并替换当前 `.app`；若当前安装在 `/Applications` 等受保护目录，会请求管理员授权；若仍处于 App Translocation 或只读卷，会明确提示先移动到可写目录
+- GitHub Release 当前会同时发布 `universal.zip`、`arm64.zip`、`x86_64.zip` 与 `universal.dmg`，为通用安装、单架构下载和 DMG 拖拽安装提供不同选择
 
 ## 支持的 Agents
 
@@ -79,6 +81,7 @@ SkillsMaster 的目标，是把这些分散在文件系统、命令行和配置�
 - `HTTPS + Token` 的 Repository 凭据只存储在 macOS Keychain，不写入 `~/.skillsmaster/.skillsmaster-repos.json`
 - Custom Repository 默认不开启启动时自动同步，默认不扫描隐藏目录；可在 Repository 设置中按仓库开启
 - 当前 SkillsHub 入口是独立 marketplace，浏览使用 SkillsHub 网页接口，安装使用 SkillsHub archive 下载接口；lock file 中会同时记录 `skillhub` 来源和推断出的 upstream 来源（当前通常是 `clawhub`）
+- 应用内更新依赖当前运行实例对应的 `.app` bundle 路径；若是从 DMG、解压后的临时位置或 `swift run` 启动，不保证可原地更新
 
 ## 当前边界
 
@@ -95,6 +98,11 @@ SkillsMaster 的目标，是把这些分散在文件系统、命令行和配置�
 - macOS 14+
 - Xcode 15+
 - Swift 5.9+
+
+若希望使用详情页内联中文翻译能力，还需要：
+
+- macOS 26+
+- 系统已安装 English -> Simplified Chinese 离线翻译语言包
 
 ## 快速开始
 
@@ -118,6 +126,12 @@ cd SkillsMaster
 ./run package --version 1.2.3 --zip
 ```
 
+若需要一次性生成当前 release 矩阵产物，可使用：
+
+```bash
+./run package --version 1.2.3 --release-assets
+```
+
 ### 发布版本
 
 ```bash
@@ -136,7 +150,14 @@ cd SkillsMaster
 ./run release v1.2.3 --remote zhls-ayl --yes
 ```
 
-推送 `v1.2.3` 这类版本 tag 到 GitHub 后，Actions 会自动在对应 GitHub Release 下上传 `SkillsMaster-v1.2.3-universal.zip`。用户通常是从 `Tags` 列表进入对应版本，再在关联的 Release 附件里下载可用安装包。
+推送 `v1.2.3` 这类版本 tag 到 GitHub 后，Actions 会自动在对应 GitHub Release 下上传以下附件：
+
+- `SkillsMaster-v1.2.3-universal.zip`
+- `SkillsMaster-v1.2.3-arm64.zip`
+- `SkillsMaster-v1.2.3-x86_64.zip`
+- `SkillsMaster-v1.2.3-universal.dmg`
+
+应用内更新会优先使用 `universal.zip`；用户通常是从 `Tags` 列表进入对应版本，再在关联的 Release 附件里选择适合自己的安装包。
 
 ## 常用命令
 
@@ -149,6 +170,10 @@ cd SkillsMaster
 ./run build -c release
 ./run clean
 ./run package --version 1.2.3 --zip
+./run package --version 1.2.3 --arch arm64 --zip
+./run package --version 1.2.3 --arch x86_64 --zip
+./run package --version 1.2.3 --dmg
+./run package --version 1.2.3 --release-assets
 ./run release v1.2.3
 ./run release v1.2.3 --remote zhls-ayl
 ./run release v1.2.3 --remote zhls-ayl --yes

@@ -21,6 +21,10 @@
 ./run test --enable-code-coverage
 ./run clean
 ./run package --version 1.2.3 --zip
+./run package --version 1.2.3 --arch arm64 --zip
+./run package --version 1.2.3 --arch x86_64 --zip
+./run package --version 1.2.3 --dmg
+./run package --version 1.2.3 --release-assets
 ```
 
 ## 本地构建与沙箱 / 提权排查

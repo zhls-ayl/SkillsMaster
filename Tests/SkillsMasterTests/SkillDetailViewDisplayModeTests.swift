@@ -21,4 +21,18 @@ final class SkillDetailViewDisplayModeTests: XCTestCase {
         XCTAssertFalse(SkillDetailView.DisplayMode.contentOnly.showsManagementUI)
         XCTAssertTrue(SkillDetailView.DisplayMode.management.showsManagementUI)
     }
+
+    func testManagementModeUsesInstalledTranslationScope() {
+        XCTAssertEqual(
+            SkillDetailView.DisplayMode.management.translationScope,
+            .installed
+        )
+    }
+
+    func testContentOnlyModeUsesAgentsTranslationScope() {
+        XCTAssertEqual(
+            SkillDetailView.DisplayMode.contentOnly.translationScope,
+            .agents
+        )
+    }
 }

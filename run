@@ -30,6 +30,9 @@ Examples:
   ./run test --filter SkillMDParserTests
   ./run build -c release
   ./run package --version 1.2.3 --zip
+  ./run package --version 1.2.3 --arch arm64 --zip
+  ./run package --version 1.2.3 --dmg
+  ./run package --version 1.2.3 --release-assets
   ./run release v1.2.3
   ./run release v1.2.3 --remote zhls-ayl
 EOF

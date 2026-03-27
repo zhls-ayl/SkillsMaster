@@ -18,6 +18,15 @@ struct SkillDetailView: View {
             self == .management
         }
 
+        var translationScope: SkillTranslationScope {
+            switch self {
+            case .management:
+                .installed
+            case .contentOnly:
+                .agents
+            }
+        }
+
         static func forSidebarSelection(_ selection: SidebarItem?) -> Self {
             if case .skillsByAgent = selection {
                 return .contentOnly
@@ -123,8 +132,8 @@ struct SkillDetailView: View {
             }
             .navigationTitle(skill.displayName)
             .toolbar {
-                if displayMode.showsManagementUI {
-                    ToolbarItemGroup {
+                ToolbarItemGroup {
+                    if displayMode.showsManagementUI {
                         // 在 Finder 中定位。
                         Button {
                             viewModel.revealInFinder(skill: skill)
@@ -140,7 +149,15 @@ struct SkillDetailView: View {
                             Image(systemName: "terminal")
                         }
                         .help("在 Terminal 中打开")
+                    }
 
+                    ManualTranslationToolbarButton(
+                        isActive: viewModel.isShowingManualTranslation
+                    ) {
+                        viewModel.toggleManualTranslation()
+                    }
+
+                    if displayMode.showsManagementUI {
                         // 编辑按钮。
                         Button {
                             viewModel.startEditing(skill: skill)
@@ -156,7 +173,7 @@ struct SkillDetailView: View {
                         }
                         .help("在外置编辑器中打开 SKILL.md")
                     }
-                }
+                } 
             }
         } else {
             EmptyStateView(
@@ -251,7 +268,11 @@ struct SkillDetailView: View {
                 // - `LazyVStack` 会延迟渲染屏幕外节点
                 // - 解析期间显示轻量的 “Rendering...” 占位文案
                 // 这样可以避免大段 Markdown 在主线程触发明显卡顿。
-                MarkdownContentView(markdownText: skill.markdownBody)
+                MarkdownContentView(
+                    markdownText: skill.markdownBody,
+                    translationScope: displayMode.translationScope,
+                    manuallyShowsChineseTranslation: viewModel.isShowingManualTranslation
+                )
             }
         }
     }

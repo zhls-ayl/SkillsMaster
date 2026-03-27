@@ -259,6 +259,23 @@ struct ContentView: View {
         } message: {
             Text("当前编辑器有未保存修改。")
         }
+        .alert(
+            item: Binding(
+                get: { skillManager.translationPackPrompt },
+                set: { skillManager.translationPackPrompt = $0 }
+            )
+        ) { prompt in
+            Alert(
+                title: Text(prompt.title),
+                message: Text(prompt.message),
+                primaryButton: .default(Text("知道了")) {
+                    skillManager.dismissTranslationPackPrompt()
+                },
+                secondaryButton: .default(Text("下次不再提示")) {
+                    skillManager.dontShowTranslationPackPromptAgain()
+                }
+            )
+        }
     }
 
     // MARK: - Private Helpers
