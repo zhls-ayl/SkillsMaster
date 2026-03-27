@@ -7,6 +7,10 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.2.4] - 2026-03-27
+### Fixed
+- 修复应用内“立即更新”在真实安装场景下不会真正替换当前 `.app` 的问题。更新器现在会在退出当前进程后执行带回滚的 bundle 替换；安装在 `/Applications` 等受保护目录时会申请管理员权限，而在 App Translocation / 只读卷 / 非 `.app` 启动场景下会明确报错，不再静默失败。
+
 ## [0.2.3] - 2026-03-27
 ### Added
 - 各类 Skill 详情页新增手动 `翻译` 按钮，为不启用自动翻译的用户提供按需查看当前 Skill 中文译文的入口；点击后会复用现有内联翻译链路，但不会修改全局自动翻译设置。

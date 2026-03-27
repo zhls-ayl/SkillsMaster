@@ -86,3 +86,4 @@
 - 当前选择的发布 remote 确实指向 GitHub 仓库；多 remote 时必要时显式传 `--remote`
 - 目标分支的 Release commit 已经推送到该 GitHub remote，再创建版本 tag
 - 若改动涉及自更新，手动核对下载与安装逻辑是否仍可工作
+- 自更新回归时至少覆盖三类真实场景：可写目录原地更新、`/Applications` 下的管理员授权更新、以及 App Translocation / 只读卷下的明确失败提示

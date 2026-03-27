@@ -42,6 +42,7 @@ SkillsMaster 的目标，是把这些分散在文件系统、命令行和配置�
 - 启动时执行从 `~/.agents` 到 `~/.skillsmaster` 的迁移，并保留对旧兼容路径的读取
 - 文件系统变化会触发自动刷新，尽量让 UI 与磁盘状态保持同步
 - 支持主题切换、应用版本检查、自更新入口，以及 CI、测试、打包与 GitHub Release 链路
+- 应用自更新现在会在 `Settings > 关于` 中真实下载并替换当前 `.app`；若当前安装在 `/Applications` 等受保护目录，会请求管理员授权；若仍处于 App Translocation 或只读卷，会明确提示先移动到可写目录
 
 ## 支持的 Agents
 
@@ -79,6 +80,7 @@ SkillsMaster 的目标，是把这些分散在文件系统、命令行和配置�
 - `HTTPS + Token` 的 Repository 凭据只存储在 macOS Keychain，不写入 `~/.skillsmaster/.skillsmaster-repos.json`
 - Custom Repository 默认不开启启动时自动同步，默认不扫描隐藏目录；可在 Repository 设置中按仓库开启
 - 当前 SkillsHub 入口是独立 marketplace，浏览使用 SkillsHub 网页接口，安装使用 SkillsHub archive 下载接口；lock file 中会同时记录 `skillhub` 来源和推断出的 upstream 来源（当前通常是 `clawhub`）
+- 应用内更新依赖当前运行实例对应的 `.app` bundle 路径；若是从 DMG、解压后的临时位置或 `swift run` 启动，不保证可原地更新
 
 ## 当前边界
 

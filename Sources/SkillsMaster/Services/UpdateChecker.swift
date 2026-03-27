@@ -67,6 +67,36 @@ struct AppUpdateInfo: Codable, Sendable {
     }
 }
 
+enum AppUpdateInstallError: LocalizedError, Equatable {
+    case notRunningFromAppBundle
+    case translocatedApp(path: String)
+    case readOnlyVolume(path: String)
+    case missingParentDirectory(path: String)
+    case authorizationFailed(message: String)
+
+    var errorDescription: String? {
+        switch self {
+        case .notRunningFromAppBundle:
+            return "当前不是从 `.app` bundle 启动，无法执行应用内更新。请先安装打包后的 SkillsMaster.app 再重试。"
+        case let .translocatedApp(path):
+            return "当前应用仍处于 macOS App Translocation 环境，无法原地替换更新：\(path)。请先将 SkillsMaster.app 移动到 `/Applications` 或 `~/Applications` 后再重试。"
+        case let .readOnlyVolume(path):
+            return "当前应用位于只读卷，无法原地替换更新：\(path)。请先将 SkillsMaster.app 移动到可写目录后再重试。"
+        case let .missingParentDirectory(path):
+            return "未找到当前应用所在目录，无法执行更新：\(path)"
+        case let .authorizationFailed(message):
+            return message
+        }
+    }
+}
+
+struct AppUpdateInstallationContext: Equatable {
+    let appBundleURL: URL
+    let requiresAdminPrivileges: Bool
+    let relaunchUserID: uid_t
+    let relaunchUserName: String
+}
+
 /// `UpdateChecker` 负责检查并执行 application update。
 ///
 /// 这里同时涉及 network request、文件操作和安装流程，因此使用 `actor` 保证 thread safety。
@@ -286,11 +316,7 @@ actor UpdateChecker {
     ///   - newAppPath: Path to extracted new .app bundle
     ///   - extractDir: Extraction temp directory (for cleanup)
     private func executeUpdate(newAppPath: URL, extractDir: URL) async throws {
-        // 4. Get current app path
-        // Bundle.main.bundlePath returns full path of currently running .app
-        // e.g. "/Applications/SkillsMaster.app"
-        // Note: When launched via swift run, bundlePath points to executable directory, not .app
-        let currentAppPath = Bundle.main.bundlePath
+        let installContext = try Self.resolveInstallationContext()
 
         // Get current process PID (Process IDentifier)
         // ProcessInfo.processInfo is process info singleton (similar to Java's Runtime)
@@ -305,31 +331,15 @@ actor UpdateChecker {
         // - Clean up temp files
         //
         // Uses Swift's multi-line string literal (triple quotes """), similar to Python's triple quotes or Java's text block
-        let script = """
-        #!/bin/bash
-        # Wait for current process to exit (max 30 seconds)
-        # kill -0 only checks if process exists, doesn't send any signal
-        TIMEOUT=60
-        while kill -0 \(currentPID) 2>/dev/null; do
-            sleep 0.5
-            TIMEOUT=$((TIMEOUT - 1))
-            if [ $TIMEOUT -le 0 ]; then
-                exit 1
-            fi
-        done
-
-        # Replace .app bundle
-        rm -rf "\(currentAppPath)"
-        mv "\(newAppPath.path)" "\(currentAppPath)"
-
-        # Restart app
-        # open command is macOS general launch tool, correctly handles .app bundle
-        open "\(currentAppPath)"
-
-        # Clean up temp files
-        rm -rf "\(extractDir.path)"
-        rm -rf "\(URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("SkillsMasterUpdate").path)"
-        """
+        let script = Self.makeUpdateScript(
+            currentPID: currentPID,
+            targetAppPath: installContext.appBundleURL.path,
+            newAppPath: newAppPath.path,
+            extractDir: extractDir.path,
+            downloadDir: Self.updateDownloadDirectory.path,
+            relaunchUserID: installContext.relaunchUserID,
+            relaunchUserName: installContext.relaunchUserName
+        )
 
         // Write script to temp file
         let scriptURL = URL(fileURLWithPath: NSTemporaryDirectory())
@@ -343,15 +353,15 @@ actor UpdateChecker {
             ofItemAtPath: scriptURL.path
         )
 
-        // 6. Launch shell script (run in background)
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/bash")
-        process.arguments = [scriptURL.path]
-        // Redirect stdout and stderr to /dev/null (discard output)
-        // FileHandle.nullDevice similar to /dev/null
-        process.standardOutput = FileHandle.nullDevice
-        process.standardError = FileHandle.nullDevice
-        try process.run()
+        let logURL = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("skillsmaster_update.log")
+        Self.prepareLogFile(at: logURL)
+
+        if installContext.requiresAdminPrivileges {
+            try Self.launchPrivilegedUpdateScript(at: scriptURL, logURL: logURL)
+        } else {
+            try Self.launchUpdateScript(at: scriptURL, logURL: logURL)
+        }
 
         // 7. Exit current app
         // Must call NSApplication.terminate on main thread (UI operations must be on main thread)
@@ -359,6 +369,185 @@ actor UpdateChecker {
         await MainActor.run {
             NSApplication.shared.terminate(nil)
         }
+    }
+
+    static var updateDownloadDirectory: URL {
+        URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("SkillsMasterUpdate")
+    }
+
+    static func resolveInstallationContext(
+        bundleURL: URL = Bundle.main.bundleURL,
+        fileManager: FileManager = .default,
+        relaunchUserID: uid_t = getuid(),
+        relaunchUserName: String = NSUserName()
+    ) throws -> AppUpdateInstallationContext {
+        let appBundleURL = bundleURL.standardizedFileURL
+
+        guard appBundleURL.pathExtension == "app" else {
+            throw AppUpdateInstallError.notRunningFromAppBundle
+        }
+
+        if appBundleURL.path.contains("/AppTranslocation/") {
+            throw AppUpdateInstallError.translocatedApp(path: appBundleURL.path)
+        }
+
+        let resourceValues = try? appBundleURL.resourceValues(forKeys: [.volumeIsReadOnlyKey, .volumeURLKey])
+        if resourceValues?.volumeIsReadOnly == true {
+            throw AppUpdateInstallError.readOnlyVolume(path: appBundleURL.path)
+        }
+
+        let parentDirectory = appBundleURL.deletingLastPathComponent()
+        var isDirectory: ObjCBool = false
+        guard fileManager.fileExists(atPath: parentDirectory.path, isDirectory: &isDirectory), isDirectory.boolValue else {
+            throw AppUpdateInstallError.missingParentDirectory(path: parentDirectory.path)
+        }
+
+        return AppUpdateInstallationContext(
+            appBundleURL: appBundleURL,
+            requiresAdminPrivileges: !fileManager.isWritableFile(atPath: parentDirectory.path),
+            relaunchUserID: relaunchUserID,
+            relaunchUserName: relaunchUserName
+        )
+    }
+
+    static func makeUpdateScript(
+        currentPID: Int32,
+        targetAppPath: String,
+        newAppPath: String,
+        extractDir: String,
+        downloadDir: String,
+        relaunchUserID: uid_t,
+        relaunchUserName: String
+    ) -> String {
+        """
+        #!/bin/bash
+        set -euo pipefail
+
+        CURRENT_PID=\(currentPID)
+        TARGET_APP=\(shellLiteral(targetAppPath))
+        NEW_APP=\(shellLiteral(newAppPath))
+        EXTRACT_DIR=\(shellLiteral(extractDir))
+        DOWNLOAD_DIR=\(shellLiteral(downloadDir))
+        ORIGINAL_UID=\(relaunchUserID)
+        ORIGINAL_USER=\(shellLiteral(relaunchUserName))
+        BACKUP_APP="${TARGET_APP}.backup"
+
+        TIMEOUT=120
+        while kill -0 "$CURRENT_PID" 2>/dev/null; do
+            sleep 0.5
+            TIMEOUT=$((TIMEOUT - 1))
+            if [ "$TIMEOUT" -le 0 ]; then
+                echo "Timed out waiting for SkillsMaster to exit" >&2
+                exit 1
+            fi
+        done
+
+        if [ ! -d "$NEW_APP" ]; then
+            echo "Extracted app bundle not found: $NEW_APP" >&2
+            exit 1
+        fi
+
+        rm -rf "$BACKUP_APP"
+        if [ -e "$TARGET_APP" ]; then
+            mv "$TARGET_APP" "$BACKUP_APP"
+        fi
+
+        if ! mv "$NEW_APP" "$TARGET_APP"; then
+            echo "Failed to move new app bundle into place" >&2
+            if [ -e "$BACKUP_APP" ]; then
+                mv "$BACKUP_APP" "$TARGET_APP" || true
+            fi
+            exit 1
+        fi
+
+        rm -rf "$BACKUP_APP"
+
+        restart_app() {
+            if [ "$(id -u)" = "$ORIGINAL_UID" ]; then
+                open "$TARGET_APP"
+                return
+            fi
+
+            if launchctl asuser "$ORIGINAL_UID" open "$TARGET_APP"; then
+                return
+            fi
+
+            if [ -n "$ORIGINAL_USER" ]; then
+                if /usr/bin/sudo -u "$ORIGINAL_USER" open "$TARGET_APP"; then
+                    return
+                fi
+            fi
+
+            open "$TARGET_APP"
+        }
+
+        restart_app
+
+        rm -rf "$EXTRACT_DIR"
+        rm -rf "$DOWNLOAD_DIR"
+        """
+    }
+
+    private static func launchUpdateScript(at scriptURL: URL, logURL: URL) throws {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/bash")
+        process.arguments = [scriptURL.path]
+        let logHandle = try FileHandle(forWritingTo: logURL)
+        logHandle.seekToEndOfFile()
+        process.standardOutput = logHandle
+        process.standardError = logHandle
+        try process.run()
+    }
+
+    private static func launchPrivilegedUpdateScript(at scriptURL: URL, logURL: URL) throws {
+        let scriptPath = appleScriptLiteral(scriptURL.path)
+        let logPath = appleScriptLiteral(logURL.path)
+        let appleScript = """
+        do shell script "nohup /bin/bash " & quoted form of "\(scriptPath)" & " >>" & quoted form of "\(logPath)" & " 2>&1 &" with administrator privileges
+        """
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+        process.arguments = ["-e", appleScript]
+        let stdoutPipe = Pipe()
+        let stderrPipe = Pipe()
+        process.standardOutput = stdoutPipe
+        process.standardError = stderrPipe
+        try process.run()
+        process.waitUntilExit()
+
+        guard process.terminationStatus == 0 else {
+            let errorData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
+            let outputData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
+            let message = String(data: errorData.isEmpty ? outputData : errorData, encoding: .utf8)?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+
+            throw AppUpdateInstallError.authorizationFailed(
+                message: message?.isEmpty == false
+                    ? "管理员授权失败，未执行更新：\(message!)"
+                    : "管理员授权失败或已取消，未执行更新。"
+            )
+        }
+    }
+
+    private static func prepareLogFile(at url: URL) {
+        let fileManager = FileManager.default
+        if fileManager.fileExists(atPath: url.path) {
+            try? fileManager.removeItem(at: url)
+        }
+        fileManager.createFile(atPath: url.path, contents: Data())
+    }
+
+    private static func shellLiteral(_ value: String) -> String {
+        let escaped = value.replacingOccurrences(of: "'", with: #"'\"'\"'"#)
+        return "'\(escaped)'"
+    }
+
+    private static func appleScriptLiteral(_ value: String) -> String {
+        value
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
     }
 }
 
