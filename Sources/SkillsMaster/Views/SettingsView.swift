@@ -20,6 +20,11 @@ struct SettingsView: View {
                     Label("Repositories", systemImage: "archivebox")
                 }
 
+            翻译SettingsView()
+                .tabItem {
+                    Label("翻译", systemImage: "translate")
+                }
+
             关于SettingsView()
                 .tabItem {
                     Label("关于", systemImage: "info.circle")
@@ -49,9 +54,6 @@ struct 通用SettingsView: View {
     /// unlike Java/Go/Python where UI state and preferences are often wired manually.
     @AppStorage(Constants.appThemeModeKey)
     private var appThemeModeRawValue = AppThemeMode.system.rawValue
-
-    @AppStorage(Constants.autoTranslationEnabledKey)
-    private var autoTranslationEnabled = true
 
     /// Bridge String storage to strongly typed `AppThemeMode` for Picker binding.
     ///
@@ -86,14 +88,6 @@ struct 通用SettingsView: View {
                     }
                 }
                 .pickerStyle(.menu)
-            }
-
-            Section("Skill 文档") {
-                Toggle("自动翻译", isOn: $autoTranslationEnabled)
-
-                Text("关闭后，详情页只显示原始英文文档，不再自动请求中文译文。")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             }
 
             Section("Agent 默认安装方式") {
@@ -276,6 +270,57 @@ struct 通用SettingsView: View {
         } catch {
             toolPreferenceError = error.localizedDescription
         }
+    }
+}
+
+struct 翻译SettingsView: View {
+
+    @AppStorage(Constants.autoTranslationEnabledKey)
+    private var autoTranslationEnabled = false
+
+    @AppStorage(Constants.autoTranslationInstalledEnabledKey)
+    private var installedEnabled = false
+
+    @AppStorage(Constants.autoTranslationSkillsShEnabledKey)
+    private var skillsShEnabled = false
+
+    @AppStorage(Constants.autoTranslationClawHubEnabledKey)
+    private var clawHubEnabled = false
+
+    @AppStorage(Constants.autoTranslationSkillsHubEnabledKey)
+    private var skillsHubEnabled = false
+
+    @AppStorage(Constants.autoTranslationRepositoriesEnabledKey)
+    private var repositoriesEnabled = false
+
+    @AppStorage(Constants.autoTranslationAgentsEnabledKey)
+    private var agentsEnabled = false
+
+    var body: some View {
+        Form {
+            Section("自动翻译") {
+                Toggle("启用自动翻译", isOn: $autoTranslationEnabled)
+
+                Text("默认关闭。关闭后，所有 Skill 详情页都只显示原始文档，不再自动请求中文译文。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section("生效范围") {
+                Toggle("Installed", isOn: $installedEnabled)
+                Toggle("Skills.sh", isOn: $skillsShEnabled)
+                Toggle("ClawHub", isOn: $clawHubEnabled)
+                Toggle("SkillsHub", isOn: $skillsHubEnabled)
+                Toggle("Repositories", isOn: $repositoriesEnabled)
+                Toggle("Agents Skills", isOn: $agentsEnabled)
+
+                Text("总开关关闭时，以下范围设置会被保留但不会生效。`Agent Files` 中的任何文件预览都不会启用自动翻译。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
+        .padding()
     }
 }
 

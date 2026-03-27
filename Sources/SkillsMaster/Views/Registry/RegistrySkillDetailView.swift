@@ -351,7 +351,7 @@ struct RegistrySkillDetailView: View {
                 if !content.markdownBody.isEmpty {
                     MarkdownContentView(
                         markdownText: content.markdownBody,
-                        allowsChineseTranslation: true
+                        translationScope: .skillsSh
                     )
                 } else {
                     Text("No content available.")

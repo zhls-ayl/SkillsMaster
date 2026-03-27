@@ -207,7 +207,7 @@ struct RepositorySkillDetailView: View {
             } else if let markdownBody = content?.markdownBody, !markdownBody.isEmpty {
                 MarkdownContentView(
                     markdownText: markdownBody,
-                    allowsChineseTranslation: true
+                    translationScope: .repositories
                 )
             } else {
                 Text("No markdown content available in this SKILL.md.")

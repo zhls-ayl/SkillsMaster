@@ -261,7 +261,7 @@ struct ClawHubSkillDetailView: View {
                 if !content.markdownBody.isEmpty {
                     MarkdownContentView(
                         markdownText: content.markdownBody,
-                        allowsChineseTranslation: true
+                        translationScope: .clawHub
                     )
                 } else {
                     Text("No content available.")

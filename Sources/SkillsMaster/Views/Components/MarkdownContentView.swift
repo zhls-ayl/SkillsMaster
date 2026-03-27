@@ -22,9 +22,9 @@ struct MarkdownContentView: View {
     /// 需要被解析和渲染的原始 Markdown 字符串。
     let markdownText: String
 
-    /// 是否允许在当前 Markdown 场景下显示逐段中文翻译。
-    /// 详情页会显式开启；普通文件预览保持关闭，避免把“文档翻译”扩散到所有 Markdown 文件。
-    let allowsChineseTranslation: Bool
+    /// 当前 markdown 内容所属的翻译作用域。
+    /// 详情页会显式传入 scope；普通文件预览保持 `nil`，避免把“文档翻译”扩散到所有 Markdown 文件。
+    let translationScope: SkillTranslationScope?
 
     /// 已解析的 AST `Document`；在后台解析完成之前这里为 `nil`。
     /// `@State` 用于保存当前 `View` 的本地可变状态。
@@ -34,15 +34,42 @@ struct MarkdownContentView: View {
     @Environment(SkillManager.self) private var skillManager
 
     @AppStorage(Constants.autoTranslationEnabledKey)
-    private var autoTranslationEnabled = true
+    private var autoTranslationEnabled = false
+
+    @AppStorage(Constants.autoTranslationInstalledEnabledKey)
+    private var installedEnabled = false
+
+    @AppStorage(Constants.autoTranslationSkillsShEnabledKey)
+    private var skillsShEnabled = false
+
+    @AppStorage(Constants.autoTranslationClawHubEnabledKey)
+    private var clawHubEnabled = false
+
+    @AppStorage(Constants.autoTranslationSkillsHubEnabledKey)
+    private var skillsHubEnabled = false
+
+    @AppStorage(Constants.autoTranslationRepositoriesEnabledKey)
+    private var repositoriesEnabled = false
+
+    @AppStorage(Constants.autoTranslationAgentsEnabledKey)
+    private var agentsEnabled = false
 
     init(markdownText: String, allowsChineseTranslation: Bool = false) {
         self.markdownText = markdownText
-        self.allowsChineseTranslation = allowsChineseTranslation
+        self.translationScope = allowsChineseTranslation ? .installed : nil
+    }
+
+    init(markdownText: String, translationScope: SkillTranslationScope?) {
+        self.markdownText = markdownText
+        self.translationScope = translationScope
     }
 
     var body: some View {
-        let translationEnabledOnThisScreen = allowsChineseTranslation && autoTranslationEnabled
+        let translationEnabledOnThisScreen = TranslationSettingsPolicy.isEnabled(
+            autoTranslationEnabled: autoTranslationEnabled,
+            scope: translationScope,
+            enabledScopes: enabledScopes
+        )
         let showsChineseTranslation = translationEnabledOnThisScreen && skillManager.shouldShowChineseTranslation
 
         Group {
@@ -111,6 +138,17 @@ struct MarkdownContentView: View {
                 translationEnabledOnThisScreen: translationEnabledOnThisScreen
             )
         }
+    }
+
+    private var enabledScopes: Set<SkillTranslationScope> {
+        var scopes = Set<SkillTranslationScope>()
+        if installedEnabled { scopes.insert(.installed) }
+        if skillsShEnabled { scopes.insert(.skillsSh) }
+        if clawHubEnabled { scopes.insert(.clawHub) }
+        if skillsHubEnabled { scopes.insert(.skillsHub) }
+        if repositoriesEnabled { scopes.insert(.repositories) }
+        if agentsEnabled { scopes.insert(.agents) }
+        return scopes
     }
 }
 

@@ -18,6 +18,15 @@ struct SkillDetailView: View {
             self == .management
         }
 
+        var translationScope: SkillTranslationScope {
+            switch self {
+            case .management:
+                .installed
+            case .contentOnly:
+                .agents
+            }
+        }
+
         static func forSidebarSelection(_ selection: SidebarItem?) -> Self {
             if case .skillsByAgent = selection {
                 return .contentOnly
@@ -253,7 +262,7 @@ struct SkillDetailView: View {
                 // 这样可以避免大段 Markdown 在主线程触发明显卡顿。
                 MarkdownContentView(
                     markdownText: skill.markdownBody,
-                    allowsChineseTranslation: true
+                    translationScope: displayMode.translationScope
                 )
             }
         }

@@ -251,7 +251,7 @@ struct SkillsHubSkillDetailView: View {
             } else if let detail = viewModel.selectedSkillDetail {
                 MarkdownContentView(
                     markdownText: detail.content.markdownBody,
-                    allowsChineseTranslation: true
+                    translationScope: .skillsHub
                 )
                     .textSelection(.enabled)
             } else {
