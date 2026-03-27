@@ -6,11 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.2.3] - 2026-03-27
 ### Added
 - 各类 Skill 详情页新增手动 `翻译` 按钮，为不启用自动翻译的用户提供按需查看当前 Skill 中文译文的入口；点击后会复用现有内联翻译链路，但不会修改全局自动翻译设置。
 
 ### Changed
-- 手动翻译现在覆盖 `Installed` 下的 `All Skills` 与 `Agents Skills`，以及 `Skills.sh`、ClawHub、SkillsHub、`Repositories` 的详情页；当前页已显示译文时按钮会禁用，切换到其他 Skill 后会自动恢复为未手动翻译状态。
+- 手动翻译现在覆盖 `Installed` 下的 `All Skills` 与 `Agents Skills`，以及 `Skills.sh`、ClawHub、SkillsHub、`Repositories` 的详情页；翻译状态在同一详情视图内切换 Skill 时会保留，再次点击工具栏中的 `翻译` 按钮可恢复原文。
+- 手动翻译按钮在显示译文时会进入高亮态，帮助用户识别当前处于“已开启翻译、再次点击可恢复原文”的交互状态。
 
 ## [0.2.2] - 2026-03-27
 ### Added

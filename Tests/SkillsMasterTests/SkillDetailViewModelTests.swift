@@ -4,46 +4,28 @@ import XCTest
 @MainActor
 final class SkillDetailViewModelTests: XCTestCase {
 
-    func testManualTranslationRequest_marksCurrentSkillAsTranslated() {
+    func testToggleManualTranslation_turnsTranslationOn() {
         let viewModel = SkillDetailViewModel(
             skillManager: SkillManager(),
             toolPreferences: ToolPreferencesStore()
         )
 
-        XCTAssertTrue(viewModel.canRequestManualTranslation(for: "skill-a"))
         XCTAssertFalse(viewModel.isShowingManualTranslation)
 
-        viewModel.requestManualTranslation(for: "skill-a")
+        viewModel.toggleManualTranslation()
 
         XCTAssertTrue(viewModel.isShowingManualTranslation)
-        XCTAssertFalse(viewModel.canRequestManualTranslation(for: "skill-a"))
-        XCTAssertTrue(viewModel.canRequestManualTranslation(for: "skill-b"))
     }
 
-    func testResetManualTranslation_keepsStateForSameSkill() {
+    func testToggleManualTranslation_secondTapRestoresOriginalContent() {
         let viewModel = SkillDetailViewModel(
             skillManager: SkillManager(),
             toolPreferences: ToolPreferencesStore()
         )
-        viewModel.requestManualTranslation(for: "skill-a")
+        viewModel.toggleManualTranslation()
 
-        viewModel.resetManualTranslationIfNeeded(for: "skill-a")
-
-        XCTAssertTrue(viewModel.isShowingManualTranslation)
-        XCTAssertFalse(viewModel.canRequestManualTranslation(for: "skill-a"))
-    }
-
-    func testResetManualTranslation_clearsStateWhenSwitchingSkill() {
-        let viewModel = SkillDetailViewModel(
-            skillManager: SkillManager(),
-            toolPreferences: ToolPreferencesStore()
-        )
-        viewModel.requestManualTranslation(for: "skill-a")
-
-        viewModel.resetManualTranslationIfNeeded(for: "skill-b")
+        viewModel.toggleManualTranslation()
 
         XCTAssertFalse(viewModel.isShowingManualTranslation)
-        XCTAssertTrue(viewModel.canRequestManualTranslation(for: "skill-a"))
-        XCTAssertTrue(viewModel.canRequestManualTranslation(for: "skill-b"))
     }
 }

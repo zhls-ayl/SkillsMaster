@@ -131,9 +131,6 @@ struct SkillDetailView: View {
                 .padding()
             }
             .navigationTitle(skill.displayName)
-            .task(id: skill.id) {
-                viewModel.resetManualTranslationIfNeeded(for: skill.id)
-            }
             .toolbar {
                 ToolbarItemGroup {
                     if displayMode.showsManagementUI {
@@ -154,13 +151,11 @@ struct SkillDetailView: View {
                         .help("在 Terminal 中打开")
                     }
 
-                    Button {
-                        viewModel.requestManualTranslation(for: skill.id)
-                    } label: {
-                        Image(systemName: "translate")
+                    ManualTranslationToolbarButton(
+                        isActive: viewModel.isShowingManualTranslation
+                    ) {
+                        viewModel.toggleManualTranslation()
                     }
-                    .help("翻译当前 Skill")
-                    .disabled(!viewModel.canRequestManualTranslation(for: skill.id))
 
                     if displayMode.showsManagementUI {
                         // 编辑按钮。

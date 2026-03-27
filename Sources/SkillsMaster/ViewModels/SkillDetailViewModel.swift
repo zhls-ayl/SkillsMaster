@@ -36,7 +36,7 @@ final class SkillDetailViewModel {
 
     var editorViewModel: TextFileEditorViewModel?
     var pendingEditorAction: PendingEditorAction?
-    var manuallyRequestedTranslationSkillID: String?
+    var manuallyShowsChineseTranslation = false
 
     init(
         skillManager: SkillManager,
@@ -109,20 +109,11 @@ final class SkillDetailViewModel {
     }
 
     var isShowingManualTranslation: Bool {
-        manuallyRequestedTranslationSkillID != nil
+        manuallyShowsChineseTranslation
     }
 
-    func canRequestManualTranslation(for skillID: String) -> Bool {
-        manuallyRequestedTranslationSkillID != skillID
-    }
-
-    func requestManualTranslation(for skillID: String) {
-        manuallyRequestedTranslationSkillID = skillID
-    }
-
-    func resetManualTranslationIfNeeded(for skillID: String) {
-        guard manuallyRequestedTranslationSkillID != skillID else { return }
-        manuallyRequestedTranslationSkillID = nil
+    func toggleManualTranslation() {
+        manuallyShowsChineseTranslation.toggle()
     }
 
     func requestCloseEditor() {

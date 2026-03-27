@@ -8,7 +8,6 @@ struct ClawHubSkillDetailView: View {
     let isInstalling: Bool
     let onInstall: () -> Void
     let viewModel: ClawHubBrowserViewModel
-
     @State private var manuallyShowsChineseTranslation = false
 
     var body: some View {
@@ -31,18 +30,15 @@ struct ClawHubSkillDetailView: View {
         }
         .navigationTitle(skill.name)
         .task(id: skill.id) {
-            manuallyShowsChineseTranslation = false
             await viewModel.loadSelection(for: skill)
         }
         .toolbar {
             ToolbarItemGroup {
-                Button {
-                    manuallyShowsChineseTranslation = true
-                } label: {
-                    Image(systemName: "translate")
+                ManualTranslationToolbarButton(
+                    isActive: manuallyShowsChineseTranslation
+                ) {
+                    manuallyShowsChineseTranslation.toggle()
                 }
-                .help("翻译当前 Skill")
-                .disabled(manuallyShowsChineseTranslation)
             }
         }
     }

@@ -15,7 +15,6 @@ struct RepositorySkillDetailView: View {
     let isInstalled: Bool
     let onInstall: () -> Void
     let onLoadContent: () async -> Void
-
     @State private var manuallyShowsChineseTranslation = false
 
     private var displayMetadata: SkillMetadata {
@@ -64,18 +63,15 @@ struct RepositorySkillDetailView: View {
         }
         .navigationTitle(displayName)
         .task(id: skill.id) {
-            manuallyShowsChineseTranslation = false
             await onLoadContent()
         }
         .toolbar {
             ToolbarItemGroup {
-                Button {
-                    manuallyShowsChineseTranslation = true
-                } label: {
-                    Image(systemName: "translate")
+                ManualTranslationToolbarButton(
+                    isActive: manuallyShowsChineseTranslation
+                ) {
+                    manuallyShowsChineseTranslation.toggle()
                 }
-                .help("翻译当前 Skill")
-                .disabled(manuallyShowsChineseTranslation)
             }
         }
     }

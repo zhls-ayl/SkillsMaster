@@ -33,7 +33,6 @@ struct RegistrySkillDetailView: View {
     /// that drive the content section's three states (loading / error / loaded).
     /// Passed from ContentView where the ViewModel is already available.
     let viewModel: RegistryBrowserViewModel
-
     @State private var manuallyShowsChineseTranslation = false
 
     var body: some View {
@@ -72,18 +71,15 @@ struct RegistrySkillDetailView: View {
         // previous task and starts a new one. This prevents stale content from appearing.
         // Similar to React's useEffect with a dependency array: useEffect(() => { ... }, [skill.id])
         .task(id: skill.id) {
-            manuallyShowsChineseTranslation = false
             await viewModel.loadSkillContent(for: skill)
         }
         .toolbar {
             ToolbarItemGroup {
-                Button {
-                    manuallyShowsChineseTranslation = true
-                } label: {
-                    Image(systemName: "translate")
+                ManualTranslationToolbarButton(
+                    isActive: manuallyShowsChineseTranslation
+                ) {
+                    manuallyShowsChineseTranslation.toggle()
                 }
-                .help("翻译当前 Skill")
-                .disabled(manuallyShowsChineseTranslation)
             }
         }
     }
