@@ -44,6 +44,7 @@ SkillsMaster 的目标，是把这些分散在文件系统、命令行和配置�
 - 支持主题切换、应用版本检查、自更新入口，以及 CI、测试、打包与 GitHub Release 链路
 - 应用自更新现在会在 `Settings > 关于` 中真实下载并替换当前 `.app`；若当前安装在 `/Applications` 等受保护目录，会请求管理员授权；若仍处于 App Translocation 或只读卷，会明确提示先移动到可写目录
 - GitHub Release 当前会同时发布 `universal.zip`、`arm64.zip`、`x86_64.zip` 与 `universal.dmg`，为通用安装、单架构下载和 DMG 拖拽安装提供不同选择
+- 仓库内提供了对齐最新 release 的 Homebrew cask 文件，可作为 `homebrew-skillsmaster` 自有 tap 的发布基础
 
 ## 支持的 Agents
 

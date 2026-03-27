@@ -24,7 +24,7 @@ jobs:
   release:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Print Swift version
         run: swift --version
@@ -55,14 +55,23 @@ jobs:
           test -f "build/SkillsMaster-v${{ steps.version.outputs.VERSION }}-x86_64.zip"
           test -f "build/SkillsMaster-v${{ steps.version.outputs.VERSION }}-universal.dmg"
 
-      # 创建 GitHub Release 并上传构建产物
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            build/SkillsMaster-v${{ steps.version.outputs.VERSION }}-universal.zip
-            build/SkillsMaster-v${{ steps.version.outputs.VERSION }}-arm64.zip
-            build/SkillsMaster-v${{ steps.version.outputs.VERSION }}-x86_64.zip
-            build/SkillsMaster-v${{ steps.version.outputs.VERSION }}-universal.dmg
-          generate_release_notes: true
-          name: ${{ github.ref_name }}
+      # 使用 GitHub CLI 创建 / 更新 Release，避免依赖已弃用 Node 20 的 JS action runtime
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          assets=(
+            "build/SkillsMaster-v${{ steps.version.outputs.VERSION }}-universal.zip"
+            "build/SkillsMaster-v${{ steps.version.outputs.VERSION }}-arm64.zip"
+            "build/SkillsMaster-v${{ steps.version.outputs.VERSION }}-x86_64.zip"
+            "build/SkillsMaster-v${{ steps.version.outputs.VERSION }}-universal.dmg"
+          )
+
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            gh release upload "${GITHUB_REF_NAME}" "${assets[@]}" --clobber
+          else
+            gh release create "${GITHUB_REF_NAME}" "${assets[@]}" \
+              --title "${GITHUB_REF_NAME}" \
+              --generate-notes \
+              --verify-tag
+          fi

@@ -65,9 +65,10 @@
 - `.github/workflows/ci.yml`
   - 在 `push main` 和 `pull_request` 时执行 `swift build` 与 `swift test`
 - `.github/workflows/release.yml`
-  - 在推送 `v*` tag 时执行测试、构建 release matrix、创建 GitHub Release
+  - 在推送 `v*` tag 时执行测试、构建 release matrix、并通过 `gh` CLI 创建或更新 GitHub Release
   - 当前只负责 GitHub Release 产物，不再联动 Homebrew tap
   - workflow 文件内显式声明 `permissions: contents: write`，用于创建 Release；当前不需要把仓库默认 `Workflow permissions` 提升为全局 write
+  - 为规避 GitHub Actions 上 Node 20 JavaScript action 弃用告警，workflow 已升级 `actions/checkout`，并移除了 `softprops/action-gh-release` 依赖
 
 ## 发布产物
 当前发布产物命名为：
@@ -91,7 +92,17 @@
 - `README.md`
 
 ## Homebrew
-仓库内 `homebrew/skillsmaster.rb` 目前只作为 cask 模板参考，尚未接入当前 GitHub Release workflow。
+仓库内 `homebrew/skillsmaster.rb` 当前已对齐到最近发布版本，可直接作为自有 tap 中 `Casks/skillsmaster.rb` 的基础文件。
+
+推荐发布方式：
+- 新建仓库 `zhls-ayl/homebrew-skillsmaster`
+- 把当前文件放到该仓库的 `Casks/skillsmaster.rb`
+- 每次发布后，用对应 `universal.zip` 的真实 `sha256` 更新 cask
+- 用户通过 `brew tap zhls-ayl/skillsmaster && brew install --cask skillsmaster` 安装
+
+当前不建议直接把本仓库当作 tap：
+- `brew tap <user>/<repo>` 默认要求仓库名满足 `homebrew-<name>` 约定
+- 把 cask 单独放在 tap 仓库里，升级和校验都会更清晰
 
 后续单独接入 Homebrew 时，再额外确认：
 - 下载 URL 模式是否仍匹配 Release 产物
