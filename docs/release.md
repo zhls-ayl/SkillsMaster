@@ -130,7 +130,7 @@ cd homebrew-skillsmaster
 mkdir -p Casks
 cp /path/to/SkillsMaster/homebrew/skillsmaster.rb Casks/skillsmaster.rb
 git add Casks/skillsmaster.rb README.md
-git commit -m "cask: add skillsmaster 0.2.4"
+git commit -m "cask: add skillsmaster 0.2.5"
 git push origin main
 ```
 
@@ -143,14 +143,14 @@ git push origin main
 如果本机已安装 `gh`，可以直接用下面的命令取某个版本 `universal.zip` 的 digest：
 
 ```bash
-gh release view v0.2.4 --repo zhls-ayl/SkillsMaster --json assets | \
-  ruby -rjson -e 'data=JSON.parse(STDIN.read); asset=data.fetch("assets").find { |a| a["name"] == "SkillsMaster-v0.2.4-universal.zip" }; puts asset.fetch("digest")'
+gh release view v0.2.5 --repo zhls-ayl/SkillsMaster --json assets | \
+  ruby -rjson -e 'data=JSON.parse(STDIN.read); asset=data.fetch("assets").find { |a| a["name"] == "SkillsMaster-v0.2.5-universal.zip" }; puts asset.fetch("digest")'
 ```
 
 得到的结果形如：
 
 ```text
-sha256:5e547ff4171192b77828dbd7945421f40bb23bd2b9d8f39b654cfb1657dfe7a0
+sha256:6e0974f53f007926542f2cb74a7e9fbc1a5f9826b1189ac5464f2464af45bdb9
 ```
 
 把前缀 `sha256:` 去掉后，填回 `Casks/skillsmaster.rb` 的 `sha256` 字段即可。
