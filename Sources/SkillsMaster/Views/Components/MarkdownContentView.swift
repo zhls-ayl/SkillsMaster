@@ -22,25 +22,55 @@ struct MarkdownContentView: View {
     /// 需要被解析和渲染的原始 Markdown 字符串。
     let markdownText: String
 
+    /// 是否允许在当前 Markdown 场景下显示逐段中文翻译。
+    /// 详情页会显式开启；普通文件预览保持关闭，避免把“文档翻译”扩散到所有 Markdown 文件。
+    let allowsChineseTranslation: Bool
+
     /// 已解析的 AST `Document`；在后台解析完成之前这里为 `nil`。
     /// `@State` 用于保存当前 `View` 的本地可变状态。
     /// 当这个值变化时，SwiftUI 会自动触发重新渲染。
     @State private var document: Document?
 
+    @Environment(SkillManager.self) private var skillManager
+
+    init(markdownText: String, allowsChineseTranslation: Bool = false) {
+        self.markdownText = markdownText
+        self.allowsChineseTranslation = allowsChineseTranslation
+    }
+
     var body: some View {
+        let showsChineseTranslation = allowsChineseTranslation && skillManager.shouldShowChineseTranslation
+
         Group {
             if let document {
                 // 解析完成后，按完整 AST 渲染 SwiftUI 视图。
-                // `LazyVStack` 会延迟创建屏幕外节点对应的视图，
-                // 只有当前可见区域附近的内容才会真正实例化。
-                // 概念上类似 Android 的 `RecyclerView` 或 React 中的虚拟列表。
-                LazyVStack(alignment: .leading, spacing: 12) {
-                    ForEach(Array(document.children.enumerated()), id: \.offset) { _, child in
-                        // 使用自定义 visitor 渲染每个顶层 block element。
-                        MarkdownNodeView(node: child)
+                // 开启逐段翻译后，每个段落都会在异步完成时改变自身高度。
+                // `ScrollView + LazyVStack` 在这种“滚动中动态高度变化”的场景下很容易反复回收与重建子视图，
+                // 进而触发重复翻译与布局抖动。这里在翻译开启时退回稳定的 `VStack`。
+                Group {
+                    if showsChineseTranslation {
+                        VStack(alignment: .leading, spacing: 12) {
+                            ForEach(Array(document.children.enumerated()), id: \.offset) { _, child in
+                                MarkdownNodeView(node: child)
+                            }
+                        }
+                    } else {
+                        // 未开启翻译时继续保留 lazy 渲染，避免长文档一次性创建全部节点。
+                        LazyVStack(alignment: .leading, spacing: 12) {
+                            ForEach(Array(document.children.enumerated()), id: \.offset) { _, child in
+                                MarkdownNodeView(node: child)
+                            }
+                        }
                     }
                 }
                 .textSelection(.enabled)
+                .environment(
+                    \.markdownShowsChineseTranslation,
+                    showsChineseTranslation
+                )
+                .transaction { transaction in
+                    transaction.animation = nil
+                }
             } else {
                 // 解析过程中显示轻量 loading placeholder。
                 // 这样可以避免页面在解析期间出现“空白阻塞”的观感。
@@ -72,6 +102,62 @@ struct MarkdownContentView: View {
             // 这里的赋值是安全的，并会触发重新渲染来展示解析结果。
             document = parsed
         }
+        .task(id: allowsChineseTranslation) {
+            await skillManager.prepareSkillContentTranslationIfNeeded(
+                translationEnabledOnThisScreen: allowsChineseTranslation
+            )
+        }
+    }
+}
+
+private struct TranslatedParagraphView: View {
+    let englishText: SwiftUI.Text
+    let plainEnglishText: String
+
+    @Environment(SkillManager.self) private var skillManager
+
+    @State private var translatedText: String?
+    @State private var translationFailed = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            englishText
+                .font(.body)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if let translatedText {
+                Text(translatedText)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else if translationFailed {
+                Text("翻译失败")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .italic()
+            } else {
+                Text("翻译中…")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .italic()
+            }
+        }
+        .task(id: plainEnglishText) {
+            let input = plainEnglishText
+            guard !input.isEmpty else {
+                translatedText = nil
+                translationFailed = false
+                return
+            }
+
+            do {
+                translationFailed = false
+                translatedText = try await skillManager.translateEnglishParagraphToChinese(input)
+            } catch {
+                translatedText = nil
+                translationFailed = true
+            }
+        }
     }
 }
 
@@ -90,12 +176,25 @@ struct MarkdownNodeView: View {
     /// 当前要渲染的 Markdown AST node。
     let node: any Markup
 
+    @Environment(\.markdownShowsChineseTranslation) private var markdownShowsChineseTranslation
+
     var body: some View {
         // 创建 visitor，并把 node 分发到对应的 `visit*` 方法。
         // `visit()` 是入口方法，会根据 node 的实际类型分发到 `visitHeading()`、`visitParagraph()` 等具体实现。
-        var visitor = SwiftUIMarkdownVisitor()
+        var visitor = SwiftUIMarkdownVisitor(showsChineseTranslation: markdownShowsChineseTranslation)
         let result = visitor.visit(node)
         result
+    }
+}
+
+private struct MarkdownShowsChineseTranslationKey: EnvironmentKey {
+    static let defaultValue: Bool = false
+}
+
+private extension EnvironmentValues {
+    var markdownShowsChineseTranslation: Bool {
+        get { self[MarkdownShowsChineseTranslationKey.self] }
+        set { self[MarkdownShowsChineseTranslationKey.self] = newValue }
     }
 }
 
@@ -126,6 +225,12 @@ struct SwiftUIMarkdownVisitor: MarkupVisitor {
     // 这样每个 `visit*` 方法都返回同一种结果类型。
     // `AnyView` 是 SwiftUI 中常见的 type-erased `View` 包装器。
     typealias Result = AnyView
+
+    let showsChineseTranslation: Bool
+
+    init(showsChineseTranslation: Bool = false) {
+        self.showsChineseTranslation = showsChineseTranslation
+    }
 
     // MARK: - Block Elements
 
@@ -159,6 +264,17 @@ struct SwiftUIMarkdownVisitor: MarkupVisitor {
     /// We build a single `SwiftUI.Text` by concatenating inline elements with `+` operator.
     mutating func visitParagraph(_ paragraph: Paragraph) -> AnyView {
         let text = buildInlineText(from: paragraph)
+        let plain = MarkdownPlainTextExtractor.extract(from: paragraph)
+
+        if showsChineseTranslation, !plain.isEmpty {
+            return AnyView(
+                TranslatedParagraphView(
+                    englishText: text,
+                    plainEnglishText: plain
+                )
+            )
+        }
+
         return AnyView(
             text
                 .font(.body)

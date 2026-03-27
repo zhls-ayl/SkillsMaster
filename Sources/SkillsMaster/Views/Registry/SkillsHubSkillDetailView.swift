@@ -249,7 +249,10 @@ struct SkillsHubSkillDetailView: View {
                     }
                 }
             } else if let detail = viewModel.selectedSkillDetail {
-                MarkdownContentView(markdownText: detail.content.markdownBody)
+                MarkdownContentView(
+                    markdownText: detail.content.markdownBody,
+                    allowsChineseTranslation: true
+                )
                     .textSelection(.enabled)
             } else {
                 Text("请选择一个 SkillsHub skill 查看详情。")

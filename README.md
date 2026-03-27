@@ -27,7 +27,7 @@ SkillsMaster 的目标，是把这些分散在文件系统、命令行和配置�
 - `Agent Files` 的文本预览超过 10 MB 时会回退为原始文本预览，不再执行 Markdown 渲染或结构化格式化
 - `Agent Files` 中可配置全局外置编辑器和全局默认终端，并支持在 Finder / 外置编辑器 / 终端中打开当前文件或目录
 - `Agent Files` 中的 `skills/` 目录及其子内容只读显示，不允许新建、重命名、删除或外部编辑
-- 详情页支持查看 Frontmatter、Markdown 正文、lock file 信息和更新状态
+- 详情页支持查看 Frontmatter、Markdown 正文、lock file 信息和更新状态；若系统支持且已安装英文到简体中文离线翻译包，会在英文段落下方自动显示中文译文
 - `Skill Detail` 中的 `SKILL.md` 编辑已统一为右侧 detail pane 纯文本编辑器
 - 可为每个 Agent 单独设置默认安装方式：`symbolic link` 或 `physical copy`
 - 从 Git 仓库扫描并安装 Skills（支持 `owner/repo`、`HTTPS`、`SSH` 输入），安装后落到 canonical 目录并写入 lock file
@@ -95,6 +95,11 @@ SkillsMaster 的目标，是把这些分散在文件系统、命令行和配置�
 - macOS 14+
 - Xcode 15+
 - Swift 5.9+
+
+若希望使用详情页内联中文翻译能力，还需要：
+
+- macOS 26+
+- 系统已安装 English -> Simplified Chinese 离线翻译语言包
 
 ## 快速开始
 

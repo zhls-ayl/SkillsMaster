@@ -349,7 +349,10 @@ struct RegistrySkillDetailView: View {
                 // and renders each block element (headings, paragraphs, code blocks, etc.)
                 // as native SwiftUI views.
                 if !content.markdownBody.isEmpty {
-                    MarkdownContentView(markdownText: content.markdownBody)
+                    MarkdownContentView(
+                        markdownText: content.markdownBody,
+                        allowsChineseTranslation: true
+                    )
                 } else {
                     Text("No content available.")
                         .foregroundStyle(.secondary)

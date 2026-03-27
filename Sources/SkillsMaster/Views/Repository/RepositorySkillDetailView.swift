@@ -205,7 +205,10 @@ struct RepositorySkillDetailView: View {
                     .controlSize(.small)
                 }
             } else if let markdownBody = content?.markdownBody, !markdownBody.isEmpty {
-                MarkdownContentView(markdownText: markdownBody)
+                MarkdownContentView(
+                    markdownText: markdownBody,
+                    allowsChineseTranslation: true
+                )
             } else {
                 Text("No markdown content available in this SKILL.md.")
                     .foregroundStyle(.tertiary)

@@ -34,3 +34,7 @@ Packages/
 *.app
 *.dmg
 *.ipa
+
+# Reference Code
+reference/
+

@@ -7,6 +7,19 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-03-27
+### Added
+- 新增 Skill 详情页内联中文翻译能力：本地 Skill、`Skills.sh`、ClawHub、SkillsHub 与 Custom Repository 的 Markdown 文档在系统支持且已安装 English -> Simplified Chinese 离线翻译包时，会在英文段落下方显示中文译文。
+- 新增本地翻译相关基础能力与测试，包括翻译服务缓存、Markdown 段落纯文本提取、语言包提示策略，以及并发去重 / 串行化测试。
+
+### Changed
+- 调整详情页 Markdown 渲染策略：仅在启用中文翻译时退回稳定的非 lazy 栈布局，并关闭这一路径上的隐式动画，降低滚动过程中的动态高度重排风险。
+- 更新 README 中对详情页中文翻译能力和额外系统要求的说明。
+
+### Fixed
+- 修复启用中文翻译后在 Skill 详情页滚动长文档时容易触发重复翻译任务、布局抖动，进而在 `Skills.sh -> vercel-react-best-practices` 等长内容详情页出现卡死的问题。
+- 修复同一段文本在并发场景下可能被重复提交给本地翻译框架的问题；现在会对相同文本做 in-flight 去重，并对不同段落的翻译请求做串行化收敛。
+
 ## [0.2.1] - 2026-03-24
 ### Changed
 - 统一 `Skills.sh`、`SkillsHub`、`ClawHub` 与 `Custom Repository` 的安装交互：移除列表行直接安装与 `skills.sh` / 自定义仓库的 sheet 流程，统一改为详情页内联 Agent 勾选安装。

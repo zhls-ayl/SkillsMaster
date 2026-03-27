@@ -251,7 +251,10 @@ struct SkillDetailView: View {
                 // - `LazyVStack` 会延迟渲染屏幕外节点
                 // - 解析期间显示轻量的 “Rendering...” 占位文案
                 // 这样可以避免大段 Markdown 在主线程触发明显卡顿。
-                MarkdownContentView(markdownText: skill.markdownBody)
+                MarkdownContentView(
+                    markdownText: skill.markdownBody,
+                    allowsChineseTranslation: true
+                )
             }
         }
     }
