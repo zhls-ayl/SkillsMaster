@@ -50,6 +50,9 @@ struct 通用SettingsView: View {
     @AppStorage(Constants.appThemeModeKey)
     private var appThemeModeRawValue = AppThemeMode.system.rawValue
 
+    @AppStorage(Constants.autoTranslationEnabledKey)
+    private var autoTranslationEnabled = true
+
     /// Bridge String storage to strongly typed `AppThemeMode` for Picker binding.
     ///
     /// Why a custom Binding is used:
@@ -83,6 +86,14 @@ struct 通用SettingsView: View {
                     }
                 }
                 .pickerStyle(.menu)
+            }
+
+            Section("Skill 文档") {
+                Toggle("自动翻译", isOn: $autoTranslationEnabled)
+
+                Text("关闭后，详情页只显示原始英文文档，不再自动请求中文译文。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section("Agent 默认安装方式") {

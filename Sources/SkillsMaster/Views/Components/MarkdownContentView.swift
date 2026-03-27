@@ -33,13 +33,17 @@ struct MarkdownContentView: View {
 
     @Environment(SkillManager.self) private var skillManager
 
+    @AppStorage(Constants.autoTranslationEnabledKey)
+    private var autoTranslationEnabled = true
+
     init(markdownText: String, allowsChineseTranslation: Bool = false) {
         self.markdownText = markdownText
         self.allowsChineseTranslation = allowsChineseTranslation
     }
 
     var body: some View {
-        let showsChineseTranslation = allowsChineseTranslation && skillManager.shouldShowChineseTranslation
+        let translationEnabledOnThisScreen = allowsChineseTranslation && autoTranslationEnabled
+        let showsChineseTranslation = translationEnabledOnThisScreen && skillManager.shouldShowChineseTranslation
 
         Group {
             if let document {
@@ -102,9 +106,9 @@ struct MarkdownContentView: View {
             // 这里的赋值是安全的，并会触发重新渲染来展示解析结果。
             document = parsed
         }
-        .task(id: allowsChineseTranslation) {
+        .task(id: translationEnabledOnThisScreen) {
             await skillManager.prepareSkillContentTranslationIfNeeded(
-                translationEnabledOnThisScreen: allowsChineseTranslation
+                translationEnabledOnThisScreen: translationEnabledOnThisScreen
             )
         }
     }

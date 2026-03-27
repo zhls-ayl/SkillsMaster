@@ -11,10 +11,12 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 ### Added
 - 新增 Skill 详情页内联中文翻译能力：本地 Skill、`Skills.sh`、ClawHub、SkillsHub 与 Custom Repository 的 Markdown 文档在系统支持且已安装 English -> Simplified Chinese 离线翻译包时，会在英文段落下方显示中文译文。
 - 新增本地翻译相关基础能力与测试，包括翻译服务缓存、Markdown 段落纯文本提取、语言包提示策略，以及并发去重 / 串行化测试。
+- 在 `Settings > 通用` 中新增 `自动翻译` 开关，可直接关闭详情页 Markdown 文档的内联中文翻译。
 
 ### Changed
 - 调整详情页 Markdown 渲染策略：仅在启用中文翻译时退回稳定的非 lazy 栈布局，并关闭这一路径上的隐式动画，降低滚动过程中的动态高度重排风险。
 - 更新 README 中对详情页中文翻译能力和额外系统要求的说明。
+- Skill 详情页的自动翻译能力现在同时受系统翻译包可用性和用户设置控制；关闭开关后会立即回退为只显示原始文档。
 
 ### Fixed
 - 修复启用中文翻译后在 Skill 详情页滚动长文档时容易触发重复翻译任务、布局抖动，进而在 `Skills.sh -> vercel-react-best-practices` 等长内容详情页出现卡死的问题。
