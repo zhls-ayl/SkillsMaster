@@ -1,11 +1,11 @@
-# Homebrew Cask Formula Template for SkillsMaster
+# Homebrew Cask for SkillsMaster release assets
 #
-# 这个文件是 Homebrew Cask 配方的模板，用于 `brew install --cask skillsmaster`
+# 这个文件用于发布到自有 tap，例如 `zhls-ayl/homebrew-skillsmaster`。
 #
 # 使用方法：
 #   1. 创建一个新仓库: github.com/zhls-ayl/homebrew-skillsmaster
 #   2. 将此文件放在: Casks/skillsmaster.rb
-#   3. 每次发布新版本时，更新 version 和 sha256
+#   3. 每次发布新版本时，更新 version / sha256
 #
 # 用户安装命令：
 #   brew tap zhls-ayl/skillsmaster
@@ -15,8 +15,8 @@
 #   shasum -a 256 SkillsMaster-vX.Y.Z-universal.zip
 
 cask "skillsmaster" do
-  version "0.2.1"
-  sha256 "a3af9240fef29908b16d6afa605683792c6408dddc55696b1ba720a0901a9c05"
+  version "0.2.4"
+  sha256 "5e547ff4171192b77828dbd7945421f40bb23bd2b9d8f39b654cfb1657dfe7a0"
 
   url "https://github.com/zhls-ayl/SkillsMaster/releases/download/v#{version}/SkillsMaster-v#{version}-universal.zip"
   name "SkillsMaster"
