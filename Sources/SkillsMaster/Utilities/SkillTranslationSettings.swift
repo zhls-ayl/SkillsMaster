@@ -34,8 +34,23 @@ enum TranslationSettingsPolicy {
         scope: SkillTranslationScope?,
         enabledScopes: Set<SkillTranslationScope>
     ) -> Bool {
-        guard autoTranslationEnabled else { return false }
+        isEnabled(
+            autoTranslationEnabled: autoTranslationEnabled,
+            manualTranslationEnabled: false,
+            scope: scope,
+            enabledScopes: enabledScopes
+        )
+    }
+
+    static func isEnabled(
+        autoTranslationEnabled: Bool,
+        manualTranslationEnabled: Bool,
+        scope: SkillTranslationScope?,
+        enabledScopes: Set<SkillTranslationScope>
+    ) -> Bool {
         guard let scope else { return false }
+        if manualTranslationEnabled { return true }
+        guard autoTranslationEnabled else { return false }
         return enabledScopes.contains(scope)
     }
 }

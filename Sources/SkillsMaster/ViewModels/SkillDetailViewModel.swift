@@ -36,6 +36,7 @@ final class SkillDetailViewModel {
 
     var editorViewModel: TextFileEditorViewModel?
     var pendingEditorAction: PendingEditorAction?
+    var manuallyRequestedTranslationSkillID: String?
 
     init(
         skillManager: SkillManager,
@@ -105,6 +106,23 @@ final class SkillDetailViewModel {
     func startEditing(skill: Skill) {
         feedbackMessage = nil
         editorViewModel = TextFileEditorViewModel(fileURL: skill.skillMDURL)
+    }
+
+    var isShowingManualTranslation: Bool {
+        manuallyRequestedTranslationSkillID != nil
+    }
+
+    func canRequestManualTranslation(for skillID: String) -> Bool {
+        manuallyRequestedTranslationSkillID != skillID
+    }
+
+    func requestManualTranslation(for skillID: String) {
+        manuallyRequestedTranslationSkillID = skillID
+    }
+
+    func resetManualTranslationIfNeeded(for skillID: String) {
+        guard manuallyRequestedTranslationSkillID != skillID else { return }
+        manuallyRequestedTranslationSkillID = nil
     }
 
     func requestCloseEditor() {

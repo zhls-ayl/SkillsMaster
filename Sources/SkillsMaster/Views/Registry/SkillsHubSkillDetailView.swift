@@ -9,6 +9,8 @@ struct SkillsHubSkillDetailView: View {
     let onInstall: () -> Void
     let viewModel: SkillsHubBrowserViewModel
 
+    @State private var manuallyShowsChineseTranslation = false
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
@@ -32,7 +34,19 @@ struct SkillsHubSkillDetailView: View {
         }
         .navigationTitle(skill.name)
         .task(id: skill.id) {
+            manuallyShowsChineseTranslation = false
             await viewModel.loadSelection(for: skill)
+        }
+        .toolbar {
+            ToolbarItemGroup {
+                Button {
+                    manuallyShowsChineseTranslation = true
+                } label: {
+                    Image(systemName: "translate")
+                }
+                .help("翻译当前 Skill")
+                .disabled(manuallyShowsChineseTranslation)
+            }
         }
     }
 
@@ -251,7 +265,8 @@ struct SkillsHubSkillDetailView: View {
             } else if let detail = viewModel.selectedSkillDetail {
                 MarkdownContentView(
                     markdownText: detail.content.markdownBody,
-                    translationScope: .skillsHub
+                    translationScope: .skillsHub,
+                    manuallyShowsChineseTranslation: manuallyShowsChineseTranslation
                 )
                     .textSelection(.enabled)
             } else {

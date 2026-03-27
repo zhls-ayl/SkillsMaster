@@ -26,6 +26,9 @@ struct MarkdownContentView: View {
     /// 详情页会显式传入 scope；普通文件预览保持 `nil`，避免把“文档翻译”扩散到所有 Markdown 文件。
     let translationScope: SkillTranslationScope?
 
+    /// 仅当前页面会话有效的手动翻译状态，不写回全局设置。
+    let manuallyShowsChineseTranslation: Bool
+
     /// 已解析的 AST `Document`；在后台解析完成之前这里为 `nil`。
     /// `@State` 用于保存当前 `View` 的本地可变状态。
     /// 当这个值变化时，SwiftUI 会自动触发重新渲染。
@@ -57,16 +60,29 @@ struct MarkdownContentView: View {
     init(markdownText: String, allowsChineseTranslation: Bool = false) {
         self.markdownText = markdownText
         self.translationScope = allowsChineseTranslation ? .installed : nil
+        self.manuallyShowsChineseTranslation = false
     }
 
     init(markdownText: String, translationScope: SkillTranslationScope?) {
         self.markdownText = markdownText
         self.translationScope = translationScope
+        self.manuallyShowsChineseTranslation = false
+    }
+
+    init(
+        markdownText: String,
+        translationScope: SkillTranslationScope?,
+        manuallyShowsChineseTranslation: Bool
+    ) {
+        self.markdownText = markdownText
+        self.translationScope = translationScope
+        self.manuallyShowsChineseTranslation = manuallyShowsChineseTranslation
     }
 
     var body: some View {
         let translationEnabledOnThisScreen = TranslationSettingsPolicy.isEnabled(
             autoTranslationEnabled: autoTranslationEnabled,
+            manualTranslationEnabled: manuallyShowsChineseTranslation,
             scope: translationScope,
             enabledScopes: enabledScopes
         )

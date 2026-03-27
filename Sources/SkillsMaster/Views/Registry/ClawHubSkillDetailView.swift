@@ -9,6 +9,8 @@ struct ClawHubSkillDetailView: View {
     let onInstall: () -> Void
     let viewModel: ClawHubBrowserViewModel
 
+    @State private var manuallyShowsChineseTranslation = false
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
@@ -29,7 +31,19 @@ struct ClawHubSkillDetailView: View {
         }
         .navigationTitle(skill.name)
         .task(id: skill.id) {
+            manuallyShowsChineseTranslation = false
             await viewModel.loadSelection(for: skill)
+        }
+        .toolbar {
+            ToolbarItemGroup {
+                Button {
+                    manuallyShowsChineseTranslation = true
+                } label: {
+                    Image(systemName: "translate")
+                }
+                .help("翻译当前 Skill")
+                .disabled(manuallyShowsChineseTranslation)
+            }
         }
     }
 
@@ -261,7 +275,8 @@ struct ClawHubSkillDetailView: View {
                 if !content.markdownBody.isEmpty {
                     MarkdownContentView(
                         markdownText: content.markdownBody,
-                        translationScope: .clawHub
+                        translationScope: .clawHub,
+                        manuallyShowsChineseTranslation: manuallyShowsChineseTranslation
                     )
                 } else {
                     Text("No content available.")

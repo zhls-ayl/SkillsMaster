@@ -41,4 +41,26 @@ final class TranslationSettingsPolicyTests: XCTestCase {
             )
         )
     }
+
+    func testIsEnabled_manualTranslationOverridesAutoTranslationSettings() {
+        let result = TranslationSettingsPolicy.isEnabled(
+            autoTranslationEnabled: false,
+            manualTranslationEnabled: true,
+            scope: .installed,
+            enabledScopes: []
+        )
+
+        XCTAssertTrue(result)
+    }
+
+    func testIsEnabled_manualTranslationStillRequiresScope() {
+        let result = TranslationSettingsPolicy.isEnabled(
+            autoTranslationEnabled: false,
+            manualTranslationEnabled: true,
+            scope: nil,
+            enabledScopes: [.installed]
+        )
+
+        XCTAssertFalse(result)
+    }
 }

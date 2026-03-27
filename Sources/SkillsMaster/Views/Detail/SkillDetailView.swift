@@ -131,9 +131,12 @@ struct SkillDetailView: View {
                 .padding()
             }
             .navigationTitle(skill.displayName)
+            .task(id: skill.id) {
+                viewModel.resetManualTranslationIfNeeded(for: skill.id)
+            }
             .toolbar {
-                if displayMode.showsManagementUI {
-                    ToolbarItemGroup {
+                ToolbarItemGroup {
+                    if displayMode.showsManagementUI {
                         // 在 Finder 中定位。
                         Button {
                             viewModel.revealInFinder(skill: skill)
@@ -149,7 +152,17 @@ struct SkillDetailView: View {
                             Image(systemName: "terminal")
                         }
                         .help("在 Terminal 中打开")
+                    }
 
+                    Button {
+                        viewModel.requestManualTranslation(for: skill.id)
+                    } label: {
+                        Image(systemName: "translate")
+                    }
+                    .help("翻译当前 Skill")
+                    .disabled(!viewModel.canRequestManualTranslation(for: skill.id))
+
+                    if displayMode.showsManagementUI {
                         // 编辑按钮。
                         Button {
                             viewModel.startEditing(skill: skill)
@@ -165,7 +178,7 @@ struct SkillDetailView: View {
                         }
                         .help("在外置编辑器中打开 SKILL.md")
                     }
-                }
+                } 
             }
         } else {
             EmptyStateView(
@@ -262,7 +275,8 @@ struct SkillDetailView: View {
                 // 这样可以避免大段 Markdown 在主线程触发明显卡顿。
                 MarkdownContentView(
                     markdownText: skill.markdownBody,
-                    translationScope: displayMode.translationScope
+                    translationScope: displayMode.translationScope,
+                    manuallyShowsChineseTranslation: viewModel.isShowingManualTranslation
                 )
             }
         }

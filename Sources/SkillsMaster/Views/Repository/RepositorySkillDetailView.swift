@@ -16,6 +16,8 @@ struct RepositorySkillDetailView: View {
     let onInstall: () -> Void
     let onLoadContent: () async -> Void
 
+    @State private var manuallyShowsChineseTranslation = false
+
     private var displayMetadata: SkillMetadata {
         content?.metadata ?? skill.metadata
     }
@@ -62,7 +64,19 @@ struct RepositorySkillDetailView: View {
         }
         .navigationTitle(displayName)
         .task(id: skill.id) {
+            manuallyShowsChineseTranslation = false
             await onLoadContent()
+        }
+        .toolbar {
+            ToolbarItemGroup {
+                Button {
+                    manuallyShowsChineseTranslation = true
+                } label: {
+                    Image(systemName: "translate")
+                }
+                .help("翻译当前 Skill")
+                .disabled(manuallyShowsChineseTranslation)
+            }
         }
     }
 
@@ -207,7 +221,8 @@ struct RepositorySkillDetailView: View {
             } else if let markdownBody = content?.markdownBody, !markdownBody.isEmpty {
                 MarkdownContentView(
                     markdownText: markdownBody,
-                    translationScope: .repositories
+                    translationScope: .repositories,
+                    manuallyShowsChineseTranslation: manuallyShowsChineseTranslation
                 )
             } else {
                 Text("No markdown content available in this SKILL.md.")
