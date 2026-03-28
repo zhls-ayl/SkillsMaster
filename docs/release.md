@@ -36,6 +36,7 @@
 需要特别注意：
 - GitHub 的 `Tags` 列表本身不直接承载安装包；实际下载的是该 tag 关联的 GitHub Release 附件
 - 如果 `origin` 指向内部镜像、代码托管或其他非 GitHub 远端，必须确认 Release tag 被推送到真正触发 GitHub Actions 的 GitHub remote
+- 若 GitHub `main` 开启“必须通过 Pull Request 合并”，发布准备提交也应先走 PR；不要把“推送版本提交”和“推送版本 tag”混为同一步
 
 ## 常见本地打包命令
 ```bash
@@ -69,6 +70,46 @@
   - 当前只负责 GitHub Release 产物，不再联动 Homebrew tap
   - workflow 文件内显式声明 `permissions: contents: write`，用于创建 Release；当前不需要把仓库默认 `Workflow permissions` 提升为全局 write
   - 为规避 GitHub Actions 上 Node 20 JavaScript action 弃用告警，workflow 已升级 `actions/checkout`，并移除了 `softprops/action-gh-release` 依赖
+
+## 本次发布复盘（v0.2.6）
+这次 `v0.2.6` 发布实际经历了完整的失败恢复链路，暴露出几条值得固化的规则：
+
+### 发生了什么
+- 首次 `v0.2.6` Release workflow 在 `Run tests` 阶段失败，原因不是发布脚本，而是 `TranslationServiceTests` 里对并发调用顺序做了错误假设；本地通过、CI 失败，属于典型 flaky test。
+- 修复测试后，主仓库由于 `main` 受分支保护，必须先走 PR 合并，再重新发布 tag。
+- GitHub Release 成功后，仓库内 `homebrew/skillsmaster.rb` 与独立 tap `zhls-ayl/homebrew-skillsmaster` 还需要第二阶段同步；它们依赖发布后才能拿到的真实 `universal.zip` digest。
+
+### 更高效的工作流
+推荐以后统一按下面顺序执行，而不是在发布过程中交叉回填：
+
+1. 在主仓库把目标版本的代码、测试、`CHANGELOG.md` 全部合入 `main`
+2. 运行 `./run test`
+3. 运行 `./run package --version X.Y.Z --release-assets`
+4. 确认当前本地 `main` 跟踪的是会触发 GitHub Release 的 GitHub remote，而不是镜像或内部 `origin`
+5. 执行 `./run release vX.Y.Z --remote <github-remote> --yes`
+6. 等待 GitHub Release workflow 成功，确认 `universal.zip`、单架构 zip 与 dmg 都已上传
+7. 读取 `universal.zip` 的真实 `sha256`
+8. 依次更新本仓库 `homebrew/skillsmaster.rb` 与独立 tap 仓库 `Casks/skillsmaster.rb`
+
+这样可以把“应用发布”和“Homebrew 分发同步”分成两个清晰阶段，减少中途回滚与重复验证。
+
+### 失败恢复规则
+- 如果 Release workflow 失败在测试或打包阶段，且 GitHub 上还没有正式 Release 记录，可以在修复问题后删除错误 tag，再从修复后的 `main` 重发同一个版本号。
+- 如果 GitHub 上已经创建了正式 Release 或用户已经可能下载到该版本，不要复用同一版本号；应改发新版本，并在 `CHANGELOG.md` 里明确说明补救范围。
+- 恢复发布前，先用 `gh release view vX.Y.Z` 确认是否已经存在 Release，再决定“删 tag 重发”还是“ bump 新版本”。
+
+### 这次暴露出的测试教训
+- 并发测试不要断言 `async let` 或 task 启动顺序，例如 `["One", "Two"]` 这样的调用顺序在本地和 CI 上都可能不同。
+- 对 `TranslationService` 这类并发敏感逻辑，更稳定的断言应放在：
+  - 返回值是否正确
+  - 相同输入是否被去重
+  - 不同输入是否满足串行化 / 单飞约束
+  - `maxConcurrentCallCount` 是否符合预期
+
+### Homebrew 同步规则
+- `homebrew/skillsmaster.rb` 和独立 tap 中的 cask 都必须使用 GitHub Release 已上传的 `SkillsMaster-vX.Y.Z-universal.zip` 的真实 digest。
+- 不要在 Release 成功前先修改 cask 版本和 `sha256`，否则 tap 会短暂进入“版本已更新但下载校验必然失败”的坏状态。
+- 仓库内 cask 只是 tap 的源模板；真正给用户使用的是独立 tap 仓库，因此发布收尾默认应包含“同步 tap 仓库”这一步，而不是只改当前仓库。
 
 ## 发布产物
 当前发布产物命名为：
@@ -137,8 +178,9 @@ git push origin main
 ### 后续版本更新 tap 的固定流程
 1. 先确认 GitHub Release 已经完成，并且 `universal.zip` 已上传成功
 2. 取对应版本 `universal.zip` 的真实 `sha256`
-3. 更新 tap 仓库里的 `Casks/skillsmaster.rb`
-4. 提交并推送 tap 仓库
+3. 先更新当前仓库 `homebrew/skillsmaster.rb`，保持模板与最新发布一致
+4. 再更新 tap 仓库里的 `Casks/skillsmaster.rb`
+5. 提交并推送 tap 仓库
 
 如果本机已安装 `gh`，可以直接用下面的命令取某个版本 `universal.zip` 的 digest：
 
@@ -159,10 +201,12 @@ sha256:6e0974f53f007926542f2cb74a7e9fbc1a5f9826b1189ac5464f2464af45bdb9
 - 下载 URL 模式是否仍匹配 Release 产物
 - SHA256 计算对象是否未变化
 - `brew install --cask skillsmaster` 的安装路径与卸载清理规则是否仍成立
+- tap 仓库是否已经同步到与主仓库 cask 模板相同的版本与 digest
 
 ## 高风险检查清单
 发布前至少确认：
 - `swift test` 通过
+- 与本次改动直接相关的并发 / CI 敏感测试没有把任务调度顺序当作稳定行为
 - `build/SkillsMaster.app` 可成功生成
 - `build/SkillsMaster-v<version>-universal.zip` 可成功生成
 - `build/SkillsMaster-v<version>-arm64.zip` 可成功生成
@@ -174,6 +218,9 @@ sha256:6e0974f53f007926542f2cb74a7e9fbc1a5f9826b1189ac5464f2464af45bdb9
 - 资源包、图标与 `Info.plist` 未丢失
 - Release 产物命名与 workflow、README 一致
 - 当前选择的发布 remote 确实指向 GitHub 仓库；多 remote 时必要时显式传 `--remote`
+- 当前本地分支跟踪的上游确实是预期的 GitHub remote；若 `main` 不跟踪 GitHub remote，先修正 upstream 再打 tag
 - 目标分支的 Release commit 已经推送到该 GitHub remote，再创建版本 tag
+- 若仓库 `main` 受分支保护，版本相关提交先通过 PR 合入，再创建版本 tag；不要尝试直接推送 `main`
 - 若改动涉及自更新，手动核对下载与安装逻辑是否仍可工作
 - 自更新回归时至少覆盖三类真实场景：可写目录原地更新、`/Applications` 下的管理员授权更新、以及 App Translocation / 只读卷下的明确失败提示
+- 发布完成后，继续核对 GitHub Release、仓库内 cask 模板、独立 tap 仓库这三处是否全部已同步到同一版本
