@@ -167,7 +167,13 @@ final class SkillManager {
     }
 
     func translateEnglishParagraphToChinese(_ text: String) async throws -> String {
-        try await translationService.translateEnglishToChinese(text)
+        do {
+            return try await translationService.translateEnglishToChinese(text)
+        } catch TranslationService.TranslationError.unavailable {
+            translationAvailability = .supportedButNotInstalled
+            presentTranslationPackPromptIfNeeded()
+            throw TranslationService.TranslationError.unavailable
+        }
     }
 
     func prepareSkillContentTranslationIfNeeded(translationEnabledOnThisScreen: Bool) async {
@@ -185,6 +191,19 @@ final class SkillManager {
             }
         }
 
+        presentTranslationPackPromptIfNeeded()
+    }
+
+    func dismissTranslationPackPrompt() {
+        translationPackPrompt = nil
+    }
+
+    func dontShowTranslationPackPromptAgain() {
+        UserDefaults.standard.set(true, forKey: Self.dontShowTranslationPackPromptKey)
+        translationPackPrompt = nil
+    }
+
+    private func presentTranslationPackPromptIfNeeded() {
         let dontShowAgain = UserDefaults.standard.bool(forKey: Self.dontShowTranslationPackPromptKey)
         let shouldShowPrompt = TranslationPackPromptPolicy.shouldShowPrompt(
             translationEnabledOnThisScreen: translationAvailability == .supportedButNotInstalled,
@@ -195,18 +214,9 @@ final class SkillManager {
 
         hasShownTranslationPackPromptThisLaunch = true
         translationPackPrompt = TranslationPackPrompt(
-            title: "需要安装本地翻译包",
-            message: "要显示 Skill 文档的中文译文，请先在系统里安装英文到简体中文的离线翻译语言包。安装后重新打开详情页即可看到逐段中文翻译。"
+            title: "需要启用系统翻译能力",
+            message: "要显示 Skill 文档的中文译文，请先确认系统 Translate app 可用，并已安装英文到简体中文的离线翻译语言包。处理完成后重新打开详情页即可看到逐段中文翻译。"
         )
-    }
-
-    func dismissTranslationPackPrompt() {
-        translationPackPrompt = nil
-    }
-
-    func dontShowTranslationPackPromptAgain() {
-        UserDefaults.standard.set(true, forKey: Self.dontShowTranslationPackPromptKey)
-        translationPackPrompt = nil
     }
 
     /// 建立 file system 监控，在目录变化时自动触发 `refresh()`。

@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Fixed
+- 修复本地翻译能力探测与实际执行路径的系统版本门槛不一致问题，避免详情页在不支持内联翻译的系统上误判为“已安装可翻译”并持续显示段落级 `翻译失败`。
+- 修复系统翻译框架缺少离线模型时对英文错误文案的硬编码依赖；现在会稳定归一化为“翻译不可用”，从而在非英文系统下也能正确触发翻译包提示。
+- 补充本地翻译平台支持与离线模型错误归一化测试，覆盖本地化错误信息和并发等待相同翻译请求的异常传播场景。
 
 ## [0.2.5] - 2026-03-28
 ### Added

@@ -13,7 +13,7 @@ struct TranslationPackAvailabilityChecker {
 
     func englishToSimplifiedChinese() async -> Availability {
         #if canImport(Translation) && compiler(>=6.2)
-        if #available(macOS 26.0, *) {
+        if #available(macOS 26.0, *), TranslationPlatformSupport.canCheckLanguageAvailability {
             let availability = LanguageAvailability()
             let status = await availability.status(
                 from: Locale.Language(identifier: "en"),
