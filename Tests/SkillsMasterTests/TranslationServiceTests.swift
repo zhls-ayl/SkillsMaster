@@ -81,4 +81,105 @@ final class TranslationServiceTests: XCTestCase {
         let maxConcurrent = await client.maxConcurrentCallCount
         XCTAssertEqual(maxConcurrent, 1)
     }
+
+    func testTranslateEnglishToChinese_mapsOfflineModelFailureToUnavailable() async {
+        actor OfflineModelsUnavailableClient: LocalTranslationClient {
+            func translateEnglishToChinese(_ text: String) async throws -> String {
+                throw NSError(
+                    domain: "TranslationErrorDomain",
+                    code: 16,
+                    userInfo: [
+                        NSLocalizedFailureReasonErrorKey: "Offline models not available for language pair"
+                    ]
+                )
+            }
+        }
+
+        let service = TranslationService(client: OfflineModelsUnavailableClient())
+
+        do {
+            _ = try await service.translateEnglishToChinese("Hello")
+            XCTFail("Expected unavailable error")
+        } catch let error as TranslationService.TranslationError {
+            XCTAssertEqual(error, .unavailable)
+        } catch {
+            XCTFail("Expected TranslationError.unavailable, got \(error)")
+        }
+    }
+
+    func testTranslateEnglishToChinese_mapsLocalizedOfflineModelFailureToUnavailable() async {
+        actor OfflineModelsUnavailableClient: LocalTranslationClient {
+            func translateEnglishToChinese(_ text: String) async throws -> String {
+                throw NSError(
+                    domain: "TranslationErrorDomain",
+                    code: 16,
+                    userInfo: [
+                        NSLocalizedFailureReasonErrorKey: "当前语言对缺少离线模型"
+                    ]
+                )
+            }
+        }
+
+        let service = TranslationService(client: OfflineModelsUnavailableClient())
+
+        do {
+            _ = try await service.translateEnglishToChinese("Hello")
+            XCTFail("Expected unavailable error")
+        } catch let error as TranslationService.TranslationError {
+            XCTAssertEqual(error, .unavailable)
+        } catch {
+            XCTFail("Expected TranslationError.unavailable, got \(error)")
+        }
+    }
+
+    func testTranslateEnglishToChinese_mapsConcurrentOfflineModelFailureToUnavailable() async {
+        actor OfflineModelsUnavailableClient: LocalTranslationClient {
+            func translateEnglishToChinese(_ text: String) async throws -> String {
+                try? await Task.sleep(nanoseconds: 20_000_000)
+                throw NSError(
+                    domain: "TranslationErrorDomain",
+                    code: 16,
+                    userInfo: [
+                        NSLocalizedFailureReasonErrorKey: "Offline models not available for language pair"
+                    ]
+                )
+            }
+        }
+
+        let service = TranslationService(client: OfflineModelsUnavailableClient())
+
+        async let first = captureResult {
+            try await service.translateEnglishToChinese("Hello")
+        }
+        async let second = captureResult {
+            try await service.translateEnglishToChinese("Hello")
+        }
+
+        let results = await [first, second]
+        XCTAssertEqual(results.count, 2)
+
+        for result in results {
+            switch result {
+            case .success:
+                XCTFail("Expected unavailable error")
+            case .failure(let error as TranslationService.TranslationError):
+                if case .unavailable = error {
+                    continue
+                }
+                XCTFail("Expected TranslationError.unavailable, got \(error)")
+            case .failure(let error):
+                XCTFail("Expected TranslationError.unavailable, got \(error)")
+            }
+        }
+    }
+
+    private func captureResult(
+        _ operation: @escaping () async throws -> String
+    ) async -> Result<String, Error> {
+        do {
+            return .success(try await operation())
+        } catch {
+            return .failure(error)
+        }
+    }
 }

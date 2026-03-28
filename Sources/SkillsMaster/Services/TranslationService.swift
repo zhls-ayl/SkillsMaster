@@ -29,7 +29,11 @@ actor TranslationService {
         }
 
         if let inFlightTask = inFlight[text] {
-            return try await inFlightTask.value
+            do {
+                return try await inFlightTask.value
+            } catch {
+                throw normalize(error: error)
+            }
         }
 
         let previousTask = serialTailTask
@@ -49,14 +53,32 @@ actor TranslationService {
             return translated
         } catch {
             inFlight[text] = nil
-            throw error
+            throw normalize(error: error)
         }
+    }
+
+    private func normalize(error: Error) -> Error {
+        if error is CancellationError {
+            return error
+        }
+
+        if error as? TranslationError == .unavailable {
+            return TranslationError.unavailable
+        }
+
+        let nsError = error as NSError
+        if nsError.domain == "TranslationErrorDomain",
+           nsError.code == 16 {
+            return TranslationError.unavailable
+        }
+
+        return error
     }
 }
 
 private struct DefaultLocalTranslationClient: LocalTranslationClient {
     func translateEnglishToChinese(_ text: String) async throws -> String {
-        if #available(macOS 26.0, *) {
+        if #available(macOS 26.0, *), TranslationPlatformSupport.canPerformInlineTranslation {
             #if canImport(Translation) && compiler(>=6.2)
             return try await TranslationFrameworkClient().translateEnglishToChinese(text)
             #else
