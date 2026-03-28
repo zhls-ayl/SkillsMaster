@@ -10,15 +10,17 @@ enum AgentInstallMode: String, CaseIterable, Identifiable, Codable {
 
     var displayName: String {
         switch self {
-        case .symlink: "软链接"
-        case .copy: "物理复制"
+        case .symlink: AppLocalization.string("Symbolic Link")
+        case .copy: AppLocalization.string("Physical Copy")
         }
     }
 
     var detailText: String {
         switch self {
-        case .symlink: "在 Agent 目录中创建 symbolic link，指向事实源目录"
-        case .copy: "把事实源目录实际复制到 Agent 目录，并在更新时同步覆盖"
+        case .symlink:
+            AppLocalization.string("Create a symbolic link in the Agent directory that points to the source-of-truth directory.")
+        case .copy:
+            AppLocalization.string("Copy the source-of-truth directory into the Agent directory and overwrite it again during updates.")
         }
     }
 }

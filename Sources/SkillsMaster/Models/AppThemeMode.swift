@@ -27,9 +27,9 @@ enum AppThemeMode: String, CaseIterable, Identifiable {
     /// Keeping labels here ensures UI text stays consistent everywhere.
     var displayName: String {
         switch self {
-        case .system: "System"
-        case .light: "Light"
-        case .dark: "Dark"
+        case .system: AppLocalization.string("System")
+        case .light: AppLocalization.string("Light")
+        case .dark: AppLocalization.string("Dark")
         }
     }
 

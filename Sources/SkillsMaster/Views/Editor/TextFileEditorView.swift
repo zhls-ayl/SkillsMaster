@@ -23,7 +23,7 @@ struct TextFileEditorView: View {
                             .foregroundStyle(.secondary)
 
                         if viewModel.hasUnsavedChanges {
-                            Label("未保存", systemImage: "circle.fill")
+                            Label("Unsaved", systemImage: "circle.fill")
                                 .font(.caption)
                                 .foregroundStyle(.orange)
                         }
@@ -65,12 +65,12 @@ struct TextFileEditorView: View {
                     .lineLimit(1)
             }
 
-            Button("取消") {
+            Button("Cancel") {
                 onCancel()
             }
             .keyboardShortcut(.cancelAction)
 
-            Button("保存") {
+            Button("Save") {
                 Task { await onSave() }
             }
             .keyboardShortcut(.defaultAction)

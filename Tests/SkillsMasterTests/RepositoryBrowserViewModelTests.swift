@@ -64,7 +64,7 @@ final class RepositoryBrowserViewModelTests: XCTestCase {
         let repository = makeRepository()
         let vm = RepositoryBrowserViewModel(repository: repository, skillManager: skillManager)
 
-        XCTAssertEqual(vm.targetSelectionSummary(), "未选择 Agent")
+        XCTAssertEqual(vm.targetSelectionSummary(), AppLocalization.string("No Agent Selected"))
     }
 
     func testDetailInstallButtonTitleReturnsMixedWhenSelectedAgentsArePartiallyInstalled() {

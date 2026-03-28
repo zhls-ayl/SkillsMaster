@@ -225,7 +225,7 @@ struct ClawHubSkillDetailView: View {
                 agentTypes: viewModel.targetAgentTypes,
                 selectedAgents: viewModel.selectedTargetAgents,
                 selectionSummary: viewModel.targetSelectionSummary(),
-                noteText: "安装时会先写入 SkillsMaster canonical 目录，再按各 Agent 的默认安装方式建立 direct install。",
+                noteText: "Skills are first written into the SkillsMaster canonical directory, then materialized as direct installs using each Agent's default install mode.",
                 isAgentDetected: viewModel.isAgentDetected(_:),
                 onToggle: viewModel.toggleTargetAgent(_:)
             )

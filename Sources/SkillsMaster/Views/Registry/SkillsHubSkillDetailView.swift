@@ -215,7 +215,7 @@ struct SkillsHubSkillDetailView: View {
                 agentTypes: viewModel.targetAgentTypes,
                 selectedAgents: viewModel.selectedTargetAgents,
                 selectionSummary: viewModel.targetSelectionSummary(),
-                noteText: "安装时会先写入 SkillsMaster canonical 目录，再按各 Agent 的默认安装方式建立 direct install。",
+                noteText: "Skills are first written into the SkillsMaster canonical directory, then materialized as direct installs using each Agent's default install mode.",
                 isAgentDetected: viewModel.isAgentDetected(_:),
                 onToggle: viewModel.toggleTargetAgent(_:)
             )
@@ -232,7 +232,7 @@ struct SkillsHubSkillDetailView: View {
                 HStack(spacing: 8) {
                     ProgressView()
                         .controlSize(.small)
-                    Text("正在加载 SkillsHub skill 包...")
+                    Text("Loading SkillsHub package...")
                         .foregroundStyle(.secondary)
                         .font(.subheadline)
                 }
@@ -265,7 +265,7 @@ struct SkillsHubSkillDetailView: View {
                 )
                     .textSelection(.enabled)
             } else {
-                Text("请选择一个 SkillsHub skill 查看详情。")
+                Text("Select a SkillsHub skill to view details.")
                     .foregroundStyle(.secondary)
             }
         }

@@ -146,7 +146,7 @@ struct RegistrySkillDetailView: View {
                     }
                 }
                 GridRow {
-                    Text("安装s").foregroundStyle(.secondary)
+                    Text("Installs").foregroundStyle(.secondary)
                     HStack(spacing: 8) {
                         // Show both formatted and exact count
                         Text(skill.formattedInstalls)
@@ -267,7 +267,7 @@ struct RegistrySkillDetailView: View {
                         NSWorkspace.shared.open(url)
                     }
                 } label: {
-                    Label("在 skills.sh 查看", systemImage: "safari")
+                    Label("View on skills.sh", systemImage: "safari")
                 }
                 .buttonStyle(.bordered)
             }
@@ -276,14 +276,14 @@ struct RegistrySkillDetailView: View {
                 agentTypes: viewModel.targetAgentTypes,
                 selectedAgents: viewModel.selectedTargetAgents,
                 selectionSummary: viewModel.targetSelectionSummary(),
-                noteText: "安装时会先写入 SkillsMaster canonical 目录，再按各 Agent 的默认安装方式建立 direct install。",
+                noteText: "Skills are first written into the SkillsMaster canonical directory, then materialized as direct installs using each Agent's default install mode.",
                 isAgentDetected: viewModel.isAgentDetected(_:),
                 onToggle: viewModel.toggleTargetAgent(_:)
             )
 
             // CLI install hint — shows the npx command for reference
             VStack(alignment: .leading, spacing: 4) {
-                Text("CLI 安装 Command")
+                Text("CLI Install Command")
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
@@ -346,7 +346,7 @@ struct RegistrySkillDetailView: View {
                             NSWorkspace.shared.open(url)
                         }
                     } label: {
-                        Label("在 skills.sh 查看 instead", systemImage: "safari")
+                        Label("View on skills.sh instead", systemImage: "safari")
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)

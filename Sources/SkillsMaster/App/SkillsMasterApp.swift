@@ -42,6 +42,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 @main
 struct SkillsMasterApp: App {
 
+    init() {
+        AppLocalization.installBundleOverride()
+    }
+
     /// `SkillManager` 是 app 的核心状态管理器。
     /// 使用 `@State` 可以让 SwiftUI 管理它的生命周期。
     @State private var skillManager = SkillManager()
@@ -54,6 +58,9 @@ struct SkillsMasterApp: App {
     /// - SwiftUI automatically re-evaluates Scene/View bodies, so theme changes apply live.
     @AppStorage(Constants.appThemeModeKey)
     private var appThemeModeRawValue = AppThemeMode.system.rawValue
+
+    @AppStorage(Constants.appLanguageModeKey)
+    private var appLanguageModeRawValue = AppLanguageMode.system.rawValue
 
     /// NSApplicationDelegateAdaptor bridges SwiftUI with traditional AppKit lifecycle
     /// Through AppDelegate we can perform AppKit-level operations at app launch
@@ -69,6 +76,10 @@ struct SkillsMasterApp: App {
         AppThemeMode(rawValue: appThemeModeRawValue) ?? .system
     }
 
+    private var appLanguageMode: AppLanguageMode {
+        AppLanguageMode(rawValue: appLanguageModeRawValue) ?? .system
+    }
+
     var body: some Scene {
         // `WindowGroup` 用于创建主窗口。
         WindowGroup {
@@ -78,6 +89,7 @@ struct SkillsMasterApp: App {
                 // 概念上类似 React 的 Context Provider 或 Android 的 dependency injection。
                 .environment(skillManager)
                 .environment(toolPreferences)
+                .environment(\.locale, appLanguageMode.resolvedLocale)
                 // 为主窗口应用统一的外观策略。
                 // `.preferredColorScheme(nil)` 表示 follow system，
                 // `.light` / `.dark` 则表示强制指定外观。
@@ -95,6 +107,7 @@ struct SkillsMasterApp: App {
             SettingsView()
                 .environment(skillManager)
                 .environment(toolPreferences)
+                .environment(\.locale, appLanguageMode.resolvedLocale)
                 // Apply the same theme policy to Settings window,
                 // ensuring all app windows stay visually consistent.
                 .preferredColorScheme(appThemeMode.colorScheme)

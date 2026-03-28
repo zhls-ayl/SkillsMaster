@@ -245,7 +245,11 @@ struct SkillInstallView: View {
                 HStack {
                     // Selected count hint
                     let selectedCount = viewModel.selectedSkillNames.count
-                    Text("\(selectedCount) skill\(selectedCount == 1 ? "" : "s") 已选择")
+                    Text(
+                        selectedCount == 1
+                            ? AppLocalization.string("1 skill selected")
+                            : AppLocalization.format("%d skills selected", selectedCount)
+                    )
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
@@ -284,10 +288,14 @@ struct SkillInstallView: View {
                 .font(.system(size: 48))
                 .foregroundStyle(.green)
 
-            Text("安装ation Complete")
+            Text("Installation Complete")
                 .font(.headline)
 
-            Text("\(viewModel.installedCount) skill\(viewModel.installedCount == 1 ? "" : "s") 个 Skill 安装成功")
+            Text(
+                viewModel.installedCount == 1
+                    ? AppLocalization.string("1 skill was installed successfully")
+                    : AppLocalization.format("%d skills were installed successfully", viewModel.installedCount)
+            )
                 .foregroundStyle(.secondary)
 
             HStack(spacing: 12) {

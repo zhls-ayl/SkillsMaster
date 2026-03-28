@@ -73,7 +73,7 @@ struct AllSkillsView: View {
                             } label: {
                                 // HStack horizontal layout: icon + text + sort direction arrow
                                 HStack {
-                                    Label(order.rawValue, systemImage: order.iconName)
+                                    Label(order.displayName, systemImage: order.iconName)
                                     if viewModel.sortOrder == order {
                                         // Spacer pushes arrow to the right
                                         Spacer()
@@ -88,7 +88,7 @@ struct AllSkillsView: View {
                     // Label provides both text and icon, macOS toolbar decides which to display based on space
                     HStack(spacing: 2) {
                         Image(systemName: "line.3.horizontal.decrease")
-                        Text(viewModel.sortOrder.rawValue)
+                        Text(viewModel.sortOrder.displayName)
                         Image(systemName: viewModel.sortDirection.iconName)
                             .font(.caption2)
                             // imageScale controls SF Symbol size

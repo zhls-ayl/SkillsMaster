@@ -7,6 +7,21 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.2.7] - 2026-03-29
+### Added
+- 新增应用级语言偏好与语言切换基础设施，支持在 `Settings > App Language` 中手动切换 `English` 与 `简体中文`，默认继续跟随系统语言。
+- 新增国际化回归测试，覆盖应用语言设置对应的本地化解析结果，防止后续再次出现“切换语言但 UI 不生效”的回归。
+
+### Changed
+- 将项目对外入口调整为双语结构：`README.md` 作为英文主入口，新增 `README.zh-Hans.md` 作为中文入口，并同步更新文档索引。
+- 统一整理 `Installed`、`Marketplace`、`Repositories`、`Agents`、`Settings` 与各类 Skill 详情页中的预置 UI 文案，使中英文切换覆盖主流程界面、按钮、弹窗、提示与状态文本。
+- 优化简体中文语料，在保留 `Skill`、`Agent`、`Repository`、`Marketplace`、`Terminal` 等关键术语的基础上，对面向中文用户的界面描述做更自然的本地化表达。
+
+### Fixed
+- 修复 `Settings` 中切换 `App Language` 为简体中文后，应用大部分 SwiftUI 文案仍持续显示英文的问题；现在语言切换会真正接管应用本地化资源解析。
+- 修复 `Agent Files` 列表页和详情页中 `skills/` 保护路径、只读标记、文件属性、确认弹窗、错误提示等文案在英文模式下残留中文的问题。
+- 修复 `All Skills` 排序菜单、`SkillsHub` 分类/排序/分页控件，以及多类 Skill 详情页中枚举显示名和预置说明未正确进入国际化体系的问题。
+
 ## [0.2.6] - 2026-03-29
 ### Fixed
 - 修复本地翻译能力探测与实际执行路径的系统版本门槛不一致问题，避免详情页在不支持内联翻译的系统上误判为“已安装可翻译”并持续显示段落级 `翻译失败`。

@@ -200,9 +200,12 @@ final class ClawHubBrowserViewModel {
     func targetSelectionSummary() -> String {
         let count = selectedTargetAgents.count
         if count == 0 {
-            return "未选择 Agent"
+            return AppLocalization.string("No Agent Selected")
         }
-        return count == 1 ? "1 个 Agent 已选中" : "\(count) 个 Agent 已选中"
+        if count == 1 {
+            return AppLocalization.string("1 Agent Selected")
+        }
+        return AppLocalization.format("%d Agents Selected", count)
     }
 
     func isShowingManualTranslation(for skillID: String) -> Bool {
@@ -261,7 +264,10 @@ final class ClawHubBrowserViewModel {
     func installSkill(_ skill: ClawHubSkill) {
         guard installingSkillSlug == nil else { return }
         guard !selectedTargetAgents.isEmpty else {
-            notice = Notice(title: "无法安装", message: "请至少选择一个目标 Agent。")
+            notice = Notice(
+                title: AppLocalization.string("Unable to Install"),
+                message: AppLocalization.string("Select at least one target Agent.")
+            )
             return
         }
         Task { await performInstall(skill) }
@@ -271,20 +277,20 @@ final class ClawHubBrowserViewModel {
         let action = installAction(for: skill)
         let targetAgents = selectedTargetAgents
         installingSkillSlug = skill.slug
-        installingStatusMessage = "Loading package info..."
+        installingStatusMessage = AppLocalization.string("Loading package info...")
         defer {
             installingSkillSlug = nil
             installingStatusMessage = nil
         }
 
         do {
-            installingStatusMessage = "Loading package info..."
+            installingStatusMessage = AppLocalization.string("Loading package info...")
             let detail = try await service.fetchSkillDetail(slug: skill.slug)
             guard let version = detail.installVersion else {
                 throw SkillManager.ImportError.parseFailed("ClawHub did not provide a version for \(skill.slug).")
             }
 
-            installingStatusMessage = "Downloading archive..."
+            installingStatusMessage = AppLocalization.string("Downloading archive...")
             let archiveResult = await downloadArchiveForInstall(slug: skill.slug, version: version)
             let archiveData = archiveResult.data
             let archiveDownloadError = archiveResult.error
@@ -292,7 +298,7 @@ final class ClawHubBrowserViewModel {
             var skillContent: String?
             var skillContentError: Error?
             do {
-                installingStatusMessage = "Fetching SKILL.md..."
+                installingStatusMessage = AppLocalization.string("Fetching SKILL.md...")
                 skillContent = try await service.fetchSkillContent(slug: skill.slug)
             } catch {
                 skillContentError = error
@@ -303,8 +309,8 @@ final class ClawHubBrowserViewModel {
             }
 
             installingStatusMessage = archiveData == nil
-                ? "Installing SKILL.md..."
-                : "Installing files..."
+                ? AppLocalization.string("Installing SKILL.md...")
+                : AppLocalization.string("Installing files...")
             let result = try await skillManager.installClawHubSkill(
                 slug: skill.slug,
                 version: version,
@@ -318,19 +324,24 @@ final class ClawHubBrowserViewModel {
 
             if result == .installedSkillMarkdownOnly {
                 let reason = archiveDownloadError?.localizedDescription ??
-                    "ClawHub did not return a downloadable archive for this skill version."
+                    AppLocalization.string("ClawHub did not return a downloadable archive for this skill version.")
                 notice = Notice(
-                    title: "Installed with limited files",
-                    message: "\(skill.name) 已安装到 \(targetAgents.count) 个 Agent，但辅助文件缺失。原因：\(reason)"
+                    title: AppLocalization.string("Installed with limited files"),
+                    message: AppLocalization.format(
+                        "%@ was installed to %d Agent(s), but some supplemental files were missing. Reason: %@",
+                        skill.name,
+                        targetAgents.count,
+                        reason
+                    )
                 )
             } else {
                 notice = Notice(
                     title: action.completionTitle,
-                    message: "\(skill.name) 已安装到 \(targetAgents.count) 个 Agent。"
+                    message: AppLocalization.format("%@ was installed to %d Agent(s).", skill.name, targetAgents.count)
                 )
             }
         } catch {
-            notice = Notice(title: "Installation Failed", message: error.localizedDescription)
+            notice = Notice(title: AppLocalization.string("Installation Failed"), message: error.localizedDescription)
         }
     }
 

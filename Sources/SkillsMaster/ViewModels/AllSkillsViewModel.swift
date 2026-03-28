@@ -50,15 +50,28 @@ final class AllSkillsViewModel {
 
         /// Display text
         var displayName: String {
-            self == .ascending ? "升序" : "降序"
+            self == .ascending
+                ? AppLocalization.string("Ascending")
+                : AppLocalization.string("Descending")
         }
     }
 
     /// Sort order enum
-    enum SortOrder: String, CaseIterable {
-        case name = "名称"
-        case scope = "作用域"
-        case agent = "Agent 数量"
+    enum SortOrder: CaseIterable {
+        case name
+        case scope
+        case agent
+
+        var displayName: String {
+            switch self {
+            case .name:
+                AppLocalization.string("Name")
+            case .scope:
+                AppLocalization.string("Scope")
+            case .agent:
+                AppLocalization.string("Agent Count")
+            }
+        }
 
         /// Each sort order corresponds to an SF Symbol icon
         var iconName: String {
@@ -140,7 +153,7 @@ final class AllSkillsViewModel {
         do {
             try await skillManager.deleteSkill(skill)
         } catch {
-            skillManager.errorMessage = "删除失败：\(error.localizedDescription)"
+            skillManager.errorMessage = AppLocalization.format("Delete failed: %@", error.localizedDescription)
         }
         skillToDelete = nil
         showDeleteConfirmation = false

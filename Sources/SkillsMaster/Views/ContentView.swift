@@ -119,8 +119,8 @@ struct ContentView: View {
                 } else {
                     EmptyStateView(
                         icon: "globe",
-                        title: "请选择 Skill",
-                        subtitle: "请从 Skills.sh 中选择一个 Skill 查看详情"
+                        title: "Select a Skill",
+                        subtitle: "Please select a Skill from Skills.sh to view details."
                     )
                 }
             } else if selectedSidebarItem == .clawHub {
@@ -135,8 +135,8 @@ struct ContentView: View {
                 } else {
                     EmptyStateView(
                         icon: "shippingbox",
-                        title: "请选择 Skill",
-                        subtitle: "请从 ClawHub 中选择一个 Skill 查看详情"
+                        title: "Select a Skill",
+                        subtitle: "Please select a Skill from ClawHub to view details."
                     )
                 }
             } else if selectedSidebarItem == .skillsHub {
@@ -151,8 +151,8 @@ struct ContentView: View {
                 } else {
                     EmptyStateView(
                         icon: "shippingbox.circle",
-                        title: "请选择 Skill",
-                        subtitle: "请从 SkillsHub 中选择一个 Skill 查看详情"
+                        title: "Select a Skill",
+                        subtitle: "Please select a Skill from SkillsHub to view details."
                     )
                 }
             } else if case .agentFiles(let agentType) = selectedSidebarItem,
@@ -177,8 +177,8 @@ struct ContentView: View {
                 } else {
                     EmptyStateView(
                         icon: "archivebox",
-                        title: "请选择 Skill",
-                        subtitle: "请从 Repository 中选择一个 Skill 查看详情"
+                        title: "Select a Skill",
+                        subtitle: "Please select a Skill from the Repository to view details."
                     )
                 }
             } else if let skillID = selectedSkillID, let vm = detailVM {
@@ -196,8 +196,8 @@ struct ContentView: View {
             } else {
                 EmptyStateView(
                     icon: "square.stack.3d.up",
-                    title: "请选择 Skill",
-                    subtitle: "请从列表中选择一个 Skill 查看详情"
+                    title: "Select a Skill",
+                    subtitle: "Please select a Skill from the list to view details."
                 )
             }
         }

@@ -27,10 +27,14 @@ enum SkillScope: Hashable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .unassigned: "Unassigned"
-        case .shared: "Shared"
-        case .agentLocal(let agent): "\(agent.displayName) Local"
-        case .project: "Project"
+        case .unassigned:
+            AppLocalization.string("Unassigned")
+        case .shared:
+            AppLocalization.string("Shared")
+        case .agentLocal(let agent):
+            AppLocalization.format("%@ Local", agent.displayName)
+        case .project:
+            AppLocalization.string("Project")
         }
     }
 

@@ -17,10 +17,10 @@ struct AgentFilesBrowserView: View {
             } else if viewModel.entries.isEmpty {
                 EmptyStateView(
                     icon: viewModel.rootExists ? "folder" : "folder.badge.questionmark",
-                    title: viewModel.rootExists ? "目录为空" : "根目录尚未创建",
+                    title: viewModel.rootExists ? "Directory is Empty" : "Root Directory Not Created",
                     subtitle: viewModel.rootExists
-                        ? "使用工具栏新建文件或文件夹。"
-                        : "使用工具栏新建文件或文件夹时，SkillsMaster 会自动创建该 Agent 的根目录。"
+                        ? "Use the toolbar to create a file or folder."
+                        : "When you create a file or folder from the toolbar, SkillsMaster creates this Agent's root directory automatically."
                 )
             } else {
                 List(selection: selectionBinding) {
@@ -40,7 +40,7 @@ struct AgentFilesBrowserView: View {
                 } label: {
                     Image(systemName: "doc.badge.plus")
                 }
-                .help("新建文件")
+                .help("New File")
                 .disabled(!viewModel.canCreateInCurrentDirectory || viewModel.isEditingTextFile)
 
                 Button {
@@ -48,7 +48,7 @@ struct AgentFilesBrowserView: View {
                 } label: {
                     Image(systemName: "folder.badge.plus")
                 }
-                .help("新建文件夹")
+                .help("New Folder")
                 .disabled(!viewModel.canCreateInCurrentDirectory || viewModel.isEditingTextFile)
 
                 Button {
@@ -57,7 +57,7 @@ struct AgentFilesBrowserView: View {
                 } label: {
                     Image(systemName: "pencil")
                 }
-                .help("重命名")
+                .help("Rename")
                 .disabled(!viewModel.canRenameSelectedItem || viewModel.isEditingTextFile)
 
                 Button(role: .destructive) {
@@ -65,7 +65,7 @@ struct AgentFilesBrowserView: View {
                 } label: {
                     Image(systemName: "trash")
                 }
-                .help("删除")
+                .help("Delete")
                 .disabled(!viewModel.canDeleteSelectedItem || viewModel.isEditingTextFile)
 
                 Button {
@@ -73,7 +73,7 @@ struct AgentFilesBrowserView: View {
                 } label: {
                     Image(systemName: "arrow.clockwise")
                 }
-                .help("刷新")
+                .help("Refresh")
             }
         }
         .task(id: viewModel.agentType) {
@@ -93,14 +93,14 @@ struct AgentFilesBrowserView: View {
             )
         }
         .confirmationDialog(
-            "确认删除",
+            "Confirm Deletion",
             isPresented: Binding(
                 get: { pendingDeleteItem != nil },
                 set: { if !$0 { pendingDeleteItem = nil } }
             ),
             titleVisibility: .visible
         ) {
-            Button("删除", role: .destructive) {
+            Button("Delete", role: .destructive) {
                 do {
                     try viewModel.deleteSelectedItem()
                 } catch {
@@ -108,7 +108,7 @@ struct AgentFilesBrowserView: View {
                 }
                 pendingDeleteItem = nil
             }
-            Button("取消", role: .cancel) {
+            Button("Cancel", role: .cancel) {
                 pendingDeleteItem = nil
             }
         } message: {
@@ -117,19 +117,19 @@ struct AgentFilesBrowserView: View {
             }
         }
         .confirmationDialog(
-            "目标已存在",
+            "Target Already Exists",
             isPresented: Binding(
                 get: { pendingOverwriteAction != nil },
                 set: { if !$0 { pendingOverwriteAction = nil } }
             ),
             titleVisibility: .visible
         ) {
-            Button("覆盖", role: .destructive) {
+            Button("Replace", role: .destructive) {
                 guard let pendingOverwriteAction else { return }
                 performOverwrite(pendingOverwriteAction)
                 self.pendingOverwriteAction = nil
             }
-            Button("取消", role: .cancel) {
+            Button("Cancel", role: .cancel) {
                 pendingOverwriteAction = nil
             }
         } message: {
@@ -138,7 +138,7 @@ struct AgentFilesBrowserView: View {
             }
         }
         .alert(
-            "操作失败",
+            "Action Failed",
             isPresented: Binding(
                 get: { localErrorMessage != nil || viewModel.errorMessage != nil },
                 set: { newValue in
@@ -149,12 +149,12 @@ struct AgentFilesBrowserView: View {
                 }
             )
         ) {
-            Button("确定", role: .cancel) {
+            Button("OK", role: .cancel) {
                 localErrorMessage = nil
                 viewModel.errorMessage = nil
             }
         } message: {
-            Text(localErrorMessage ?? viewModel.errorMessage ?? "未知错误")
+            Text(localErrorMessage ?? viewModel.errorMessage ?? "Unknown Error")
         }
     }
 
@@ -214,9 +214,9 @@ struct AgentFilesBrowserView: View {
 
     private func deleteMessage(for item: AgentFileItem) -> String {
         if item.isDirectory {
-            return "这会删除文件夹 “\(item.name)” 及其全部内容，且无法撤销。"
+            return "This will permanently delete the folder \"\(item.name)\" and all of its contents."
         }
-        return "这会删除文件 “\(item.name)”，且无法撤销。"
+        return "This will permanently delete the file \"\(item.name)\"."
     }
 }
 
@@ -269,7 +269,7 @@ private struct AgentFileRowView: View {
 
             if item.isProtected {
                 Spacer(minLength: 8)
-                Text("只读")
+                Text("Read Only")
                     .font(.caption2)
                     .foregroundStyle(.orange)
             } else if item.isSymbolicLink {
@@ -322,20 +322,20 @@ private struct NamePromptContext: Identifiable {
     var title: String {
         switch kind {
         case .newFile:
-            return "新建文件"
+            return "New File"
         case .newFolder:
-            return "新建文件夹"
+            return "New Folder"
         case .rename:
-            return "重命名"
+            return "Rename"
         }
     }
 
     var actionTitle: String {
         switch kind {
         case .rename:
-            return "保存"
+            return "Save"
         case .newFile, .newFolder:
-            return "创建"
+            return "Create"
         }
     }
 }
@@ -347,11 +347,11 @@ private struct PendingOverwriteAction {
     var message: String {
         switch kind {
         case .newFile:
-            return "同名文件已存在。确认后会覆盖现有文件。"
+            return "A file with the same name already exists. Confirm to replace the existing file."
         case .newFolder:
-            return "同名文件夹或文件已存在。确认后会删除现有目标并创建新的文件夹。"
+            return "A file or folder with the same name already exists. Confirm to remove it and create a new folder."
         case .rename:
-            return "目标名称已存在。确认后会删除现有目标并继续重命名。"
+            return "The target name already exists. Confirm to remove the existing target and continue renaming."
         }
     }
 }
@@ -385,11 +385,11 @@ private struct NamePromptSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text(title)
-                .font(.headline)
+                Text(title)
+                    .font(.headline)
 
             VStack(alignment: .leading, spacing: 8) {
-                Text("目录")
+                Text("Directory")
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
@@ -399,7 +399,7 @@ private struct NamePromptSheet: View {
                     .foregroundStyle(.secondary)
             }
 
-            TextField("名称", text: $name)
+            TextField("Name", text: $name)
                 .textFieldStyle(.roundedBorder)
                 .onSubmit {
                     onConfirm(name)
@@ -408,7 +408,7 @@ private struct NamePromptSheet: View {
             HStack {
                 Spacer()
 
-                Button("取消", role: .cancel) {
+                Button("Cancel", role: .cancel) {
                     onCancel()
                 }
 

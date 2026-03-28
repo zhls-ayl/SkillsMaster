@@ -11,7 +11,7 @@ struct SettingsView: View {
         TabView {
             通用SettingsView()
                 .tabItem {
-                    Label("通用", systemImage: "gear")
+                    Label("General", systemImage: "gear")
                 }
 
             // Custom repositories: GitHub/GitLab SSH sources for Skills
@@ -22,12 +22,12 @@ struct SettingsView: View {
 
             翻译SettingsView()
                 .tabItem {
-                    Label("翻译", systemImage: "translate")
+                    Label("Translation", systemImage: "translate")
                 }
 
             关于SettingsView()
                 .tabItem {
-                    Label("关于", systemImage: "info.circle")
+                    Label("About", systemImage: "info.circle")
                 }
         }
         // Widened and taller to accommodate repository management and editor / terminal settings.
@@ -55,6 +55,9 @@ struct 通用SettingsView: View {
     @AppStorage(Constants.appThemeModeKey)
     private var appThemeModeRawValue = AppThemeMode.system.rawValue
 
+    @AppStorage(Constants.appLanguageModeKey)
+    private var appLanguageModeRawValue = AppLanguageMode.system.rawValue
+
     /// Bridge String storage to strongly typed `AppThemeMode` for Picker binding.
     ///
     /// Why a custom Binding is used:
@@ -77,8 +80,32 @@ struct 通用SettingsView: View {
         AgentType.displayNameLengthSortedCases
     }
 
+    private var appLanguageModeBinding: Binding<AppLanguageMode> {
+        Binding(
+            get: {
+                AppLanguageMode(rawValue: appLanguageModeRawValue) ?? .system
+            },
+            set: { newMode in
+                appLanguageModeRawValue = newMode.rawValue
+            }
+        )
+    }
+
     var body: some View {
         Form {
+            Section("Language") {
+                Picker("App Language", selection: appLanguageModeBinding) {
+                    ForEach(AppLanguageMode.allCases) { mode in
+                        Text(mode.displayName).tag(mode)
+                    }
+                }
+                .pickerStyle(.menu)
+
+                Text("By default, SkillsMaster follows the macOS language. You can override it here without changing the system language.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             Section("Appearance") {
                 // Picker with .menu style renders as a standard macOS dropdown in Form.
                 // The selected enum case is persisted via appThemeModeBinding -> @AppStorage.
@@ -90,8 +117,8 @@ struct 通用SettingsView: View {
                 .pickerStyle(.menu)
             }
 
-            Section("Agent 默认安装方式") {
-                Text("切换后会立即迁移该 Agent 当前由 SkillsMaster 管理的 direct install。")
+            Section("Default Install Mode by Agent") {
+                Text("Changing this setting immediately migrates existing direct installs managed by SkillsMaster for that Agent.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
@@ -133,7 +160,7 @@ struct 通用SettingsView: View {
                     }
                 }
 
-                Text("手工放在 Agent 目录中的 agent-local Skill 不会被这个设置改写。")
+                Text("Agent-local skills that were manually placed in an Agent directory are not changed by this setting.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
@@ -145,15 +172,15 @@ struct 通用SettingsView: View {
             }
 
             Section("Editor & Terminal") {
-                LabeledContent("内置编辑器") {
-                    Text("支持 .json / .md / .toml / SKILL.md")
+                LabeledContent("Built-in Editor") {
+                    Text("Supports .json / .md / .toml / SKILL.md")
                         .foregroundStyle(.secondary)
                 }
 
                 VStack(alignment: .leading, spacing: 10) {
                     HStack(alignment: .top, spacing: 16) {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("外置编辑器")
+                            Text("External Editor")
                             Text(toolPreferences.externalEditorDisplayName)
                                 .foregroundStyle(.secondary)
                             if let appURL = toolPreferences.externalEditorAppURL {
@@ -162,7 +189,7 @@ struct 通用SettingsView: View {
                                     .foregroundStyle(.tertiary)
                                     .textSelection(.enabled)
                             } else {
-                                Text("未配置时回退到系统默认应用")
+                                Text("Falls back to the system default app when not configured.")
                                     .font(.caption)
                                     .foregroundStyle(.tertiary)
                             }
@@ -171,12 +198,12 @@ struct 通用SettingsView: View {
                         Spacer()
 
                         HStack(spacing: 8) {
-                            Button("选择应用…") {
+                            Button("Choose App…") {
                                 chooseExternalEditorApp()
                             }
                             .buttonStyle(.bordered)
 
-                            Button("清除") {
+                            Button("Clear") {
                                 toolPreferences.setExternalEditorApp(url: nil)
                                 toolPreferenceError = nil
                             }
@@ -187,10 +214,10 @@ struct 通用SettingsView: View {
 
                     HStack(alignment: .top, spacing: 16) {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("默认终端")
+                            Text("Default Terminal")
                             Text(toolPreferences.effectiveTerminalDisplayName)
                                 .foregroundStyle(.secondary)
-                            Text("支持 Terminal / iTerm / Warp / Ghostty")
+                            Text("Supports Terminal / iTerm / Warp / Ghostty")
                                 .font(.caption)
                                 .foregroundStyle(.tertiary)
                         }
@@ -198,12 +225,12 @@ struct 通用SettingsView: View {
                         Spacer()
 
                         HStack(spacing: 8) {
-                            Button("选择终端…") {
+                            Button("Choose Terminal…") {
                                 chooseDefaultTerminalApp()
                             }
                             .buttonStyle(.bordered)
 
-                            Button("恢复默认") {
+                            Button("Restore Default") {
                                 do {
                                     try toolPreferences.setDefaultTerminalApp(url: nil)
                                     toolPreferenceError = nil
@@ -247,7 +274,7 @@ struct 通用SettingsView: View {
         panel.canChooseDirectories = false
         panel.canChooseFiles = true
         panel.allowsMultipleSelection = false
-        panel.prompt = "选择"
+        panel.prompt = AppLocalization.string("Select")
 
         guard panel.runModal() == .OK, let url = panel.url else { return }
         toolPreferences.setExternalEditorApp(url: url)
@@ -260,7 +287,7 @@ struct 通用SettingsView: View {
         panel.canChooseDirectories = false
         panel.canChooseFiles = true
         panel.allowsMultipleSelection = false
-        panel.prompt = "选择"
+        panel.prompt = AppLocalization.string("Select")
 
         guard panel.runModal() == .OK, let url = panel.url else { return }
 
@@ -298,15 +325,15 @@ struct 翻译SettingsView: View {
 
     var body: some View {
         Form {
-            Section("自动翻译") {
-                Toggle("启用自动翻译", isOn: $autoTranslationEnabled)
+            Section("Automatic Translation") {
+                Toggle("Enable Automatic Translation", isOn: $autoTranslationEnabled)
 
-                Text("默认关闭。关闭后，所有 Skill 详情页都只显示原始文档，不再自动请求中文译文。")
+                Text("Disabled by default. When off, every Skill detail view shows only the original content and stops requesting Chinese translations automatically.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
-            Section("生效范围") {
+            Section("Scopes") {
                 Toggle("Installed", isOn: $installedEnabled)
                 Toggle("Skills.sh", isOn: $skillsShEnabled)
                 Toggle("ClawHub", isOn: $clawHubEnabled)
@@ -314,7 +341,7 @@ struct 翻译SettingsView: View {
                 Toggle("Repositories", isOn: $repositoriesEnabled)
                 Toggle("Agents Skills", isOn: $agentsEnabled)
 
-                Text("总开关关闭时，以下范围设置会被保留但不会生效。`Agent Files` 中的任何文件预览都不会启用自动翻译。")
+                Text("These scope settings are preserved even when the global switch is off, but they do not take effect. Automatic translation is never enabled for previews in Agent Files.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -441,7 +468,7 @@ struct 关于SettingsView: View {
                 HStack(spacing: 12) {
                     // "立即更新" button triggers download and install update
                     // .borderedProminent is filled prominent button style (similar to Material Design's Filled Button)
-                    Button("立即更新") {
+                    Button("Update Now") {
                         Task { await skillManager.performUpdate() }
                     }
                     .buttonStyle(.borderedProminent)
@@ -450,7 +477,7 @@ struct 关于SettingsView: View {
                     // "在 GitHub 查看" link opens Release page in browser
                     // Uses Link component instead of Button because it's external navigation (opens browser)
                     if let url = URL(string: updateInfo.htmlUrl) {
-                        Link("在 GitHub 查看", destination: url)
+                        Link("View on GitHub", destination: url)
                             .font(.caption)
                     }
                 }
@@ -458,7 +485,7 @@ struct 关于SettingsView: View {
         } else {
             // No update/not checked state: show manual check button
             // force: true ignores 4-hour interval limit, executes check immediately
-            Button("检查更新") {
+            Button("Check for updates") {
                 Task { await skillManager.checkForAppUpdate(force: true) }
             }
             .buttonStyle(.bordered)

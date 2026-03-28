@@ -9,22 +9,22 @@ enum MarketplaceInstallAction {
     var title: String {
         switch self {
         case .install:
-            "Install"
+            AppLocalization.string("Install")
         case .reinstall:
-            "Reinstall"
+            AppLocalization.string("Reinstall")
         case .mixed:
-            "Install / Reinstall"
+            AppLocalization.string("Install / Reinstall")
         }
     }
 
     var completionTitle: String {
         switch self {
         case .install:
-            "Install Complete"
+            AppLocalization.string("Install Complete")
         case .reinstall:
-            "Reinstall Complete"
+            AppLocalization.string("Reinstall Complete")
         case .mixed:
-            "Install / Reinstall Complete"
+            AppLocalization.string("Install / Reinstall Complete")
         }
     }
 

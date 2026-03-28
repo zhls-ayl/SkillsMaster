@@ -183,7 +183,7 @@ struct RepositorySkillDetailView: View {
                 agentTypes: viewModel.targetAgentTypes,
                 selectedAgents: viewModel.selectedTargetAgents,
                 selectionSummary: viewModel.targetSelectionSummary(),
-                noteText: "安装时会先写入 SkillsMaster canonical 目录，再按各 Agent 的默认安装方式建立 direct install。",
+                noteText: "Skills are first written into the SkillsMaster canonical directory, then materialized as direct installs using each Agent's default install mode.",
                 isAgentDetected: viewModel.isAgentDetected(_:),
                 onToggle: viewModel.toggleTargetAgent(_:)
             )
@@ -207,7 +207,7 @@ struct RepositorySkillDetailView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(contentError)
                         .foregroundStyle(.secondary)
-                    Button("重试加载") {
+                    Button("Retry Loading") {
                         Task { await onLoadContent() }
                     }
                     .buttonStyle(.bordered)
@@ -229,6 +229,6 @@ struct RepositorySkillDetailView: View {
 
     private var installHelpText: String {
         if let installDisabledReason = viewModel.installDisabledReason { return installDisabledReason }
-        return "安装 this skill from local repository clone"
+        return "Install this skill from the local repository clone"
     }
 }

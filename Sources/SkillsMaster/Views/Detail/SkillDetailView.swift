@@ -76,24 +76,24 @@ struct SkillDetailView: View {
                 }
             )
             .confirmationDialog(
-                "未保存修改",
+                "Unsaved Changes",
                 isPresented: Binding(
                     get: { viewModel.pendingEditorAction != nil },
                     set: { if !$0 { viewModel.cancelPendingEditorAction() } }
                 ),
                 titleVisibility: .visible
             ) {
-                Button("保存") {
+                Button("Save") {
                     Task { _ = await viewModel.saveCurrentEditorAndClose() }
                 }
-                Button("放弃修改", role: .destructive) {
+                Button("Discard Changes", role: .destructive) {
                     viewModel.discardPendingEditorAction()
                 }
-                Button("取消", role: .cancel) {
+                Button("Cancel", role: .cancel) {
                     viewModel.cancelPendingEditorAction()
                 }
             } message: {
-                Text("当前 `SKILL.md` 有未保存修改。")
+                Text("The current `SKILL.md` has unsaved changes.")
             }
         } else if let skill = viewModel.skill(id: skillID) {
             // 这里相当于 SwiftUI 版的 `guard let`：如果 skill 不存在，就直接展示 empty state。
@@ -140,7 +140,7 @@ struct SkillDetailView: View {
                         } label: {
                             Image(systemName: "folder")
                         }
-                        .help("在 Finder 中显示")
+                        .help("Show in Finder")
 
                         // 在 Terminal 中打开。
                         Button {
@@ -148,7 +148,7 @@ struct SkillDetailView: View {
                         } label: {
                             Image(systemName: "terminal")
                         }
-                        .help("在 Terminal 中打开")
+                        .help("Open in Terminal")
                     }
 
                     ManualTranslationToolbarButton(
@@ -171,15 +171,15 @@ struct SkillDetailView: View {
                         } label: {
                             Image(systemName: "square.and.arrow.up")
                         }
-                        .help("在外置编辑器中打开 SKILL.md")
+                        .help("Open SKILL.md in External Editor")
                     }
                 } 
             }
         } else {
             EmptyStateView(
                 icon: "questionmark.circle",
-                title: "找不到 Skill",
-                subtitle: "当前选中的 Skill 可能已被删除"
+                title: "Skill not found",
+                subtitle: "The selected Skill may have been deleted."
             )
         }
     }
@@ -244,7 +244,7 @@ struct SkillDetailView: View {
     @ViewBuilder
     private func agentAssignmentSection(_ skill: Skill) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Agent 分配")
+            Text("Agent Assignments")
                 .font(.headline)
 
             AgentToggleView(skill: skill, viewModel: viewModel)
@@ -255,11 +255,11 @@ struct SkillDetailView: View {
     @ViewBuilder
     private func markdownSection(_ skill: Skill) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("文档")
+            Text("Documentation")
                 .font(.headline)
 
             if skill.markdownBody.isEmpty {
-                Text("暂无文档")
+                Text("No documentation available.")
                     .foregroundStyle(.tertiary)
                     .italic()
             } else {
@@ -291,12 +291,12 @@ struct SkillDetailView: View {
         let inputIsEmpty = viewModel.repoURLInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
 
         VStack(alignment: .leading, spacing: 8) {
-            Text("包信息")
+            Text("Package Info")
                 .font(.headline)
 
             pathRow(skill)
 
-            Text("当前 Skill 尚未关联 Repository。完成关联后才能检查更新。")
+            Text("This Skill is not linked to a Repository yet. Link it before checking for updates.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
@@ -316,11 +316,11 @@ struct SkillDetailView: View {
                     // 关联ing 中：显示 `ProgressView` 作为 loading 指示器。
                     ProgressView()
                         .controlSize(.small)
-                    Text("关联ing...")
+                    Text("Linking...")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else {
-                    Button("关联") {
+                    Button("Link") {
                         Task { await viewModel.linkToRepository(skill: skill) }
                     }
                     .disabled(inputIsEmpty)
@@ -346,7 +346,7 @@ struct SkillDetailView: View {
         VStack(alignment: .leading, spacing: 8) {
             // 标题行：`包信息` + 更新检查按钮。
             HStack {
-                Text("包信息")
+                Text("Package Info")
                     .font(.headline)
 
                 Spacer()
@@ -462,7 +462,7 @@ struct SkillDetailView: View {
                 .contentTransition(.symbolEffect(.replace))
         }
         .buttonStyle(.plain)
-        .help("复制路径到剪贴板")
+        .help("Copy path to clipboard")
         .animation(.easeInOut(duration: 0.2), value: pathCopied)
     }
 
@@ -481,7 +481,7 @@ struct SkillDetailView: View {
             HStack(spacing: 4) {
                 ProgressView()
                     .controlSize(.small)
-                Text("检查中...")
+                Text("Checking...")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -490,7 +490,7 @@ struct SkillDetailView: View {
             HStack(spacing: 4) {
                 ProgressView()
                     .controlSize(.small)
-                Text("更新中...")
+                Text("Updating...")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -498,11 +498,11 @@ struct SkillDetailView: View {
             // 检测到可用更新：展示 hash 对比、GitHub 链接和 `更新` 按钮。
             VStack(alignment: .trailing, spacing: 4) {
                 HStack(spacing: 8) {
-                    Label("发现更新", systemImage: "arrow.up.circle.fill")
+                    Label("Update available", systemImage: "arrow.up.circle.fill")
                         .font(.caption)
                         .foregroundStyle(.orange)
 
-                    Button("更新") {
+                    Button("Update") {
                         Task { await viewModel.updateSkill(skill) }
                     }
                     .controlSize(.small)
@@ -514,7 +514,7 @@ struct SkillDetailView: View {
             }
         } else if viewModel.showUpToDate {
             // 已是最新版本（2 秒后自动消失）。
-            Label("已是最新", systemImage: "checkmark.circle.fill")
+            Label("Up to Date", systemImage: "checkmark.circle.fill")
                 .font(.caption)
                 .foregroundStyle(.green)
         } else if let error = viewModel.updateError {
@@ -580,7 +580,7 @@ struct SkillDetailView: View {
                         NSWorkspace.shared.open(url)
                     } label: {
                         HStack(spacing: 2) {
-                            Text("在 GitHub 查看变更")
+                            Text("View changes on GitHub")
                             // `arrow.up.right` 是常见的 external link 图标（↗）。
                             Image(systemName: "arrow.up.right")
                         }
@@ -649,7 +649,7 @@ struct SkillDetailView: View {
                 Text(label)
                 Text(lockEntry.originSource ?? urlString)
                     .foregroundStyle(.secondary)
-                Link("打开", destination: url)
+                Link("Open", destination: url)
             }
             .textSelection(.enabled)
         } else {
