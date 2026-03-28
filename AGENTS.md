@@ -103,6 +103,7 @@
 ## 测试与质量要求
 - 修改代码后，默认需要补充或更新相邻测试；若未补测试，必须明确说明原因
 - 优先执行最小相关测试，再视情况扩展到 `swift test`
+- 修改并发 / async 相关测试时，不要把 `async let`、task 调度或 actor 入队顺序当作稳定语义；优先断言结果集合、单飞 / 串行化约束、最大并发数等行为事实，避免只在 CI 上暴露 flaky failure
 - 不得为了“顺手清理”而修复与当前任务无关的问题，除非用户明确要求
 - 修改文档时，也要核对命令、路径、脚本名、产物名、文件名是否真实存在
 - 修改脚本或发布配置时，优先验证受影响的脚本参数、文件引用和调用链
@@ -118,6 +119,10 @@
 - `scripts/package-app.sh`、`scripts/release.sh`、`.github/workflows/`、`homebrew/skillsmaster.rb`
 - 应用自更新下载、替换、签名校验、重启流程
 - 大规模重命名、目录迁移、删除旧文档或调整文档入口文件名
+
+涉及发布链路时，还必须额外核对：
+- 目标 GitHub remote 与默认跟踪分支是否正确；若仓库存在非 GitHub `origin`、镜像 remote 或 `main` 受分支保护，不要默认直接推送当前上游
+- `homebrew/skillsmaster.rb` 与独立 tap cask 只能在 GitHub Release 成功、`universal.zip` 的真实 `sha256` 已确认后再更新；不得预填尚未生成的 digest
 
 ## 执行风格
 - 默认先局部核实，再扩大影响面；先做小步可验证改动，再考虑整理
