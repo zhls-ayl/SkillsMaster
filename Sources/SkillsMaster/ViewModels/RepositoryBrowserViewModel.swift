@@ -304,6 +304,14 @@ final class RepositoryBrowserViewModel {
         installAction(for: skill).systemImage
     }
 
+    func isShowingManualTranslation(for skillID: String) -> Bool {
+        skillManager.isShowingManualTranslation(for: manualTranslationKey(for: skillID))
+    }
+
+    func toggleManualTranslation(for skillID: String) {
+        skillManager.toggleManualTranslation(for: manualTranslationKey(for: skillID))
+    }
+
     /// Sync this repository (git pull or clone).
     ///
     /// Delegates to SkillManager.syncRepository which updates repoSyncStatuses
@@ -445,5 +453,9 @@ final class RepositoryBrowserViewModel {
         }
 
         return repository.localSlug
+    }
+
+    private func manualTranslationKey(for skillID: String) -> String {
+        "repository:\(repository.id.uuidString):\(skillID)"
     }
 }

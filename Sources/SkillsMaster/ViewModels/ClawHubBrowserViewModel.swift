@@ -205,6 +205,14 @@ final class ClawHubBrowserViewModel {
         return count == 1 ? "1 个 Agent 已选中" : "\(count) 个 Agent 已选中"
     }
 
+    func isShowingManualTranslation(for skillID: String) -> Bool {
+        skillManager.isShowingManualTranslation(for: manualTranslationKey(for: skillID))
+    }
+
+    func toggleManualTranslation(for skillID: String) {
+        skillManager.toggleManualTranslation(for: manualTranslationKey(for: skillID))
+    }
+
     // MARK: - Detail loading
 
     func loadSelection(for skill: ClawHubSkill) async {
@@ -373,6 +381,10 @@ final class ClawHubBrowserViewModel {
             return
         }
         selectedTargetAgents = directInstalledAgents(for: selectedSkill)
+    }
+
+    private func manualTranslationKey(for skillID: String) -> String {
+        "clawhub:\(skillID)"
     }
 
     private var browseOptions: ClawHubService.BrowseOptions {

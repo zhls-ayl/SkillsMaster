@@ -8,7 +8,6 @@ struct ClawHubSkillDetailView: View {
     let isInstalling: Bool
     let onInstall: () -> Void
     let viewModel: ClawHubBrowserViewModel
-    @State private var manuallyShowsChineseTranslation = false
 
     var body: some View {
         ScrollView {
@@ -35,9 +34,9 @@ struct ClawHubSkillDetailView: View {
         .toolbar {
             ToolbarItemGroup {
                 ManualTranslationToolbarButton(
-                    isActive: manuallyShowsChineseTranslation
+                    isActive: viewModel.isShowingManualTranslation(for: skill.id)
                 ) {
-                    manuallyShowsChineseTranslation.toggle()
+                    viewModel.toggleManualTranslation(for: skill.id)
                 }
             }
         }
@@ -272,7 +271,7 @@ struct ClawHubSkillDetailView: View {
                     MarkdownContentView(
                         markdownText: content.markdownBody,
                         translationScope: .clawHub,
-                        manuallyShowsChineseTranslation: manuallyShowsChineseTranslation
+                        manuallyShowsChineseTranslation: viewModel.isShowingManualTranslation(for: skill.id)
                     )
                 } else {
                     Text("No content available.")

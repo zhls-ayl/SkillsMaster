@@ -123,6 +123,10 @@ final class SkillManager {
     /// 仅当系统支持且已安装英文 -> 简体中文离线翻译包时，详情页才会展示逐段中文译文。
     var translationAvailability: TranslationAvailability = .unknown
 
+    /// 详情页手动翻译开关的会话内状态。
+    /// 以调用方提供的稳定 memory key 为索引，跨窗口共享，但不落盘。
+    private var manualTranslationStateByKey: [String: Bool] = [:]
+
     struct TranslationPackPrompt: Identifiable {
         let id = UUID()
         let title: String
@@ -164,6 +168,14 @@ final class SkillManager {
 
     var shouldShowChineseTranslation: Bool {
         translationAvailability == .installed
+    }
+
+    func isShowingManualTranslation(for memoryKey: String) -> Bool {
+        manualTranslationStateByKey[memoryKey] ?? false
+    }
+
+    func toggleManualTranslation(for memoryKey: String) {
+        manualTranslationStateByKey[memoryKey] = !isShowingManualTranslation(for: memoryKey)
     }
 
     func translateEnglishParagraphToChinese(_ text: String) async throws -> String {

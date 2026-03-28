@@ -199,6 +199,18 @@ final class RegistryBrowserViewModelTests: XCTestCase {
         XCTAssertEqual(vm.selectedTargetAgents, [.cursor])
     }
 
+    func testManualTranslationStateIsTrackedPerRegistrySkill() {
+        let skillManager = SkillManager()
+        let vm = RegistryBrowserViewModel(skillManager: skillManager)
+        let secondVM = RegistryBrowserViewModel(skillManager: skillManager)
+
+        vm.toggleManualTranslation(for: "alice/skills/ui-ux-pro-max")
+
+        XCTAssertTrue(vm.isShowingManualTranslation(for: "alice/skills/ui-ux-pro-max"))
+        XCTAssertTrue(secondVM.isShowingManualTranslation(for: "alice/skills/ui-ux-pro-max"))
+        XCTAssertFalse(vm.isShowingManualTranslation(for: "bob/skills/ui-ux-pro-max"))
+    }
+
     func testLeaderboardModeUsesLocalPaginationAfterInitialFetch() async {
         let skillManager = SkillManager()
         let leaderboardSkills = (0..<130).map { index in

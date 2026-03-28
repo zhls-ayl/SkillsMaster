@@ -112,6 +112,7 @@ SkillsMaster 当前围绕四条主要使用路径设计：
 - Agent 的 direct install 会按设置落为 symbolic link 或 physical copy
 - `Agent Files` 中的 `skills/` 是受保护路径，只允许浏览和跳转，不允许直接改写
 - 应用内更新依赖当前运行实例对应的 `.app` bundle；从 `swift run`、DMG 或临时解压位置启动时，不保证可原地更新
+- 详情页手动翻译开关会在当前应用会话内跨窗口共享，并按每个 Skill 单独记忆；关闭应用后不会保留
 
 ## 界面预览
 

@@ -96,6 +96,45 @@ final class RepositoryBrowserViewModelTests: XCTestCase {
         XCTAssertEqual(vm.selectedTargetAgents, [.cursor])
     }
 
+    func testManualTranslationStateIsTrackedPerSkill() {
+        let skillManager = SkillManager()
+        let repository = makeRepository()
+        let vm = RepositoryBrowserViewModel(repository: repository, skillManager: skillManager)
+        let secondVM = RepositoryBrowserViewModel(repository: repository, skillManager: skillManager)
+
+        vm.toggleManualTranslation(for: "repo-skill-a")
+
+        XCTAssertTrue(vm.isShowingManualTranslation(for: "repo-skill-a"))
+        XCTAssertTrue(secondVM.isShowingManualTranslation(for: "repo-skill-a"))
+        XCTAssertFalse(vm.isShowingManualTranslation(for: "repo-skill-b"))
+    }
+
+    func testManualTranslationStateDoesNotLeakAcrossRepositories() {
+        let skillManager = SkillManager()
+        let firstRepository = makeRepository()
+        let secondRepository = SkillRepository(
+            id: UUID(),
+            name: "another-team-skills",
+            repoURL: "https://github.com/org/another-repo.git",
+            authType: .httpsToken,
+            platform: .github,
+            isEnabled: true,
+            lastSyncedAt: nil,
+            localSlug: "org-another-repo",
+            httpUsername: nil,
+            credentialKey: nil,
+            scanHiddenPaths: false,
+            syncOnLaunch: false
+        )
+        let firstVM = RepositoryBrowserViewModel(repository: firstRepository, skillManager: skillManager)
+        let secondVM = RepositoryBrowserViewModel(repository: secondRepository, skillManager: skillManager)
+
+        firstVM.toggleManualTranslation(for: "shared-skill")
+
+        XCTAssertTrue(firstVM.isShowingManualTranslation(for: "shared-skill"))
+        XCTAssertFalse(secondVM.isShowingManualTranslation(for: "shared-skill"))
+    }
+
     private func makeRepository() -> SkillRepository {
         SkillRepository(
             id: UUID(),
