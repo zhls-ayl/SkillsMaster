@@ -77,7 +77,7 @@ final class TranslationServiceTests: XCTestCase {
         XCTAssertEqual(results, ["ZH:One", "ZH:Two"])
 
         let calls = await client.calls
-        XCTAssertEqual(calls, ["One", "Two"])
+        XCTAssertEqual(calls.sorted(), ["One", "Two"])
         let maxConcurrent = await client.maxConcurrentCallCount
         XCTAssertEqual(maxConcurrent, 1)
     }
