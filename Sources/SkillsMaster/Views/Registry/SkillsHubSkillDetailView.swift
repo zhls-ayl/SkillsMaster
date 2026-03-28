@@ -8,7 +8,6 @@ struct SkillsHubSkillDetailView: View {
     let isInstalling: Bool
     let onInstall: () -> Void
     let viewModel: SkillsHubBrowserViewModel
-    @State private var manuallyShowsChineseTranslation = false
 
     var body: some View {
         ScrollView {
@@ -38,9 +37,9 @@ struct SkillsHubSkillDetailView: View {
         .toolbar {
             ToolbarItemGroup {
                 ManualTranslationToolbarButton(
-                    isActive: manuallyShowsChineseTranslation
+                    isActive: viewModel.isShowingManualTranslation(for: skill.id)
                 ) {
-                    manuallyShowsChineseTranslation.toggle()
+                    viewModel.toggleManualTranslation(for: skill.id)
                 }
             }
         }
@@ -262,7 +261,7 @@ struct SkillsHubSkillDetailView: View {
                 MarkdownContentView(
                     markdownText: detail.content.markdownBody,
                     translationScope: .skillsHub,
-                    manuallyShowsChineseTranslation: manuallyShowsChineseTranslation
+                    manuallyShowsChineseTranslation: viewModel.isShowingManualTranslation(for: skill.id)
                 )
                     .textSelection(.enabled)
             } else {

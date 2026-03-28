@@ -216,6 +216,18 @@ final class SkillsHubBrowserViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.selectedTargetAgents, [.cursor])
     }
 
+    func testManualTranslationStateIsTrackedPerSkillsHubSkill() {
+        let skillManager = SkillManager()
+        let viewModel = SkillsHubBrowserViewModel(skillManager: skillManager)
+        let secondViewModel = SkillsHubBrowserViewModel(skillManager: skillManager)
+
+        viewModel.toggleManualTranslation(for: "github")
+
+        XCTAssertTrue(viewModel.isShowingManualTranslation(for: "github"))
+        XCTAssertTrue(secondViewModel.isShowingManualTranslation(for: "github"))
+        XCTAssertFalse(viewModel.isShowingManualTranslation(for: "tapd"))
+    }
+
     func testOnAppearLoadsFeaturedAndFirstPage() async {
         let skillManager = SkillManager()
         let service = MockSkillsHubService(totalCount: 60)

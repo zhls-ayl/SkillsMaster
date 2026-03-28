@@ -33,7 +33,6 @@ struct RegistrySkillDetailView: View {
     /// that drive the content section's three states (loading / error / loaded).
     /// Passed from ContentView where the ViewModel is already available.
     let viewModel: RegistryBrowserViewModel
-    @State private var manuallyShowsChineseTranslation = false
 
     var body: some View {
         ScrollView {
@@ -76,9 +75,9 @@ struct RegistrySkillDetailView: View {
         .toolbar {
             ToolbarItemGroup {
                 ManualTranslationToolbarButton(
-                    isActive: manuallyShowsChineseTranslation
+                    isActive: viewModel.isShowingManualTranslation(for: skill.id)
                 ) {
-                    manuallyShowsChineseTranslation.toggle()
+                    viewModel.toggleManualTranslation(for: skill.id)
                 }
             }
         }
@@ -362,7 +361,7 @@ struct RegistrySkillDetailView: View {
                     MarkdownContentView(
                         markdownText: content.markdownBody,
                         translationScope: .skillsSh,
-                        manuallyShowsChineseTranslation: manuallyShowsChineseTranslation
+                        manuallyShowsChineseTranslation: viewModel.isShowingManualTranslation(for: skill.id)
                     )
                 } else {
                     Text("No content available.")

@@ -26,7 +26,7 @@ struct MarkdownContentView: View {
     /// 详情页会显式传入 scope；普通文件预览保持 `nil`，避免把“文档翻译”扩散到所有 Markdown 文件。
     let translationScope: SkillTranslationScope?
 
-    /// 仅当前页面会话有效的手动翻译状态，不写回全局设置。
+    /// 仅当前应用会话有效的手动翻译状态；由上层详情页按当前 Skill 独立维护，不写回全局设置。
     let manuallyShowsChineseTranslation: Bool
 
     /// 已解析的 AST `Document`；在后台解析完成之前这里为 `nil`。

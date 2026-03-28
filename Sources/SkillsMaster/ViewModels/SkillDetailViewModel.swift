@@ -36,7 +36,6 @@ final class SkillDetailViewModel {
 
     var editorViewModel: TextFileEditorViewModel?
     var pendingEditorAction: PendingEditorAction?
-    var manuallyShowsChineseTranslation = false
 
     init(
         skillManager: SkillManager,
@@ -108,12 +107,12 @@ final class SkillDetailViewModel {
         editorViewModel = TextFileEditorViewModel(fileURL: skill.skillMDURL)
     }
 
-    var isShowingManualTranslation: Bool {
-        manuallyShowsChineseTranslation
+    func isShowingManualTranslation(for skillID: String) -> Bool {
+        skillManager.isShowingManualTranslation(for: manualTranslationKey(for: skillID))
     }
 
-    func toggleManualTranslation() {
-        manuallyShowsChineseTranslation.toggle()
+    func toggleManualTranslation(for skillID: String) {
+        skillManager.toggleManualTranslation(for: manualTranslationKey(for: skillID))
     }
 
     func requestCloseEditor() {
@@ -246,5 +245,9 @@ final class SkillDetailViewModel {
         }
 
         isLinking = false
+    }
+
+    private func manualTranslationKey(for skillID: String) -> String {
+        "installed:\(skillID)"
     }
 }

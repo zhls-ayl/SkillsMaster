@@ -325,6 +325,14 @@ final class RegistryBrowserViewModel {
         installAction(for: registrySkill).systemImage
     }
 
+    func isShowingManualTranslation(for skillID: String) -> Bool {
+        skillManager.isShowingManualTranslation(for: manualTranslationKey(for: skillID))
+    }
+
+    func toggleManualTranslation(for skillID: String) {
+        skillManager.toggleManualTranslation(for: manualTranslationKey(for: skillID))
+    }
+
     // MARK: - Pagination / List Loading
 
     private func reloadCurrentList() async {
@@ -416,6 +424,10 @@ final class RegistryBrowserViewModel {
     private var normalizedSearchText: String? {
         let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private func manualTranslationKey(for skillID: String) -> String {
+        "skills-sh:\(skillID)"
     }
 
     private func shouldLoadMore(after skillID: String) -> Bool {

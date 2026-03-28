@@ -152,9 +152,9 @@ struct SkillDetailView: View {
                     }
 
                     ManualTranslationToolbarButton(
-                        isActive: viewModel.isShowingManualTranslation
+                        isActive: viewModel.isShowingManualTranslation(for: skillID)
                     ) {
-                        viewModel.toggleManualTranslation()
+                        viewModel.toggleManualTranslation(for: skillID)
                     }
 
                     if displayMode.showsManagementUI {
@@ -271,7 +271,7 @@ struct SkillDetailView: View {
                 MarkdownContentView(
                     markdownText: skill.markdownBody,
                     translationScope: displayMode.translationScope,
-                    manuallyShowsChineseTranslation: viewModel.isShowingManualTranslation
+                    manuallyShowsChineseTranslation: viewModel.isShowingManualTranslation(for: skillID)
                 )
             }
         }

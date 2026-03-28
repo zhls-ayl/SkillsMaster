@@ -243,6 +243,18 @@ final class ClawHubBrowserViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.selectedTargetAgents, [.cursor])
     }
 
+    func testManualTranslationStateIsTrackedPerClawHubSkill() {
+        let skillManager = SkillManager()
+        let viewModel = ClawHubBrowserViewModel(skillManager: skillManager)
+        let secondViewModel = ClawHubBrowserViewModel(skillManager: skillManager)
+
+        viewModel.toggleManualTranslation(for: "browser-use")
+
+        XCTAssertTrue(viewModel.isShowingManualTranslation(for: "browser-use"))
+        XCTAssertTrue(secondViewModel.isShowingManualTranslation(for: "browser-use"))
+        XCTAssertFalse(viewModel.isShowingManualTranslation(for: "another-skill"))
+    }
+
     func testLoadMoreInBrowseModeIncreasesLimit() async {
         let skillManager = SkillManager()
         let service = MockClawHubService(totalBrowseCount: 120)
