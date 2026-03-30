@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Changed
+- 统一主界面 sidebar toolbar 中两个“刷新类”按钮的中英文文案与 tooltip：将远端更新检查明确为 `检查更新 / Check for Updates`，将本地状态重扫明确为 `重新扫描 / Rescan`，避免与搜索栏旁的系统 toolbar overflow 菜单混淆。
+
 ### Fixed
 - 修复发布自动化在当前仓库未开启 GitHub auto-merge 且 `set -u` 打开时，cask 同步尾段可能因为临时文件清理逻辑出错而提前退出的问题。
 

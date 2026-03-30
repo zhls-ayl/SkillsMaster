@@ -40,6 +40,7 @@
 "SkillsMaster" = "SkillsMaster";
 "Native macOS Agent Skills Manager" = "原生 macOS Agent Skills Manager";
 "Checking for updates..." = "正在检查更新...";
+"Check for Updates" = "检查更新";
 "Downloading... %lld%%" = "正在下载... %lld%%";
 "Retry" = "重试";
 "Update available: v%@" = "发现可用更新: v%@";
@@ -369,9 +370,12 @@
 "Open ClawHub in browser" = "在浏览器中打开 ClawHub";
 "Open skills.sh in browser" = "在浏览器中打开 skills.sh";
 "Package Info" = "包信息";
+"Check installed Skills for remote updates" = "检查已安装 Skills 的远端版本或 commit 更新";
 "Refresh ClawHub list" = "刷新 ClawHub 列表";
 "Refresh Skills" = "刷新 Skills";
 "Refresh registry data" = "刷新 registry 数据";
+"Rescan" = "重新扫描";
+"Rescan local Skills, Agents, lock file, and repository configuration" = "重新扫描本地 Skills、Agent、lock file 与仓库配置";
 "Reinstall" = "重装";
 "Reinstall Complete" = "重装完成";
 "Rendering..." = "渲染中...";
