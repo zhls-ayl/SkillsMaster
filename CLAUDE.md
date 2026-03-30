@@ -15,7 +15,8 @@
 - 修改并发相关测试时，不把 `async let` / task 调度顺序当作稳定断言，优先验证行为约束而不是启动顺序
 - 运行本地构建或测试若被沙箱拦截，先向用户申请提权再继续，不把缓存/权限问题误判为代码问题
 - 对话过程中学到的环境约束、排障经验与易错点，应沉淀为执行前可见的预防性规则或检查项，提前规避重复踩坑
+- 发布自动化默认以 `VERSION` 为版本真源，且优先走 `./run ship X.Y.Z`；低层 `./run package` / `./run release` 只作为 fallback 与排障入口
 - 经验沉淀时遵循职责落点：协作/提权规则与前置检查写 `AGENTS.md`，用户使用中的预防性提示写 `README.md`，文档导航与执行前阅读建议写 `docs/Index.md`，专题实现中的预检步骤写对应 `docs/*.md`
 - 修改用户可见行为、路径、脚本、发布流程或文档入口后，同步更新相关文档
-- 涉及 GitHub Release 与 Homebrew 发布时，先核对目标 GitHub remote、分支保护和真实 release digest，再更新 tag / cask / tap
+- 涉及 GitHub Release 与 Homebrew 发布时，先核对目标 GitHub remote、分支保护、`VERSION` / `CHANGELOG.md` 一致性，以及真实 release digest，再更新 tag / cask / tap
 - 若发现与 `AGENTS.md` 不一致，应优先修正兼容说明，不保留两套规则

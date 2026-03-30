@@ -6,7 +6,7 @@
 - Swift 5.9+
 
 推荐优先使用：
-- `./run`：统一入口；无参数默认本地运行，也可转发 `test` / `build` / `package` / `release` / `clean`
+- `./run`：统一入口；无参数默认本地运行，也可转发 `test` / `build` / `package` / `release` / `ship` / `clean`
 - `./run test`：执行全部单元测试
 - `./run test --filter <TestCase>`：执行最小相关测试
 
@@ -25,6 +25,8 @@
 ./run package --version 1.2.3 --arch x86_64 --zip
 ./run package --version 1.2.3 --dmg
 ./run package --version 1.2.3 --release-assets
+./run ship 1.2.3 --dry
+./run ship 1.2.3 --yes
 ```
 
 ## 本地构建与沙箱 / 提权排查

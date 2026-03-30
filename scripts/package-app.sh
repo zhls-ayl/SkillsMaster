@@ -17,7 +17,10 @@
 
 set -euo pipefail
 
-VERSION="0.0.0"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+VERSION_FILE="${REPO_ROOT}/VERSION"
+VERSION="$(tr -d '[:space:]' < "${VERSION_FILE}" 2>/dev/null || echo "0.0.0")"
 CREATE_ZIP="false"
 CREATE_DMG="false"
 RELEASE_ASSETS="false"

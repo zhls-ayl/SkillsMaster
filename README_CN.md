@@ -145,6 +145,7 @@ cd SkillsMaster
 ./run build -c release
 ./run package --version 1.2.3 --release-assets
 ./run release v1.2.3 --remote zhls-ayl --yes
+./run ship 1.2.3 --yes
 ```
 
 ## 文档入口

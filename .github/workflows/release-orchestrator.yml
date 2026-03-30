@@ -1,0 +1,47 @@
+name: Release Orchestrator
+run-name: Release Orchestrator v${{ inputs.version }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version (x.y.z)
+        required: true
+        type: string
+      release_pr_number:
+        description: Release prep PR number (0 means release current main directly)
+        required: true
+        default: "0"
+        type: string
+      tap_repo:
+        description: Homebrew tap repository
+        required: true
+        default: zhls-ayl/homebrew-skillsmaster
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  orchestrate:
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ inputs.version }}
+      RELEASE_PR_NUMBER: ${{ inputs.release_pr_number }}
+      TAP_REPO: ${{ inputs.tap_repo }}
+      RELEASE_SYNC_TOKEN: ${{ secrets.RELEASE_SYNC_TOKEN }}
+      GH_TOKEN: ${{ secrets.RELEASE_SYNC_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Validate release secret
+        run: |
+          if [[ -z "${RELEASE_SYNC_TOKEN}" ]]; then
+            echo "RELEASE_SYNC_TOKEN is required for release orchestration." >&2
+            exit 1
+          fi
+
+      - name: Run release orchestrator
+        run: ./scripts/release-orchestrator.sh

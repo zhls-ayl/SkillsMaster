@@ -21,6 +21,7 @@ Commands:
   build [args...]          Run swift build
   package [args...]        Run scripts/package-app.sh
   release [args...]        Run scripts/release.sh
+  ship [args...]           Run scripts/ship.sh
   clean                    Clean SwiftPM build artifacts
   help                     Show this help
 
@@ -35,6 +36,7 @@ Examples:
   ./run package --version 1.2.3 --release-assets
   ./run release v1.2.3
   ./run release v1.2.3 --remote zhls-ayl
+  ./run ship 1.2.3 --yes
 EOF
 }
 
@@ -59,6 +61,9 @@ case "${command}" in
     ;;
   release)
     exec "${REPO_ROOT}/scripts/release.sh" "$@"
+    ;;
+  ship)
+    exec "${REPO_ROOT}/scripts/ship.sh" "$@"
     ;;
   clean)
     if [[ $# -gt 0 ]]; then

@@ -3,22 +3,46 @@
 ## 本地打包脚本
 仓库当前使用以下脚本维护发布链路：
 - `run`：统一命令入口；负责环境准备，并分发到开发、测试、构建、打包、发布子命令
+- `VERSION`：发布版本号真源；自动化发布默认以它为准
 - `scripts/package-app.sh`：构建 universal / arm64 / x86_64 `.app`，并按需生成 zip / dmg 或整套 release 产物
 - `scripts/release.sh`：校验工作区、版本号、远端同步状态，并创建 / 推送 tag
+- `scripts/ship.sh`：高层一键发布入口；负责发布准备 PR、触发远端编排 workflow，并可等待整条链路完成
+- `scripts/release-orchestrator.sh`：供 GitHub Actions 调用的发布编排脚本；负责等 PR 合并、打 tag、等待 Release、同步两个 cask 仓库
+- `scripts/update-cask-version.sh`：统一更新当前仓库与 tap 仓库 cask 的 version / `sha256`
 - `scripts/run.sh`：本地运行入口，处理模块缓存与工具链异常提示
 - `CHANGELOG.md`：发布记录与已修复缺陷入口；每次准备发布版本时都应同步更新
 
-## 标准本地发布流程
+## 推荐自动化发布流程
 ```bash
-./run test
-./run package --version 1.2.3 --release-assets
-./run release v1.2.3
+./run ship 1.2.3 --yes
 ```
 
 其中：
+- `ship.sh` 会优先读取 / 校验 `VERSION` 与 `CHANGELOG.md`，必要时自动创建发布准备 PR 并开启 auto-merge
+- 远端 `Release Orchestrator` workflow 会等待发布准备 PR 合并，然后创建 tag、等待 `Release` workflow 成功，并在 release 产物发布后自动同步当前仓库与独立 tap 仓库的 cask
+- 如果希望只验证而不真正执行，可以先跑：
+
+```bash
+./run ship 1.2.3 --dry
+```
+
+要让自动化走完整条链路，还需要在 GitHub 仓库 secrets 中配置：
+- `RELEASE_SYNC_TOKEN`
+  - 必须至少有当前仓库 `SkillsMaster` 与 tap 仓库 `homebrew-skillsmaster` 的写权限
+  - 自动化会用它推 tag、创建 / 更新 PR、开启 auto-merge，并同步两个仓库的 cask
+
+## 底层手工流程（fallback / 调试）
+```bash
+./run test
+./run package --version 1.2.3 --release-assets
+./run release v1.2.3 --remote zhls-ayl --yes
+```
+
+说明：
 - `run` 会先固定 Swift / clang module cache 到仓库内 `.build/`，再分发到对应子命令
+- `VERSION` 是版本号真源；`CHANGELOG.md` 必须同时包含对应版本节
 - `package-app.sh` 会检查 `xcode-select`、`actool`、二进制架构与资源包，并可一次性产出整个 release matrix
-- `release.sh` 要求工作区干净、目标分支已同步到将要触发 GitHub Release 的 remote、目标 tag 在本地与该 remote 上都不存在
+- `release.sh` 要求工作区干净、目标分支已同步到将要触发 GitHub Release 的 remote、目标 tag 在本地与该 remote 上都不存在；未显式传版本时会默认读取 `VERSION`
 - `CHANGELOG.md` 应至少包含该版本的 `Added` / `Changed` / `Fixed` 中实际发生的内容；若本次发布以修复缺陷为主，应优先记录缺陷现象与修复范围
 
 多 remote 场景下，`release.sh` 会优先自动选择当前仓库里唯一的 GitHub remote。若存在多个 GitHub remote，必须显式指定：
@@ -65,9 +89,13 @@
 ## GitHub Actions
 - `.github/workflows/ci.yml`
   - 在 `push main` 和 `pull_request` 时执行 `swift build` 与 `swift test`
+- `.github/workflows/release-orchestrator.yml`
+  - 由 `./run ship ...` 或手动 `workflow_dispatch` 触发
+  - 负责等待发布准备 PR 合并、创建 tag、等待 `Release` workflow 成功，并在发布后自动同步当前仓库与 tap 仓库的 cask
+  - 依赖 `RELEASE_SYNC_TOKEN`，因为默认 `github.token` 推 tag 不适合作为“再触发 downstream workflow”的发布凭据
 - `.github/workflows/release.yml`
   - 在推送 `v*` tag 时执行测试、构建 release matrix、并通过 `gh` CLI 创建或更新 GitHub Release
-  - 当前只负责 GitHub Release 产物，不再联动 Homebrew tap
+  - 当前只负责 GitHub Release 产物；Homebrew cask 与 tap 同步交给 `release-orchestrator.yml`
   - workflow 文件内显式声明 `permissions: contents: write`，用于创建 Release；当前不需要把仓库默认 `Workflow permissions` 提升为全局 write
   - 为规避 GitHub Actions 上 Node 20 JavaScript action 弃用告警，workflow 已升级 `actions/checkout`，并移除了 `softprops/action-gh-release` 依赖
 
