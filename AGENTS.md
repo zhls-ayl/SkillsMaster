@@ -56,6 +56,7 @@
 - 应用源码：`Sources/SkillsMaster/`
 - 单元测试：`Tests/SkillsMasterTests/`
 - 打包与发布脚本：`scripts/`、`run`
+- 发布版本真源：`VERSION`
 - 项目入口与文档：`README.md`、`docs/`
 - 自动化 workflow：`.github/workflows/`
 - Homebrew cask 模板：`homebrew/skillsmaster.rb`
@@ -107,6 +108,7 @@
 - 不得为了“顺手清理”而修复与当前任务无关的问题，除非用户明确要求
 - 修改文档时，也要核对命令、路径、脚本名、产物名、文件名是否真实存在
 - 修改脚本或发布配置时，优先验证受影响的脚本参数、文件引用和调用链
+- 修改发布相关逻辑时，默认同时核对 `VERSION`、`CHANGELOG.md`、`run`、`scripts/`、`.github/workflows/` 与 cask 文件是否仍然一致
 - 如果执行本地构建、`swift build`、`swift run`、`swift test` 等验证时被沙箱拦截（例如无法访问 Swift / clang cache 或系统目录），必须向用户申请提权后再继续，不能将沙箱失败误判为代码问题
 - 如果仓库已有现成命令或脚本，优先复用，不新增一次性流程
 
@@ -122,6 +124,9 @@
 
 涉及发布链路时，还必须额外核对：
 - 目标 GitHub remote 与默认跟踪分支是否正确；若仓库存在非 GitHub `origin`、镜像 remote 或 `main` 受分支保护，不要默认直接推送当前上游
+- `VERSION` 与 `CHANGELOG.md` 必须同步；自动化发布默认以 `VERSION` 为版本真源，不允许只改其中一处
+- 标准自动化入口优先使用 `./run ship X.Y.Z`；`./run package` / `./run release` 作为底层 fallback 与排障入口保留
+- 自动化如果需要“推 tag 触发另一个 workflow”，不要默认使用 `github.token` 作为发布凭据；应明确使用可触发 downstream workflow 的 token / GitHub App 凭据
 - `homebrew/skillsmaster.rb` 与独立 tap cask 只能在 GitHub Release 成功、`universal.zip` 的真实 `sha256` 已确认后再更新；不得预填尚未生成的 digest
 - 对单架构发布包（尤其 `arm64.zip` / `x86_64.zip`），至少做一次解压后的启动级 smoke test，确认 SwiftPM resource bundle 没有因打包路径差异导致 `Bundle.module` 在启动阶段直接崩溃
 

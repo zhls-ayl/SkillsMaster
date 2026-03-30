@@ -19,6 +19,10 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+VERSION_FILE="${REPO_ROOT}/VERSION"
+
 # ── Color Definitions ──────────────────────────────────────────────────
 # ANSI escape codes for colored terminal output to improve readability
 RED='\033[0;31m'
@@ -124,9 +128,10 @@ detect_release_remote() {
 # ── Parse Arguments ──────────────────────────────────────────────────
 # $# is bash special variable, representing number of arguments passed
 usage() {
-    echo "Usage: $0 <version> [--remote <name>] [--dry] [--yes]"
+    echo "Usage: $0 [version] [--remote <name>] [--dry] [--yes]"
     echo ""
     echo "Examples:"
+    echo "  $0                          # Use VERSION file and create the matching tag"
     echo "  $0 1.0.0                    # Create and push v1.0.0 to the only GitHub remote"
     echo "  $0 v1.0.0                   # Same as above (v prefix is optional)"
     echo "  $0 1.0.0 --remote zhls-ayl  # Push Release tag to a specific GitHub remote"
@@ -136,11 +141,6 @@ usage() {
     echo "Recent tags:"
     git tag --sort=-creatordate | head -5 || echo "  (no tags yet)"
 }
-
-if [[ $# -lt 1 ]]; then
-    usage
-    exit 1
-fi
 
 INPUT=""
 DRY_RUN=false
@@ -188,9 +188,12 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$INPUT" ]]; then
-    error "Version is required"
-    usage
-    exit 1
+    if [[ ! -f "$VERSION_FILE" ]]; then
+        error "Version is required and VERSION file is missing: ${VERSION_FILE}"
+        usage
+        exit 1
+    fi
+    INPUT="$(tr -d '[:space:]' < "$VERSION_FILE")"
 fi
 
 # ── Validate Version Format ────────────────────────────────────────────
@@ -199,6 +202,14 @@ fi
 # ${INPUT#v} is bash parameter expansion syntax, removing prefix "v" (if present)
 VERSION="${INPUT#v}"
 TAG="v${VERSION}"
+
+if [[ -f "$VERSION_FILE" ]]; then
+    VERSION_FROM_FILE="$(tr -d '[:space:]' < "$VERSION_FILE")"
+    if [[ "$VERSION_FROM_FILE" != "$VERSION" ]]; then
+        error "Provided version '${VERSION}' does not match VERSION file '${VERSION_FROM_FILE}'."
+        exit 1
+    fi
+fi
 
 # =~ is bash regex match operator
 # ^[0-9]+\.[0-9]+\.[0-9]+$ matches x.y.z format (digits only)

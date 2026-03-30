@@ -147,6 +147,7 @@ For inline English-to-Chinese translation in detail pages:
 ./run build -c release
 ./run package --version 1.2.3 --release-assets
 ./run release v1.2.3 --remote zhls-ayl --yes
+./run ship 1.2.3 --yes
 ```
 
 ## Documentation
