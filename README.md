@@ -26,7 +26,7 @@ SkillsMaster turns those workflows into one native macOS experience.
 - Search, sort, edit, delete, reassign Agents, and check updates in `Installed > All Skills`
 - Browse Agent root directories in `Agent Files` with text preview, built-in editing, Finder/Terminal/external-editor actions
 - Configure each Agent's default install mode: `symbolic link` or `physical copy`
-- Install Skills from Git repositories, `Skills.sh`, ClawHub, SkillsHub, and custom repositories
+- Install Skills from `Skills.sh`, ClawHub, SkillsHub, and custom repositories
 - Batch-check updates for Git-backed and SkillsHub-backed Skills
 - Self-update the app, prioritizing the `universal.zip` release asset
 - Distribute GitHub Release artifacts as `universal.zip`, `arm64.zip`, `x86_64.zip`, and `universal.dmg`
@@ -93,7 +93,7 @@ For inline English-to-Chinese translation in detail pages:
 
 - `Installed`: inspect, edit, assign, delete, and update local Skills
 - `Marketplace`: browse and install from `Skills.sh`, ClawHub, and SkillsHub
-- `Repositories`: sync GitHub / GitLab custom repositories and install from them
+- `Repositories`: add SSH, public HTTPS, or token-authenticated HTTPS repositories; then sync, browse, and install from them
 - `Agents`: inspect Agent Skills and Agent root files
 
 ## Important Paths

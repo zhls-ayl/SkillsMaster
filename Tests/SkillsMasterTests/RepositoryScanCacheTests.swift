@@ -13,7 +13,7 @@ final class RepositoryScanCacheTests: XCTestCase {
             id: UUID(),
             name: "team-skills",
             repoURL: "https://example.com/org/repo.git",
-            authType: .httpsToken,
+            authType: .httpsPublic,
             platform: .github,
             isEnabled: true,
             lastSyncedAt: nil,

@@ -2,7 +2,7 @@ import SwiftUI
 
 /// RepositoriesSettingsView — Settings tab for managing custom Git repositories.
 ///
-/// Displays a list of user-configured repositories (SSH or HTTPS+Token) and
+/// Displays a list of user-configured repositories (SSH / HTTPS Public / HTTPS+Token) and
 /// allows adding new ones or removing existing ones.
 ///
 /// Accessed via Settings (Cmd+,) → "Repositories" tab.
@@ -397,7 +397,7 @@ struct AddRepositorySheet: View {
     /// Whether the form input is valid enough to enable the Add button
     private var canAdd: Bool {
         let urlValid = !repoURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        let tokenValid = authType == .ssh || !accessToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let tokenValid = !authType.requiresToken || !accessToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         return urlValid && tokenValid && !isAdding
     }
 
@@ -434,10 +434,7 @@ struct AddRepositorySheet: View {
                     .fontWeight(.medium)
 
                 // TextField is SwiftUI's single-line text input
-                TextField(
-                    authType == .ssh ? appLocalized("git@host:org/repo.git") : appLocalized("https://host/org/repo.git"),
-                    text: $repoURL
-                )
+                TextField(authType == .ssh ? appLocalized("git@host:org/repo.git") : appLocalized("https://host/org/repo.git"), text: $repoURL)
                     .textFieldStyle(.roundedBorder)
                     // Detect platform on URL change to update the help text
                     .onChange(of: repoURL) { _, _ in
@@ -451,14 +448,12 @@ struct AddRepositorySheet: View {
                         }
                     }
 
-                Text(authType == .ssh
-                     ? appLocalized("SSH requires keys configured in ~/.ssh")
-                     : appLocalized("Use HTTPS URL with a Personal Access Token"))
+                Text(authDescriptionText)
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
 
-            if authType == .httpsToken {
+            if authType.requiresToken {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(appLocalized("HTTPS Username"))
                         .font(.caption)
@@ -559,7 +554,18 @@ struct AddRepositorySheet: View {
             }
         }
         .padding(20)
-        .frame(width: 500, height: authType == .ssh ? 500 : 610)
+        .frame(width: 500, height: authType.requiresToken ? 610 : 500)
+    }
+
+    private var authDescriptionText: String {
+        switch authType {
+        case .ssh:
+            return appLocalized("SSH requires keys configured in ~/.ssh")
+        case .httpsPublic:
+            return appLocalized("Use HTTPS URL for a public repository that allows anonymous clone")
+        case .httpsToken:
+            return appLocalized("Use HTTPS URL with a Personal Access Token")
+        }
     }
 
     /// Validate input, create SkillRepository, add via SkillManager, then trigger sync.
@@ -571,7 +577,7 @@ struct AddRepositorySheet: View {
             return
         }
         let token = accessToken.trimmingCharacters(in: .whitespacesAndNewlines)
-        if authType == .httpsToken && token.isEmpty {
+        if authType.requiresToken && token.isEmpty {
             errorMessage = appLocalized("Access Token is required for HTTPS mode")
             return
         }
@@ -587,7 +593,7 @@ struct AddRepositorySheet: View {
             name = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
         }
         let repoID = UUID()
-        let credentialKey = authType == .httpsToken ? repoID.uuidString : nil
+        let credentialKey = authType.requiresToken ? repoID.uuidString : nil
         let username = httpUsername.trimmingCharacters(in: .whitespacesAndNewlines)
 
         // Build the SkillRepository model
@@ -600,7 +606,7 @@ struct AddRepositorySheet: View {
             isEnabled: true,
             lastSyncedAt: nil,
             localSlug: SkillRepository.slugFrom(repoURL: url),
-            httpUsername: authType == .httpsToken ? (username.isEmpty ? nil : username) : nil,
+            httpUsername: authType.requiresToken ? (username.isEmpty ? nil : username) : nil,
             credentialKey: credentialKey,
             scanHiddenPaths: scanHiddenPaths,
             syncOnLaunch: syncOnLaunch
@@ -609,7 +615,7 @@ struct AddRepositorySheet: View {
         do {
             try await skillManager.addRepository(
                 repo,
-                token: authType == .httpsToken ? token : nil
+                token: authType.requiresToken ? token : nil
             )
             // Dismiss sheet on success, then trigger initial sync in background
             isPresented = false
@@ -629,7 +635,7 @@ struct AddRepositorySheet: View {
             repoURL = converted
         }
 
-        if newType == .httpsToken && httpUsername.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        if newType.requiresToken && httpUsername.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             httpUsername = "git"
         }
     }

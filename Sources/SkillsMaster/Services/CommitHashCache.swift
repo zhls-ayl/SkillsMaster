@@ -19,19 +19,6 @@ actor CommitHashCache {
         var skills: [String: String]
         /// 手动关联 skill → repository 信息的映射。
         var linkedSkills: [String: LinkedSkillInfo]?
-        /// 用户扫描过的 repository 历史。
-        var repoHistory: [RepoHistoryEntry]?
-    }
-
-    /// Install Sheet 中的 repository 扫描历史。
-    /// 用于记录用户曾成功扫描过的 GitHub repository，便于后续快速复用。
-    struct RepoHistoryEntry: Codable, Equatable {
-        /// Repo source identifier (e.g. "crossoverJie/skills")
-        var source: String
-        /// Full repo URL (e.g. "https://github.com/crossoverJie/skills.git")
-        var sourceUrl: String
-        /// Last scanned timestamp (ISO 8601 format)
-        var scannedAt: String
     }
 
     /// 手动关联到 GitHub repository 的 skill 信息。
@@ -71,10 +58,6 @@ actor CommitHashCache {
     /// In-memory cache: skill name → manually linked repository info
     /// Used to store GitHub repository info for manually linked skills without a lockEntry
     private var linkedSkillsCache: [String: LinkedSkillInfo] = [:]
-
-    /// In-memory cache: user's scanned repo history
-    /// Deduplicated by source, most recently scanned first, max 20 entries
-    private var repoHistoryCache: [RepoHistoryEntry] = []
 
     /// Whether it has been loaded from disk (to avoid repeated reading)
     private var isLoaded = false
@@ -158,55 +141,15 @@ actor CommitHashCache {
         return linkedSkillsCache
     }
 
-    // MARK: - Repo History Methods
-
-    /// Add or update a repo scan history entry
-    ///
-    /// Deduplicates by source (e.g. "owner/repo"): if a matching entry exists,
-    /// updates its timestamp and moves it to the front. Keeps at most 20 entries (FIFO).
-    /// Only writes to memory; call save() to persist to disk.
-    ///
-    /// - Parameters:
-    ///   - source: Repo source identifier (e.g. "crossoverJie/skills")
-    ///   - sourceUrl: Full repo URL (e.g. "https://github.com/crossoverJie/skills.git")
-    func addRepoHistory(source: String, sourceUrl: String) {
-        ensureLoaded()
-
-        // Remove existing entry with the same source (case-insensitive, since GitHub URLs are case-insensitive)
-        // removeAll(where:) is like Java Stream's filter + collect — removes matching elements in place
-        // caseInsensitiveCompare returns .orderedSame when strings are equal ignoring case
-        repoHistoryCache.removeAll { $0.source.caseInsensitiveCompare(source) == .orderedSame }
-
-        // Insert at the front (most recently used first)
-        let now = ISO8601DateFormatter().string(from: Date())
-        let entry = RepoHistoryEntry(source: source, sourceUrl: sourceUrl, scannedAt: now)
-        repoHistoryCache.insert(entry, at: 0)
-
-        // Keep at most 20 entries (prefix takes first N elements, like Python's list[:20])
-        if repoHistoryCache.count > 20 {
-            repoHistoryCache = Array(repoHistoryCache.prefix(20))
-        }
-    }
-
-    /// Get all repo scan history entries
-    ///
-    /// Returns entries sorted by most recent scan time (newest first), max 20 entries
-    func getRepoHistory() -> [RepoHistoryEntry] {
-        ensureLoaded()
-        return repoHistoryCache
-    }
-
     /// Write in-memory cache to disk
     ///
     /// Uses atomic write (.atomic) to ensure file is not corrupted by a crash mid-write:
     /// writes to a temporary file first, then renames to replace the original file upon success.
     /// Similar to the pattern of writing a .tmp file then os.Rename in Go.
     func save() throws {
-        // Omit repoHistory from JSON when empty (same pattern as linkedSkillsCache)
         let cacheFile = CacheFile(
             skills: cache,
-            linkedSkills: linkedSkillsCache.isEmpty ? nil : linkedSkillsCache,
-            repoHistory: repoHistoryCache.isEmpty ? nil : repoHistoryCache
+            linkedSkills: linkedSkillsCache.isEmpty ? nil : linkedSkillsCache
         )
         let encoder = JSONEncoder()
         // prettyPrinted formats the JSON output for human readability and debugging
@@ -214,7 +157,7 @@ actor CommitHashCache {
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         let data = try encoder.encode(cacheFile)
 
-        // Ensure parent directory exists (~/.agents/)
+        // Ensure parent directory exists (~/.skillsmaster/)
         let parentDir = filePath.deletingLastPathComponent()
         let fm = FileManager.default
         if !fm.fileExists(atPath: parentDir.path) {
@@ -243,13 +186,11 @@ actor CommitHashCache {
             cache = cacheFile.skills
             // Load linked info (may be nil, old format files lack this field)
             linkedSkillsCache = cacheFile.linkedSkills ?? [:]
-            // Load repo scan history (may be nil in old cache files without this field)
-            repoHistoryCache = cacheFile.repoHistory ?? []
         } catch {
             // Restart with empty cache if file is corrupted or format incompatible
             // No error thrown because cache loss doesn't affect core functionality, just needs backfill
             cache = [:]
             linkedSkillsCache = [:]
-            repoHistoryCache = []        }
+        }
     }
 }

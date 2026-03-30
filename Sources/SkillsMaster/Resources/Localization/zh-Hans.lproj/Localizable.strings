@@ -314,6 +314,7 @@
 "%d installs" = "%d 次安装";
 "Access Token" = "访问令牌";
 "Access Token is required for HTTPS mode" = "HTTPS 模式下必须填写 Access Token";
+"Use HTTPS URL for a public repository that allows anonymous clone" = "对允许匿名 clone 的公开仓库使用 HTTPS URL";
 "Add Custom Repository" = "添加自定义 Repository";
 "Adding…" = "添加中…";
 "Agent Files" = "Agent Files";
@@ -346,7 +347,6 @@
 "Install / Reinstall" = "安装 / 重装";
 "Install / Reinstall Complete" = "安装 / 重装完成";
 "Install Complete" = "安装完成";
-"Install Skill from GitHub" = "从 GitHub 安装 Skill";
 "Install Targets" = "安装目标";
 "Install to:" = "安装到：";
 "Installs" = "安装量";
@@ -369,7 +369,6 @@
 "Open ClawHub in browser" = "在浏览器中打开 ClawHub";
 "Open skills.sh in browser" = "在浏览器中打开 skills.sh";
 "Package Info" = "包信息";
-"Recently Used Repositories" = "最近使用的 Repositories";
 "Refresh ClawHub list" = "刷新 ClawHub 列表";
 "Refresh Skills" = "刷新 Skills";
 "Refresh registry data" = "刷新 registry 数据";
@@ -404,7 +403,6 @@
 "git@host:org/repo.git" = "git@host:org/repo.git";
 "https://host/org/repo.git" = "https://host/org/repo.git";
 "installs" = "安装";
-"owner/repo or GitHub URL" = "owner/repo 或 GitHub URL";
 "symlink" = "symlink";
 "v%@" = "v%@";
 "Category" = "分类";

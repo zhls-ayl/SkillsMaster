@@ -83,7 +83,7 @@ actor LockFileManager {
         FileManager.default.fileExists(atPath: filePath.path)
     }
 
-    /// Create empty file if lock file does not exist (F10: used when installing via SkillsMaster for the first time)
+    /// Create empty file if lock file does not exist.
     ///
     /// Create an empty lock file complying with version 3 format,
     /// Subsequent updateEntry calls can append skill entries directly to it.

@@ -2,8 +2,9 @@ import Foundation
 
 /// SkillRepository represents a user-configured Git repository as a custom Skills source.
 ///
-/// Supports both SSH and HTTPS+PAT authentication.
+/// Supports SSH, public HTTPS, and HTTPS+PAT authentication.
 /// - SSH reuses the system `~/.ssh` configuration
+/// - Public HTTPS uses anonymous clone/pull without extra credentials
 /// - HTTPS tokens are stored in macOS Keychain (not persisted in JSON config)
 ///
 /// Two repository structures are supported:
@@ -49,13 +50,19 @@ struct SkillRepository: Codable, Identifiable, Hashable {
     /// Authentication mode used for git clone/pull.
     enum AuthType: String, Codable, CaseIterable {
         case ssh
+        case httpsPublic
         case httpsToken
 
         var displayName: String {
             switch self {
             case .ssh: "SSH"
+            case .httpsPublic: "HTTPS (Public)"
             case .httpsToken: "HTTPS + Token"
             }
+        }
+
+        var requiresToken: Bool {
+            self == .httpsToken
         }
 
         static func infer(from repoURL: String) -> AuthType {
@@ -281,7 +288,7 @@ extension SkillRepository {
                 }
             }
             return nil
-        case .httpsToken:
+        case .httpsPublic, .httpsToken:
             guard trimmed.lowercased().hasPrefix("https://") else {
                 return "HTTPS URL must start with https://"
             }
@@ -312,7 +319,7 @@ extension SkillRepository {
         switch authType {
         case .ssh:
             return "git@\(parsed.host):\(parsed.path).git"
-        case .httpsToken:
+        case .httpsPublic, .httpsToken:
             return "https://\(parsed.host)/\(parsed.path).git"
         }
     }

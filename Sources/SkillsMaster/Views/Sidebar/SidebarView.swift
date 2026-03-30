@@ -52,11 +52,6 @@ struct SidebarView: View {
     /// calling openSettings() is equivalent to user pressing Cmd+, (more reliable than NSApp.sendAction)
     @Environment(\.openSettings) private var openSettings
 
-    /// F10: Install modal's ViewModel (created only when showing sheet)
-    /// Uses `.sheet(item:)` binding: shows sheet when non-nil, closes when nil
-    /// This way uses only one @State variable to control both sheet display and content, avoiding dual state synchronization timing issues
-    @State private var installVM: SkillInstallViewModel?
-
     private var skillAgentTypes: [AgentType] {
         AgentType.displayNameLengthSortedCases
     }
@@ -197,17 +192,6 @@ struct SidebarView: View {
                 }
             }
 
-            // F10: "+" button for installing new skill
-            // ToolbarItem defaults to toolbar trailing when placement is not specified
-            ToolbarItem {
-                Button {
-                    installVM = SkillInstallViewModel(skillManager: skillManager)
-                } label: {
-                    Image(systemName: "plus")
-                }
-                .help(AppLocalization.string("Install Skill from GitHub"))
-            }
-
             // F12: Batch check updates for all skills
             ToolbarItem {
                 Button {
@@ -252,21 +236,6 @@ struct SidebarView: View {
                 }
                 .help(AppLocalization.string("Refresh Skills"))
             }
-        }
-        // F10: Install sheet modal
-        // .sheet(item:) binds sheet display and content to the same Optional variable:
-        // - installVM non-nil → show sheet, closure parameter vm is the unwrapped value
-        // - installVM nil → close sheet
-        // This is safer than .sheet(isPresented:) + extra @State, avoids dual state sync timing causing blank window on first open
-        // onDismiss calls cleanup to clean temp directory when sheet closes
-        .sheet(item: $installVM, onDismiss: {
-            installVM?.cleanup()
-            installVM = nil
-        }) { vm in
-            SkillInstallView(viewModel: vm)
-                // .environment() injects SkillManager into sheet's view tree
-                // Sheet creates new view hierarchy, needs to re-inject environment dependencies
-                .environment(skillManager)
         }
     }
 

@@ -262,6 +262,7 @@
 "%d installs" = "%d installs";
 "Access Token" = "Access Token";
 "Access Token is required for HTTPS mode" = "Access Token is required for HTTPS mode";
+"Use HTTPS URL for a public repository that allows anonymous clone" = "Use HTTPS URL for a public repository that allows anonymous clone";
 "Add Custom Repository" = "Add Custom Repository";
 "Adding…" = "Adding…";
 "Agent Files" = "Agent Files";
@@ -294,7 +295,6 @@
 "Install / Reinstall" = "Install / Reinstall";
 "Install / Reinstall Complete" = "Install / Reinstall Complete";
 "Install Complete" = "Install Complete";
-"Install Skill from GitHub" = "Install Skill from GitHub";
 "Install Targets" = "Install Targets";
 "Install to:" = "Install to:";
 "Installs" = "Installs";
@@ -317,7 +317,6 @@
 "Open ClawHub in browser" = "Open ClawHub in browser";
 "Open skills.sh in browser" = "Open skills.sh in browser";
 "Package Info" = "Package Info";
-"Recently Used Repositories" = "Recently Used Repositories";
 "Refresh ClawHub list" = "Refresh ClawHub list";
 "Refresh Skills" = "Refresh Skills";
 "Refresh registry data" = "Refresh registry data";
@@ -352,7 +351,6 @@
 "git@host:org/repo.git" = "git@host:org/repo.git";
 "https://host/org/repo.git" = "https://host/org/repo.git";
 "installs" = "installs";
-"owner/repo or GitHub URL" = "owner/repo or GitHub URL";
 "symlink" = "symlink";
 "v%@" = "v%@";
 "Category" = "Category";
