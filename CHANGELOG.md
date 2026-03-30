@@ -7,6 +7,11 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.2.8] - 2026-03-30
+### Fixed
+- 修复单架构发布包（尤其 `arm64.zip` / `x86_64.zip`）中 SwiftPM resource bundle 放置路径与运行时查找规则不一致的问题，避免用户解压安装后应用在启动阶段因 `Bundle.module` 断言而直接崩溃。
+- 修复本地 `./run package --arch arm64|x86_64 --zip` 打包路径回传被局部变量遮蔽的问题，恢复单架构 zip 的本地验证链路。
+
 ## [0.2.7] - 2026-03-30
 ### Added
 - 新增应用级语言偏好与语言切换基础设施，支持在 `Settings > App Language` 中手动切换 `English` 与 `简体中文`，默认继续跟随系统语言。

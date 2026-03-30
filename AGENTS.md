@@ -123,6 +123,7 @@
 涉及发布链路时，还必须额外核对：
 - 目标 GitHub remote 与默认跟踪分支是否正确；若仓库存在非 GitHub `origin`、镜像 remote 或 `main` 受分支保护，不要默认直接推送当前上游
 - `homebrew/skillsmaster.rb` 与独立 tap cask 只能在 GitHub Release 成功、`universal.zip` 的真实 `sha256` 已确认后再更新；不得预填尚未生成的 digest
+- 对单架构发布包（尤其 `arm64.zip` / `x86_64.zip`），至少做一次解压后的启动级 smoke test，确认 SwiftPM resource bundle 没有因打包路径差异导致 `Bundle.module` 在启动阶段直接崩溃
 
 ## 执行风格
 - 默认先局部核实，再扩大影响面；先做小步可验证改动，再考虑整理

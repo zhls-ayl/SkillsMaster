@@ -233,6 +233,7 @@ assemble_app_bundle() {
     local binary_path="$1"
     local resource_bundle="$2"
     local bundle_path="$3"
+    local arch="$4"
 
     local contents_dir="${bundle_path}/Contents"
     local macos_dir="${contents_dir}/MacOS"
@@ -252,7 +253,13 @@ assemble_app_bundle() {
     fi
 
     if [ -n "$resource_bundle" ] && [ -d "$resource_bundle" ]; then
-        cp -R "$resource_bundle" "$resources_dir/"
+        if [ "$arch" = "universal" ]; then
+            cp -R "$resource_bundle" "$resources_dir/"
+        else
+            # Single-arch `swift build` emits a resource accessor that looks for
+            # `SkillsMaster_SkillsMaster.bundle` next to `SkillsMaster.app`.
+            cp -R "$resource_bundle" "$bundle_path/"
+        fi
     else
         echo "Warning: SPM resource bundle not found. App may miss bundled assets."
     fi
@@ -293,9 +300,9 @@ build_bundle_for_arch() {
     local resource_bundle
     resource_bundle="$(find_resource_bundle "$scratch_path")"
 
-    local bundle_path="${stage_root}/SkillsMaster.app"
-    assemble_app_bundle "$binary_path" "$resource_bundle" "$bundle_path"
-    printf -v "$__resultvar" '%s' "$bundle_path"
+    local app_bundle_path="${stage_root}/SkillsMaster.app"
+    assemble_app_bundle "$binary_path" "$resource_bundle" "$app_bundle_path" "$arch"
+    printf -v "$__resultvar" '%s' "$app_bundle_path"
 }
 
 copy_bundle_to_output() {
