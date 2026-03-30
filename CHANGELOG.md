@@ -7,6 +7,18 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.2.10] - 2026-03-31
+### Added
+- 新增 `VERSION` 作为发布版本真源，并在 `./run ship` 自动化发布链路中强制校验 `VERSION` 与 `CHANGELOG.md` 是否一致，避免“changelog 已变更但发布版本仍靠手工输入”的漂移。
+- 新增高层发布入口 `./run ship X.Y.Z --yes`，用于自动创建发布准备 PR、触发 GitHub Actions 编排器，并等待整条发布链路完成。
+- 新增 `Release Orchestrator` workflow 与配套脚本，用于在发布准备 PR 合并后自动打 tag、等待 GitHub Release 成功、读取真实 `universal.zip` digest，并同步当前仓库与独立 Homebrew tap 的 cask。
+- 新增 `scripts/update-cask-version.sh`，统一更新当前仓库与 tap 仓库 cask 的 `version` / `sha256`，减少发布收尾时的重复手工编辑。
+
+### Changed
+- `scripts/package-app.sh` 与 `scripts/release.sh` 现在默认读取 `VERSION`；`release.sh` 在显式传版本时也会校验它必须与 `VERSION` 一致。
+- 发布文档、开发文档、README、协作规范与兼容说明已统一到“`VERSION` + `./run ship` + `Release Orchestrator`”的新发布模型，并明确 `RELEASE_SYNC_TOKEN` 是自动同步两个 cask 仓库所需的必备 secret。
+- `.github/workflows/ci.yml` 中的 `actions/checkout` 已升级到 `v6`，消除旧版 `v4` 在 GitHub Actions 上的 Node 20 deprecation 告警路径。
+
 ## [0.2.9] - 2026-03-30
 ### Added
 - `Settings > Repositories` 新增 `HTTPS (Public)` 认证模式，允许为任意支持匿名 `git clone` 的公开 HTTPS 仓库（包括自建 Git 服务）添加 Custom Repository，而不再强制要求填写 Token。
