@@ -273,7 +273,10 @@ final class RegistryBrowserViewModel {
     func installSkill(_ registrySkill: RegistrySkill) {
         guard installingSkillID == nil else { return }
         guard !selectedTargetAgents.isEmpty else {
-            notice = Notice(title: "无法安装", message: "请至少选择一个目标 Agent。")
+            notice = Notice(
+                title: AppLocalization.string("Unable to Install"),
+                message: AppLocalization.string("Select at least one target Agent.")
+            )
             return
         }
 
@@ -309,9 +312,12 @@ final class RegistryBrowserViewModel {
     func targetSelectionSummary() -> String {
         let count = selectedTargetAgents.count
         if count == 0 {
-            return "未选择 Agent"
+            return AppLocalization.string("No Agent Selected")
         }
-        return count == 1 ? "1 个 Agent 已选中" : "\(count) 个 Agent 已选中"
+        if count == 1 {
+            return AppLocalization.string("1 Agent Selected")
+        }
+        return AppLocalization.format("%d Agents Selected", count)
     }
 
     func detailInstallButtonTitle(for registrySkill: RegistrySkill) -> String {
@@ -393,10 +399,10 @@ final class RegistryBrowserViewModel {
                 allLoadedSkills = []
                 displayedSkills = []
                 if normalizedSearchText == nil {
-                    errorMessage = "无法加载排行榜，请改用搜索。"
+                    errorMessage = AppLocalization.string("Unable to load the leaderboard. Try searching instead.")
                     leaderboardUnavailable = true
                 } else {
-                    errorMessage = "搜索失败：\(error.localizedDescription)"
+                    errorMessage = AppLocalization.format("Search failed: %@", error.localizedDescription)
                     leaderboardUnavailable = false
                 }
             } else {
@@ -445,7 +451,7 @@ final class RegistryBrowserViewModel {
         let action = installAction(for: registrySkill)
         let targetAgents = selectedTargetAgents
         installingSkillID = registrySkill.id
-        installingStatusMessage = "Validating repository..."
+        installingStatusMessage = AppLocalization.string("Validating repository...")
         defer {
             installingSkillID = nil
             installingStatusMessage = nil
@@ -454,19 +460,19 @@ final class RegistryBrowserViewModel {
         do {
             let (repoURL, repoSource) = try GitService.normalizeRepoURL(registrySkill.source)
 
-            installingStatusMessage = "Checking git..."
+            installingStatusMessage = AppLocalization.string("Checking git...")
             let gitAvailable = await gitService.checkGitAvailable()
             guard gitAvailable else {
                 throw GitService.GitError.gitNotInstalled
             }
 
-            installingStatusMessage = "Cloning repository..."
+            installingStatusMessage = AppLocalization.string("Cloning repository...")
             let repoDir = try await gitService.shallowClone(repoURL: repoURL)
             defer {
                 Task { await self.gitService.cleanupTempDirectory(repoDir) }
             }
 
-            installingStatusMessage = "Scanning skills..."
+            installingStatusMessage = AppLocalization.string("Scanning skills...")
             let discoveredSkills = await gitService.scanSkillsInRepo(repoDir: repoDir)
             guard let discoveredSkill = discoveredSkills.first(where: { $0.id == registrySkill.skillId }) else {
                 throw SkillManager.ImportError.directoryNotFound(
@@ -474,7 +480,7 @@ final class RegistryBrowserViewModel {
                 )
             }
 
-            installingStatusMessage = "Installing..."
+            installingStatusMessage = AppLocalization.string("Installing...")
             try await skillManager.installSkill(
                 from: repoDir,
                 skill: discoveredSkill,
@@ -487,10 +493,10 @@ final class RegistryBrowserViewModel {
             syncInstalledSkills()
             notice = Notice(
                 title: action.completionTitle,
-                message: "\(registrySkill.name) 已安装到 \(targetAgents.count) 个 Agent。"
+                message: AppLocalization.format("%@ was installed to %d Agent(s).", registrySkill.name, targetAgents.count)
             )
         } catch {
-            notice = Notice(title: "Installation Failed", message: error.localizedDescription)
+            notice = Notice(title: AppLocalization.string("Installation Failed"), message: error.localizedDescription)
         }
     }
 

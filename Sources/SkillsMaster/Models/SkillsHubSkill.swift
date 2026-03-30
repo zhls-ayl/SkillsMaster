@@ -15,19 +15,19 @@ enum SkillsHubCategory: String, CaseIterable, Identifiable, Codable {
     var displayName: String {
         switch self {
         case .aiIntelligence:
-            return "AI 智能"
+            return AppLocalization.string("AI Intelligence")
         case .developerTools:
-            return "开发工具"
+            return AppLocalization.string("Developer Tools")
         case .productivity:
-            return "效率提升"
+            return AppLocalization.string("Productivity")
         case .dataAnalysis:
-            return "数据分析"
+            return AppLocalization.string("Data Analysis")
         case .contentCreation:
-            return "内容创作"
+            return AppLocalization.string("Content Creation")
         case .securityCompliance:
-            return "安全合规"
+            return AppLocalization.string("Security & Compliance")
         case .communicationCollaboration:
-            return "通讯协作"
+            return AppLocalization.string("Communication & Collaboration")
         }
     }
 }
@@ -63,7 +63,7 @@ struct SkillsHubSkill: Identifiable, Hashable {
         }
 
         let trimmed = summary.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? "暂无描述。" : trimmed
+        return trimmed.isEmpty ? AppLocalization.string("No description available.") : trimmed
     }
 
     var homepageURL: URL? {

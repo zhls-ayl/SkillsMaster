@@ -58,6 +58,10 @@ enum Constants {
     /// Stored as `AppThemeMode.rawValue` (`system` / `light` / `dark`).
     static let appThemeModeKey = "appThemeMode"
 
+    /// UserDefaults key for app language preference.
+    /// Stored as `AppLanguageMode.rawValue` (`system` / `en` / `zh-Hans`).
+    static let appLanguageModeKey = "appLanguageMode"
+
     /// UserDefaults key for automatic inline translation in skill detail pages.
     static let autoTranslationEnabledKey = "autoTranslationEnabled"
     static let autoTranslationInstalledEnabledKey = "autoTranslationInstalledEnabled"

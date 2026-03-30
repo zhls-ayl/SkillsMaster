@@ -13,7 +13,7 @@ struct TextFileEditorView: View {
             Divider()
 
             if viewModel.isLoading {
-                ProgressView("Loading \(viewModel.displayName)...")
+                ProgressView(AppLocalization.format("Loading %@...", viewModel.displayName))
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 VStack(alignment: .leading, spacing: 0) {
@@ -23,7 +23,7 @@ struct TextFileEditorView: View {
                             .foregroundStyle(.secondary)
 
                         if viewModel.hasUnsavedChanges {
-                            Label("未保存", systemImage: "circle.fill")
+                            Label(AppLocalization.string("Unsaved"), systemImage: "circle.fill")
                                 .font(.caption)
                                 .foregroundStyle(.orange)
                         }
@@ -65,12 +65,12 @@ struct TextFileEditorView: View {
                     .lineLimit(1)
             }
 
-            Button("取消") {
+            Button(AppLocalization.string("Cancel")) {
                 onCancel()
             }
             .keyboardShortcut(.cancelAction)
 
-            Button("保存") {
+            Button(AppLocalization.string("Save")) {
                 Task { await onSave() }
             }
             .keyboardShortcut(.defaultAction)

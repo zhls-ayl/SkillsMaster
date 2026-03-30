@@ -203,9 +203,12 @@ final class SkillsHubBrowserViewModel {
     func targetSelectionSummary() -> String {
         let count = selectedTargetAgents.count
         if count == 0 {
-            return "未选择 Agent"
+            return AppLocalization.string("No Agent Selected")
         }
-        return count == 1 ? "1 个 Agent 已选中" : "\(count) 个 Agent 已选中"
+        if count == 1 {
+            return AppLocalization.string("1 Agent Selected")
+        }
+        return AppLocalization.format("%d Agents Selected", count)
     }
 
     func isShowingManualTranslation(for skillID: String) -> Bool {
@@ -238,7 +241,10 @@ final class SkillsHubBrowserViewModel {
     func installSkill(_ skill: SkillsHubSkill) {
         guard installingSkillSlug == nil else { return }
         guard !selectedTargetAgents.isEmpty else {
-            notice = Notice(title: "无法安装", message: "请至少选择一个目标 Agent。")
+            notice = Notice(
+                title: AppLocalization.string("Unable to Install"),
+                message: AppLocalization.string("Select at least one target Agent.")
+            )
             return
         }
 
@@ -249,7 +255,7 @@ final class SkillsHubBrowserViewModel {
         let action = installAction(for: skill)
         let targetAgents = selectedTargetAgents
         installingSkillSlug = skill.slug
-        installingStatusMessage = "Loading package..."
+        installingStatusMessage = AppLocalization.string("Loading package...")
         defer {
             installingSkillSlug = nil
             installingStatusMessage = nil
@@ -261,10 +267,10 @@ final class SkillsHubBrowserViewModel {
                 throw SkillManager.ImportError.parseFailed("SkillsHub did not provide a version for \(skill.slug).")
             }
 
-            installingStatusMessage = "Downloading archive..."
+            installingStatusMessage = AppLocalization.string("Downloading archive...")
             let archiveData = try await service.downloadSkillArchive(slug: skill.slug)
 
-            installingStatusMessage = "Installing..."
+            installingStatusMessage = AppLocalization.string("Installing...")
             try await skillManager.installSkillsHubSkill(
                 skill: detail.skill,
                 version: version,
@@ -275,10 +281,10 @@ final class SkillsHubBrowserViewModel {
             syncInstalledSkills()
             notice = Notice(
                 title: action.completionTitle,
-                message: "\(skill.name) 已安装到 \(targetAgents.count) 个 Agent。"
+                message: AppLocalization.format("%@ was installed to %d Agent(s).", skill.name, targetAgents.count)
             )
         } catch {
-            notice = Notice(title: "Installation Failed", message: error.localizedDescription)
+            notice = Notice(title: AppLocalization.string("Installation Failed"), message: error.localizedDescription)
         }
     }
 

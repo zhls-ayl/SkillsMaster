@@ -16,7 +16,7 @@ struct TextFilePreviewView: View {
                 HStack(spacing: 8) {
                     ProgressView()
                         .controlSize(.small)
-                    Text("加载预览中...")
+                    Text(appLocalized("Loading preview..."))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }

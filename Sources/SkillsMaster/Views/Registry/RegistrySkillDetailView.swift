@@ -97,7 +97,7 @@ struct RegistrySkillDetailView: View {
 
                 // "Installed" badge — same visual style as Skill安装View and RegistrySkillRowView
                 if isInstalled {
-                    Text("Installed")
+                    Text(appLocalized("Installed"))
                         .font(.caption)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
@@ -110,7 +110,7 @@ struct RegistrySkillDetailView: View {
 
             // Skill ID (useful for CLI install commands)
             HStack(spacing: 4) {
-                Text("ID:")
+                Text(appLocalized("ID:"))
                     .foregroundStyle(.secondary)
                 Text(skill.skillId)
                     .textSelection(.enabled)
@@ -126,16 +126,16 @@ struct RegistrySkillDetailView: View {
     /// Grid is similar to HTML's CSS Grid — it aligns columns automatically.
     private var packageInfoSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Package Info")
+            Text(appLocalized("Package Info"))
                 .font(.headline)
 
             Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 6) {
                 GridRow {
-                    Text("Source").foregroundStyle(.secondary)
+                    Text(appLocalized("Source")).foregroundStyle(.secondary)
                     Text(skill.source).textSelection(.enabled)
                 }
                 GridRow {
-                    Text("Repository").foregroundStyle(.secondary)
+                    Text(appLocalized("Repository")).foregroundStyle(.secondary)
                     // Show source as a clickable link to the GitHub repository
                     // Link is SwiftUI's built-in component for opening URLs in the default browser
                     if let url = URL(string: skill.repoURL) {
@@ -146,7 +146,7 @@ struct RegistrySkillDetailView: View {
                     }
                 }
                 GridRow {
-                    Text("安装s").foregroundStyle(.secondary)
+                    Text(appLocalized("Installs")).foregroundStyle(.secondary)
                     HStack(spacing: 8) {
                         // Show both formatted and exact count
                         Text(skill.formattedInstalls)
@@ -158,7 +158,7 @@ struct RegistrySkillDetailView: View {
                 // Show daily change if available (from trending/hot data)
                 if let change = skill.change, change != 0 {
                     GridRow {
-                        Text("Daily Change").foregroundStyle(.secondary)
+                        Text(appLocalized("Daily Change")).foregroundStyle(.secondary)
                         HStack(spacing: 4) {
                             Image(systemName: "arrow.up.right")
                                 .foregroundStyle(.green)
@@ -170,8 +170,8 @@ struct RegistrySkillDetailView: View {
                 // Show yesterday's installs if available (from trending data)
                 if let yesterday = skill.installsYesterday {
                     GridRow {
-                        Text("Yesterday").foregroundStyle(.secondary)
-                        Text("\(yesterday) installs")
+                        Text(appLocalized("Yesterday")).foregroundStyle(.secondary)
+                        Text(AppLocalization.format("%d installs", yesterday))
                     }
                 }
             }
@@ -201,28 +201,28 @@ struct RegistrySkillDetailView: View {
             Divider()
 
             VStack(alignment: .leading, spacing: 8) {
-                Text("Skill Metadata")
+                Text(appLocalized("Skill Metadata"))
                     .font(.headline)
 
                 Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 6) {
                     // Author from metadata.author nested field
                     if let author = metadata.author {
                         GridRow {
-                            Text("Author").foregroundStyle(.secondary)
+                            Text(appLocalized("Author")).foregroundStyle(.secondary)
                             Text(author).textSelection(.enabled)
                         }
                     }
                     // Version from metadata.version nested field
                     if let version = metadata.version {
                         GridRow {
-                            Text("Version").foregroundStyle(.secondary)
+                            Text(appLocalized("Version")).foregroundStyle(.secondary)
                             Text(version).textSelection(.enabled)
                         }
                     }
                     // License from top-level license field
                     if let license = metadata.license {
                         GridRow {
-                            Text("License").foregroundStyle(.secondary)
+                            Text(appLocalized("License")).foregroundStyle(.secondary)
                             Text(license).textSelection(.enabled)
                         }
                     }
@@ -237,7 +237,7 @@ struct RegistrySkillDetailView: View {
     /// Actions section: install button + open on skills.sh
     private var actionsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Actions")
+            Text(appLocalized("Actions"))
                 .font(.headline)
 
             HStack(spacing: 12) {
@@ -267,7 +267,7 @@ struct RegistrySkillDetailView: View {
                         NSWorkspace.shared.open(url)
                     }
                 } label: {
-                    Label("在 skills.sh 查看", systemImage: "safari")
+                    Label(appLocalized("View on skills.sh"), systemImage: "safari")
                 }
                 .buttonStyle(.bordered)
             }
@@ -276,14 +276,14 @@ struct RegistrySkillDetailView: View {
                 agentTypes: viewModel.targetAgentTypes,
                 selectedAgents: viewModel.selectedTargetAgents,
                 selectionSummary: viewModel.targetSelectionSummary(),
-                noteText: "安装时会先写入 SkillsMaster canonical 目录，再按各 Agent 的默认安装方式建立 direct install。",
+                noteText: appLocalized("Skills are first written into the SkillsMaster canonical directory, then materialized as direct installs using each Agent's default install mode."),
                 isAgentDetected: viewModel.isAgentDetected(_:),
                 onToggle: viewModel.toggleTargetAgent(_:)
             )
 
             // CLI install hint — shows the npx command for reference
             VStack(alignment: .leading, spacing: 4) {
-                Text("CLI 安装 Command")
+                Text(appLocalized("CLI Install Command"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
@@ -312,7 +312,7 @@ struct RegistrySkillDetailView: View {
     /// `isLoading ? <Spinner/> : error ? <Error/> : <Content/>`
     private var skillContentSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Skill Content")
+            Text(appLocalized("Skill Content"))
                 .font(.headline)
 
             if viewModel.isLoadingContent {
@@ -322,7 +322,7 @@ struct RegistrySkillDetailView: View {
                     ProgressView()
                         // .controlSize(.small) makes the spinner compact, appropriate for inline use
                         .controlSize(.small)
-                    Text("Loading SKILL.md from GitHub...")
+                    Text(appLocalized("Loading SKILL.md from GitHub..."))
                         .foregroundStyle(.secondary)
                         .font(.subheadline)
                 }
@@ -346,7 +346,7 @@ struct RegistrySkillDetailView: View {
                             NSWorkspace.shared.open(url)
                         }
                     } label: {
-                        Label("在 skills.sh 查看 instead", systemImage: "safari")
+                        Label(appLocalized("View on skills.sh instead"), systemImage: "safari")
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
@@ -364,7 +364,7 @@ struct RegistrySkillDetailView: View {
                         manuallyShowsChineseTranslation: viewModel.isShowingManualTranslation(for: skill.id)
                     )
                 } else {
-                    Text("No content available.")
+                    Text(appLocalized("No content available."))
                         .foregroundStyle(.secondary)
                         .font(.subheadline)
                         .italic()

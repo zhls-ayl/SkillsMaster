@@ -165,7 +165,7 @@ final class RegistryBrowserViewModelTests: XCTestCase {
         let skillManager = SkillManager()
         let vm = RegistryBrowserViewModel(skillManager: skillManager)
 
-        XCTAssertEqual(vm.targetSelectionSummary(), "未选择 Agent")
+        XCTAssertEqual(vm.targetSelectionSummary(), AppLocalization.string("No Agent Selected"))
     }
 
     func testDetailInstallButtonTitleReturnsMixedWhenSelectedAgentsArePartiallyInstalled() {
@@ -180,7 +180,7 @@ final class RegistryBrowserViewModelTests: XCTestCase {
 
         XCTAssertEqual(
             vm.detailInstallButtonTitle(for: makeRegistrySkill(skillId: "ui-ux-pro-max", source: "alice/skills")),
-            "Install / Reinstall"
+            AppLocalization.string("Install / Reinstall")
         )
     }
 

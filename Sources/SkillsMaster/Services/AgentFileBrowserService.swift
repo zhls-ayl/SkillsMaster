@@ -19,15 +19,15 @@ struct AgentFileBrowserService: Sendable {
         var errorDescription: String? {
             switch self {
             case .configDirectoryUnavailable(let agentType):
-                return "\(agentType.displayName) 没有可用的配置根目录。"
+                return AppLocalization.format("%@ has no available configuration root directory.", agentType.displayName)
             case .invalidName:
-                return "名称不能为空，且不能包含 /、. 或 ..。"
+                return AppLocalization.string("The name cannot be empty and cannot contain /, . or ..")
             case .itemAlreadyExists(let url):
-                return "目标已存在：\(url.lastPathComponent)"
+                return AppLocalization.format("Target already exists: %@", url.lastPathComponent)
             case .itemNotFound(let url):
-                return "目标不存在：\(url.path)"
+                return AppLocalization.format("Target does not exist: %@", url.path)
             case .notDirectory(let url):
-                return "目标不是目录：\(url.path)"
+                return AppLocalization.format("Target is not a directory: %@", url.path)
             case .protectedPath(let reason):
                 return reason
             }
@@ -305,7 +305,7 @@ struct AgentFileBrowserService: Sendable {
 
     private func mutationDeniedReason(for itemURL: URL, rootURL: URL, protectedURL: URL) -> String? {
         if itemURL.path == rootURL.path {
-            return "Agent 根目录本身不可在这里重命名或删除。"
+            return AppLocalization.string("The Agent root directory itself cannot be renamed or deleted here.")
         }
         return skillsProtectionReason(for: itemURL, protectedURL: protectedURL)
     }
@@ -326,7 +326,7 @@ struct AgentFileBrowserService: Sendable {
             return nil
         }
 
-        return "`skills/` 目录及其子内容由 SkillsMaster 管理，在 Agent Files 中只读。"
+        return AppLocalization.string("The `skills/` directory and its contents are managed by SkillsMaster and are read-only in Agent Files.")
     }
 
     private func relativePath(for url: URL, rootURL: URL) -> String {

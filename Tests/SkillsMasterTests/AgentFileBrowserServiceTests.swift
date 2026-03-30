@@ -73,7 +73,7 @@ final class AgentFileBrowserServiceTests: XCTestCase {
         XCTAssertTrue(protectedChild.isProtected)
         XCTAssertEqual(
             protectedChild.protectionReason,
-            "`skills/` 目录及其子内容由 SkillsMaster 管理，在 Agent Files 中只读。"
+            AppLocalization.string("The `skills/` directory and its contents are managed by SkillsMaster and are read-only in Agent Files.")
         )
     }
 

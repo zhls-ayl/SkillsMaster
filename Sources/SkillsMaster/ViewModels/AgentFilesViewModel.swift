@@ -60,7 +60,7 @@ final class AgentFilesViewModel {
     }
 
     var title: String {
-        "\(agentType.displayName) Files"
+        AppLocalization.format("%@ Files", agentType.displayName)
     }
 
     var rootDisplayPath: String {

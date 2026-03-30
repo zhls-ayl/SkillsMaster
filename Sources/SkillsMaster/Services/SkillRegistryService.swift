@@ -61,9 +61,9 @@ actor SkillRegistryService {
         /// Display name shown in UI tabs
         var displayName: String {
             switch self {
-            case .allTime: "All Time"
-            case .trending: "Trending (24h)"
-            case .hot: "Hot"
+            case .allTime: AppLocalization.string("All Time")
+            case .trending: AppLocalization.string("Trending (24h)")
+            case .hot: AppLocalization.string("Hot")
             }
         }
 

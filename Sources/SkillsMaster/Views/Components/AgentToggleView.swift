@@ -111,7 +111,7 @@ private struct AgentToggleRow: View {
                 // Always show inheritance hint when applicable
                 // Informs user that this Agent can read the skill from other directories
                 if !inheritancePaths.isEmpty {
-                    Text("also reads \(inheritancePaths.joined(separator: ", "))")
+                    Text(AppLocalization.format("Also reads %@", inheritancePaths.joined(separator: ", ")))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
@@ -121,7 +121,7 @@ private struct AgentToggleRow: View {
 
             // Show "Not installed" for agents that are not available on the system
             if !isAgentAvailable && !isOn {
-                Text("Not installed")
+                Text(appLocalized("Not installed"))
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             }

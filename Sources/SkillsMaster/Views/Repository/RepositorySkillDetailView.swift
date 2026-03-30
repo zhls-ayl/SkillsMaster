@@ -86,7 +86,7 @@ struct RepositorySkillDetailView: View {
                     .textSelection(.enabled)
 
                 if isInstalled {
-                    Text("Installed")
+                    Text(appLocalized("Installed"))
                         .font(.caption)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
@@ -97,7 +97,7 @@ struct RepositorySkillDetailView: View {
             }
 
             HStack(spacing: 4) {
-                Text("ID:")
+                Text(appLocalized("ID:"))
                     .foregroundStyle(.secondary)
                 Text(skill.id)
                     .textSelection(.enabled)
@@ -116,35 +116,35 @@ struct RepositorySkillDetailView: View {
 
     private var metadataSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Metadata")
+            Text(appLocalized("Metadata"))
                 .font(.headline)
 
             Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 6) {
                 GridRow {
-                    Text("Repository").foregroundStyle(.secondary)
+                    Text(appLocalized("Repository")).foregroundStyle(.secondary)
                     Text(repository.name).textSelection(.enabled)
                 }
                 GridRow {
-                    Text("Path").foregroundStyle(.secondary)
+                    Text(appLocalized("Path")).foregroundStyle(.secondary)
                     Text(skill.skillMDPath)
                         .font(.system(.body, design: .monospaced))
                         .textSelection(.enabled)
                 }
                 if let author = displayMetadata.author {
                     GridRow {
-                        Text("Author").foregroundStyle(.secondary)
+                        Text(appLocalized("Author")).foregroundStyle(.secondary)
                         Text(author).textSelection(.enabled)
                     }
                 }
                 if let version = displayMetadata.version {
                     GridRow {
-                        Text("Version").foregroundStyle(.secondary)
+                        Text(appLocalized("Version")).foregroundStyle(.secondary)
                         Text(version).textSelection(.enabled)
                     }
                 }
                 if let license = displayMetadata.license {
                     GridRow {
-                        Text("License").foregroundStyle(.secondary)
+                        Text(appLocalized("License")).foregroundStyle(.secondary)
                         Text(license).textSelection(.enabled)
                     }
                 }
@@ -155,7 +155,7 @@ struct RepositorySkillDetailView: View {
 
     private var actionsSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Actions")
+            Text(appLocalized("Actions"))
                 .font(.headline)
 
             Button {
@@ -183,7 +183,7 @@ struct RepositorySkillDetailView: View {
                 agentTypes: viewModel.targetAgentTypes,
                 selectedAgents: viewModel.selectedTargetAgents,
                 selectionSummary: viewModel.targetSelectionSummary(),
-                noteText: "安装时会先写入 SkillsMaster canonical 目录，再按各 Agent 的默认安装方式建立 direct install。",
+                noteText: appLocalized("Skills are first written into the SkillsMaster canonical directory, then materialized as direct installs using each Agent's default install mode."),
                 isAgentDetected: viewModel.isAgentDetected(_:),
                 onToggle: viewModel.toggleTargetAgent(_:)
             )
@@ -193,21 +193,21 @@ struct RepositorySkillDetailView: View {
     @ViewBuilder
     private var markdownSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Skill Content")
+            Text(appLocalized("Skill Content"))
                 .font(.headline)
 
             if isLoadingContent {
                 HStack(spacing: 8) {
                     ProgressView()
                         .controlSize(.small)
-                    Text("Loading SKILL.md…")
+                    Text(appLocalized("Loading SKILL.md…"))
                         .foregroundStyle(.secondary)
                 }
             } else if let contentError {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(contentError)
                         .foregroundStyle(.secondary)
-                    Button("重试加载") {
+                    Button(appLocalized("Retry Loading")) {
                         Task { await onLoadContent() }
                     }
                     .buttonStyle(.bordered)
@@ -220,7 +220,7 @@ struct RepositorySkillDetailView: View {
                     manuallyShowsChineseTranslation: viewModel.isShowingManualTranslation(for: skill.id)
                 )
             } else {
-                Text("No markdown content available in this SKILL.md.")
+                Text(appLocalized("No markdown content available in this SKILL.md."))
                     .foregroundStyle(.tertiary)
                     .italic()
             }
@@ -229,6 +229,6 @@ struct RepositorySkillDetailView: View {
 
     private var installHelpText: String {
         if let installDisabledReason = viewModel.installDisabledReason { return installDisabledReason }
-        return "安装 this skill from local repository clone"
+        return appLocalized("Install this skill from the local repository clone")
     }
 }

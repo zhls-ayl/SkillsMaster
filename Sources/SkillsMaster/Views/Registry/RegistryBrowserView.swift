@@ -40,12 +40,12 @@ struct RegistryBrowserView: View {
                 skillList
             }
         }
-        .navigationTitle("Skills.sh")
+        .navigationTitle(appLocalized("Skills.sh"))
         // .searchable adds a native macOS search bar in the toolbar area
         // The text binding ($viewModel.searchText) updates as user types.
         // `prompt` is the placeholder text shown when the search field is empty.
         // This is the standard macOS search pattern (similar to Finder's search bar).
-        .searchable(text: $viewModel.searchText, prompt: "Search skills.sh...")
+        .searchable(text: $viewModel.searchText, prompt: Text(appLocalized("Search skills.sh...")))
         // .onChange(of:) triggers closure when the observed value changes
         // Here we call the debounced search handler on each keystroke
         .onChange(of: viewModel.searchText) { _, _ in
@@ -59,7 +59,7 @@ struct RegistryBrowserView: View {
                 } label: {
                     Image(systemName: "arrow.clockwise")
                 }
-                .help("Refresh registry data")
+                .help(appLocalized("Refresh registry data"))
             }
 
             // "Open in Browser" button — opens skills.sh in the default web browser
@@ -73,7 +73,7 @@ struct RegistryBrowserView: View {
                 } label: {
                     Image(systemName: "safari")
                 }
-                .help("Open skills.sh in browser")
+                .help(appLocalized("Open skills.sh in browser"))
             }
         }
         // .task runs async code when the view first appears
@@ -84,7 +84,7 @@ struct RegistryBrowserView: View {
             Alert(
                 title: Text(notice.title),
                 message: Text(notice.message),
-                dismissButton: .default(Text("OK"))
+                dismissButton: .default(Text(appLocalized("OK")))
             )
         }
     }
@@ -139,7 +139,7 @@ struct RegistryBrowserView: View {
         VStack(spacing: 12) {
             ProgressView()
                 .controlSize(.large)
-            Text("Loading registry...")
+                    Text(appLocalized("Loading registry..."))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
@@ -172,7 +172,7 @@ struct RegistryBrowserView: View {
                 HStack(spacing: 8) {
                     ProgressView()
                         .controlSize(.small)
-                    Text("Loading more...")
+                    Text(appLocalized("Loading more..."))
                         .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, alignment: .center)
@@ -180,14 +180,14 @@ struct RegistryBrowserView: View {
                 .listRowSeparator(.hidden)
             } else if let loadMoreErrorMessage = viewModel.loadMoreErrorMessage {
                 VStack(spacing: 6) {
-                    Text("Failed to load more")
+                    Text(appLocalized("Failed to load more"))
                         .font(.subheadline)
                         .fontWeight(.medium)
                     Text(loadMoreErrorMessage)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
-                    Button("Retry") {
+                    Button(appLocalized("Retry")) {
                         Task { await viewModel.retryLoadMore() }
                     }
                     .buttonStyle(.bordered)
@@ -219,15 +219,15 @@ struct RegistryBrowserView: View {
             // Leaderboard parsing failed; suggest search as alternative
             EmptyStateView(
                 icon: "magnifyingglass",
-                title: "Leaderboard Unavailable",
-                subtitle: "Use the search bar above to find skills on skills.sh"
+                title: appLocalized("Leaderboard Unavailable"),
+                subtitle: appLocalized("Use the search bar above to find skills on skills.sh")
             )
         } else if viewModel.isSearchActive {
             // Search returned no results
             EmptyStateView(
                 icon: "magnifyingglass",
-                title: "No Results",
-                subtitle: "No skills match \"\(viewModel.searchText)\""
+                title: appLocalized("No Results"),
+                subtitle: AppLocalization.format("No skills match \"%@\"", viewModel.searchText)
             )
         } else if let errorMessage = viewModel.errorMessage {
             // Generic error state
@@ -235,14 +235,14 @@ struct RegistryBrowserView: View {
                 Image(systemName: "exclamationmark.triangle")
                     .font(.system(size: 40))
                     .foregroundStyle(.orange)
-                Text("Something went wrong")
+                Text(appLocalized("Something went wrong"))
                     .font(.title3)
                     .fontWeight(.medium)
                 Text(errorMessage)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
-                Button("Try Again") {
+                Button(appLocalized("Try Again")) {
                     Task { await viewModel.refresh() }
                 }
                 .buttonStyle(.bordered)
@@ -252,8 +252,8 @@ struct RegistryBrowserView: View {
             // Generic empty state (shouldn't normally appear)
             EmptyStateView(
                 icon: "tray",
-                title: "No Skills",
-                subtitle: "Unable to load skills from the registry"
+                title: appLocalized("No Skills"),
+                subtitle: appLocalized("Unable to load skills from the registry")
             )
         }
     }

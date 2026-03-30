@@ -182,7 +182,7 @@ final class SkillsHubBrowserViewModelTests: XCTestCase {
         let skillManager = SkillManager()
         let viewModel = SkillsHubBrowserViewModel(skillManager: skillManager)
 
-        XCTAssertEqual(viewModel.targetSelectionSummary(), "未选择 Agent")
+        XCTAssertEqual(viewModel.targetSelectionSummary(), AppLocalization.string("No Agent Selected"))
     }
 
     func testDetailInstallButtonTitleReturnsMixedWhenSelectedAgentsArePartiallyInstalled() {
@@ -197,7 +197,7 @@ final class SkillsHubBrowserViewModelTests: XCTestCase {
 
         XCTAssertEqual(
             viewModel.detailInstallButtonTitle(for: makeSkillsHubSkill(slug: "github")),
-            "Install / Reinstall"
+            AppLocalization.string("Install / Reinstall")
         )
     }
 

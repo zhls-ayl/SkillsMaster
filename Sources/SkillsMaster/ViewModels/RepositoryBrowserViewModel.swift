@@ -51,12 +51,12 @@ final class RepositoryBrowserViewModel {
     /// Human-readable loading message shown when the repository view is waiting.
     var loadingMessage: String {
         if isSyncing && !repository.isCloned {
-            return "Synchronizing repository…"
+            return AppLocalization.string("Synchronizing repository…")
         }
         if isSyncing {
-            return "Refreshing repository index…"
+            return AppLocalization.string("Refreshing repository index…")
         }
-        return "Indexing repository…"
+        return AppLocalization.string("Indexing repository…")
     }
 
     /// Error message (nil = no error)
@@ -124,7 +124,7 @@ final class RepositoryBrowserViewModel {
     var installDisabledReason: String? {
         if isSyncing { return "Repository 正在同步，请稍候。" }
         if !repository.isCloned {
-            return "安装前需要先同步 Repository。"
+            return AppLocalization.string("Sync the repository before installing.")
         }
         return nil
     }
@@ -198,7 +198,7 @@ final class RepositoryBrowserViewModel {
         if let override = overrideError {
             errorMessage = override
         } else if !repository.isCloned && allSkills.isEmpty && !isSyncing {
-            errorMessage = "Repository 尚未同步，请先点击 Sync 按钮完成 clone。"
+            errorMessage = AppLocalization.string("This repository has not been synced yet. Click Sync Now to clone it first.")
         }
     }
 
@@ -245,16 +245,22 @@ final class RepositoryBrowserViewModel {
     /// - Parameter skill: The discovered skill to install
     func installSkill(_ skill: GitService.DiscoveredSkill) {
         if let reason = installDisabledReason {
-            notice = Notice(title: "无法安装", message: reason)
+            notice = Notice(title: AppLocalization.string("Unable to Install"), message: reason)
             return
         }
         guard !allSkills.isEmpty else {
-            notice = Notice(title: "无法安装", message: "当前没有可安装的 Skills，请先同步后重试。")
+            notice = Notice(
+                title: AppLocalization.string("Unable to Install"),
+                message: AppLocalization.string("No installable skills are available right now. Sync first and try again.")
+            )
             return
         }
         guard installingSkillID == nil else { return }
         guard !selectedTargetAgents.isEmpty else {
-            notice = Notice(title: "无法安装", message: "请至少选择一个目标 Agent。")
+            notice = Notice(
+                title: AppLocalization.string("Unable to Install"),
+                message: AppLocalization.string("Select at least one target Agent.")
+            )
             return
         }
 
@@ -288,9 +294,12 @@ final class RepositoryBrowserViewModel {
     func targetSelectionSummary() -> String {
         let count = selectedTargetAgents.count
         if count == 0 {
-            return "未选择 Agent"
+            return AppLocalization.string("No Agent Selected")
         }
-        return count == 1 ? "1 个 Agent 已选中" : "\(count) 个 Agent 已选中"
+        if count == 1 {
+            return AppLocalization.string("1 Agent Selected")
+        }
+        return AppLocalization.format("%d Agents Selected", count)
     }
 
     func detailInstallButtonTitle(for skill: GitService.DiscoveredSkill) -> String {
@@ -347,7 +356,7 @@ final class RepositoryBrowserViewModel {
             await loadSkills()
         case .error(let gitError):
             isLoading = false
-            errorMessage = "同步失败：\(gitError)"
+            errorMessage = AppLocalization.format("Sync failed: %@", gitError)
         }
     }
 
@@ -355,7 +364,7 @@ final class RepositoryBrowserViewModel {
         let action = installAction(for: skill)
         let targetAgents = selectedTargetAgents
         installingSkillID = skill.id
-        installingStatusMessage = "Installing..."
+        installingStatusMessage = AppLocalization.string("Installing...")
         defer {
             installingSkillID = nil
             installingStatusMessage = nil
@@ -373,10 +382,14 @@ final class RepositoryBrowserViewModel {
 
             notice = Notice(
                 title: action.completionTitle,
-                message: "\(skill.metadata.name.isEmpty ? skill.id : skill.metadata.name) 已安装到 \(targetAgents.count) 个 Agent。"
+                message: AppLocalization.format(
+                    "%@ was installed to %d Agent(s).",
+                    skill.metadata.name.isEmpty ? skill.id : skill.metadata.name,
+                    targetAgents.count
+                )
             )
         } catch {
-            notice = Notice(title: "Installation Failed", message: error.localizedDescription)
+            notice = Notice(title: AppLocalization.string("Installation Failed"), message: error.localizedDescription)
         }
     }
 

@@ -42,46 +42,26 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 @main
 struct SkillsMasterApp: App {
 
+    init() {
+        AppLocalization.installBundleOverride()
+    }
+
     /// `SkillManager` 是 app 的核心状态管理器。
     /// 使用 `@State` 可以让 SwiftUI 管理它的生命周期。
     @State private var skillManager = SkillManager()
     @State private var toolPreferences = ToolPreferencesStore()
-
-    /// 持久化保存到 `UserDefaults` 的外观模式。
-    ///
-    /// `@AppStorage` keeps the app theme preference reactive:
-    /// - Changing the value in Settings immediately updates this property.
-    /// - SwiftUI automatically re-evaluates Scene/View bodies, so theme changes apply live.
-    @AppStorage(Constants.appThemeModeKey)
-    private var appThemeModeRawValue = AppThemeMode.system.rawValue
 
     /// NSApplicationDelegateAdaptor bridges SwiftUI with traditional AppKit lifecycle
     /// Through AppDelegate we can perform AppKit-level operations at app launch
     /// Used here to solve the issue of windows not auto-activating when launched from command line
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
-    /// Resolve the stored raw value into a typed mode with safe fallback.
-    ///
-    /// Why this computed property exists:
-    /// - Protects against invalid values in UserDefaults (e.g., old versions or manual edits).
-    /// - Keeps fallback logic centralized and reusable for both WindowGroup and Settings scene.
-    private var appThemeMode: AppThemeMode {
-        AppThemeMode(rawValue: appThemeModeRawValue) ?? .system
-    }
-
     var body: some Scene {
         // `WindowGroup` 用于创建主窗口。
         WindowGroup {
-            ContentView()
-                // 通过 `.environment` 把 `skillManager` 注入整个 `View` tree。
-                // 所有子视图都可以通过 `@Environment` 访问它。
-                // 概念上类似 React 的 Context Provider 或 Android 的 dependency injection。
-                .environment(skillManager)
-                .environment(toolPreferences)
-                // 为主窗口应用统一的外观策略。
-                // `.preferredColorScheme(nil)` 表示 follow system，
-                // `.light` / `.dark` 则表示强制指定外观。
-                .preferredColorScheme(appThemeMode.colorScheme)
+            AppSceneRoot(skillManager: skillManager, toolPreferences: toolPreferences) {
+                ContentView()
+            }
         }
         // 设置窗口默认尺寸。
         .defaultSize(width: 1000, height: 700)
@@ -92,12 +72,45 @@ struct SkillsMasterApp: App {
         // allowing AboutSettingsView to access update state via @Environment
         // Settings scene and WindowGroup are independent View hierarchies, requiring separate environment injection
         Settings {
-            SettingsView()
-                .environment(skillManager)
-                .environment(toolPreferences)
-                // Apply the same theme policy to Settings window,
-                // ensuring all app windows stay visually consistent.
-                .preferredColorScheme(appThemeMode.colorScheme)
+            AppSceneRoot(skillManager: skillManager, toolPreferences: toolPreferences) {
+                SettingsView()
+            }
         }
+    }
+}
+
+/// Applies theme + language preferences inside a normal `View`, not on the `App` scene
+/// itself, so changing `@AppStorage` in Settings reliably re-renders the scene content.
+private struct AppSceneRoot<Content: View>: View {
+    let skillManager: SkillManager
+    let toolPreferences: ToolPreferencesStore
+    let content: () -> Content
+
+    @AppStorage(Constants.appThemeModeKey)
+    private var appThemeModeRawValue = AppThemeMode.system.rawValue
+
+    @AppStorage(Constants.appLanguageModeKey)
+    private var appLanguageModeRawValue = AppLanguageMode.system.rawValue
+
+    private var appThemeMode: AppThemeMode {
+        AppThemeMode(rawValue: appThemeModeRawValue) ?? .system
+    }
+
+    private var appLanguageMode: AppLanguageMode {
+        AppLanguageMode(rawValue: appLanguageModeRawValue) ?? .system
+    }
+
+    private var languageRefreshID: String {
+        "language-\(appLanguageModeRawValue)"
+    }
+
+    var body: some View {
+        content()
+            // 通过 `.environment` 把共享状态注入整个 `View` tree。
+            .environment(skillManager)
+            .environment(toolPreferences)
+            .environment(\.locale, appLanguageMode.resolvedLocale)
+            .id(languageRefreshID)
+            .preferredColorScheme(appThemeMode.colorScheme)
     }
 }

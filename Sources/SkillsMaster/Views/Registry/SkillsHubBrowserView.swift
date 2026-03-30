@@ -20,8 +20,8 @@ struct SkillsHubBrowserView: View {
                 }
             }
         }
-        .navigationTitle("SkillsHub")
-        .searchable(text: $viewModel.searchText, prompt: "搜索 SkillsHub skills...")
+        .navigationTitle(appLocalized("SkillsHub"))
+        .searchable(text: $viewModel.searchText, prompt: Text(appLocalized("Search SkillsHub skills...")))
         .onChange(of: viewModel.searchText) { _, _ in
             viewModel.onSearchTextChanged()
         }
@@ -32,7 +32,7 @@ struct SkillsHubBrowserView: View {
                 } label: {
                     Image(systemName: "arrow.clockwise")
                 }
-                .help("刷新 SkillsHub 列表")
+                .help(appLocalized("Refresh SkillsHub list"))
             }
 
             ToolbarItem {
@@ -43,7 +43,7 @@ struct SkillsHubBrowserView: View {
                 } label: {
                     Image(systemName: "safari")
                 }
-                .help("在浏览器打开 SkillsHub")
+                .help(appLocalized("Open SkillsHub in browser"))
             }
         }
         .task {
@@ -53,7 +53,7 @@ struct SkillsHubBrowserView: View {
             Alert(
                 title: Text(notice.title),
                 message: Text(notice.message),
-                dismissButton: .default(Text("OK"))
+                dismissButton: .default(Text(appLocalized("OK")))
             )
         }
     }
@@ -92,7 +92,7 @@ struct SkillsHubBrowserView: View {
             Button {
                 viewModel.selectCategory(nil)
             } label: {
-                menuRowLabel(title: "全部分类", isSelected: viewModel.selectedCategory == nil)
+                menuRowLabel(title: AppLocalization.string("All Categories"), isSelected: viewModel.selectedCategory == nil)
             }
 
             Divider()
@@ -106,7 +106,7 @@ struct SkillsHubBrowserView: View {
             }
         } label: {
             controlChip(
-                title: viewModel.selectedCategory?.displayName ?? "全部分类",
+                title: viewModel.selectedCategory?.displayName ?? AppLocalization.string("All Categories"),
                 systemImage: "line.3.horizontal.decrease.circle"
             )
         }
@@ -123,7 +123,7 @@ struct SkillsHubBrowserView: View {
             }
         } label: {
             controlChip(
-                title: "排序: \(viewModel.selectedSort.displayName)",
+                title: AppLocalization.format("Sort: %@", viewModel.selectedSort.displayName),
                 systemImage: "arrow.up.arrow.down.circle"
             )
         }
@@ -134,11 +134,11 @@ struct SkillsHubBrowserView: View {
             Button {
                 viewModel.goToPreviousPage()
             } label: {
-                Label("上一页", systemImage: "chevron.left")
+                Label(appLocalized("Previous Page"), systemImage: "chevron.left")
             }
             .disabled(viewModel.currentPage <= 1 || viewModel.isLoading)
 
-            Text("第 \(viewModel.currentPage) / \(viewModel.totalPages) 页")
+            Text(AppLocalization.format("Page %d / %d", viewModel.currentPage, viewModel.totalPages))
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .monospacedDigit()
@@ -146,12 +146,12 @@ struct SkillsHubBrowserView: View {
             Button {
                 viewModel.goToNextPage()
             } label: {
-                Label("下一页", systemImage: "chevron.right")
+                Label(appLocalized("Next Page"), systemImage: "chevron.right")
             }
             .disabled(viewModel.currentPage >= viewModel.totalPages || viewModel.isLoading)
 
             if viewModel.totalCount > 0 {
-                Text("共 \(viewModel.totalCount) 项")
+                Text(AppLocalization.format("%d total", viewModel.totalCount))
                     .font(.caption)
                     .foregroundStyle(.tertiary)
                     .monospacedDigit()
@@ -163,7 +163,7 @@ struct SkillsHubBrowserView: View {
         VStack(spacing: 12) {
             ProgressView()
                 .controlSize(.large)
-            Text(viewModel.isSearchActive ? "正在搜索 SkillsHub..." : "正在加载 SkillsHub skills...")
+            Text(viewModel.isSearchActive ? appLocalized("Searching SkillsHub...") : appLocalized("Loading SkillsHub..."))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
@@ -174,12 +174,12 @@ struct SkillsHubBrowserView: View {
         if let errorMessage = viewModel.errorMessage {
             return AnyView(
                 VStack(spacing: 10) {
-                    Text("加载 SkillsHub 失败")
+                    Text(appLocalized("Failed to load SkillsHub"))
                         .font(.headline)
                     Text(errorMessage)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
-                    Button("重试") {
+                    Button(appLocalized("Try Again")) {
                         Task { await viewModel.refresh() }
                     }
                     .buttonStyle(.borderedProminent)
@@ -192,10 +192,10 @@ struct SkillsHubBrowserView: View {
         return AnyView(
             EmptyStateView(
                 icon: "shippingbox",
-                title: "没有可展示的 Skill",
+                title: appLocalized("No Skills to display"),
                 subtitle: viewModel.isSearchActive
-                    ? "没有匹配当前搜索词的 SkillsHub skill"
-                    : "SkillsHub 当前没有返回可展示的 skill"
+                    ? appLocalized("No SkillsHub skill matches the current search term.")
+                    : appLocalized("SkillsHub did not return any displayable skills.")
             )
         )
     }
@@ -248,11 +248,11 @@ private struct SkillsHubSkillRowView: View {
                         .lineLimit(1)
 
                     if isFeatured {
-                        badge("精选", color: .blue)
+                        badge(appLocalized("Featured"), color: .blue)
                     }
 
                     if isInstalled {
-                        badge("Installed", color: .green)
+                        badge(appLocalized("Installed"), color: .green)
                     }
                 }
 

@@ -28,7 +28,7 @@ final class SkillsHubServiceModelTests: XCTestCase {
         XCTAssertEqual(skill.formattedStars, "50")
         XCTAssertEqual(skill.originSourceType, "clawhub")
         XCTAssertEqual(skill.originSource, "skills/browser-use")
-        XCTAssertEqual(skill.category?.displayName, "开发工具")
+        XCTAssertEqual(skill.category?.displayName, AppLocalization.string("Developer Tools"))
         XCTAssertNotNil(skill.formattedUpdatedDate)
     }
 
@@ -72,8 +72,8 @@ final class SkillsHubServiceModelTests: XCTestCase {
     }
 
     func testSkillsHubCategoryDisplayNames() {
-        XCTAssertEqual(SkillsHubCategory.aiIntelligence.displayName, "AI 智能")
-        XCTAssertEqual(SkillsHubCategory.securityCompliance.displayName, "安全合规")
-        XCTAssertEqual(SkillsHubCategory.communicationCollaboration.displayName, "通讯协作")
+        XCTAssertEqual(SkillsHubCategory.aiIntelligence.displayName, AppLocalization.string("AI Intelligence"))
+        XCTAssertEqual(SkillsHubCategory.securityCompliance.displayName, AppLocalization.string("Security & Compliance"))
+        XCTAssertEqual(SkillsHubCategory.communicationCollaboration.displayName, AppLocalization.string("Communication & Collaboration"))
     }
 }

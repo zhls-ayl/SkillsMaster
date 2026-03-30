@@ -192,8 +192,8 @@ final class ClawHubBrowserViewModelTests: XCTestCase {
         viewModel.syncInstalledSkills()
         let skill = makeClawHubSkill(slug: "browser-use")
 
-        XCTAssertEqual(viewModel.installButtonTitle(for: skill), "Reinstall")
-        XCTAssertEqual(viewModel.detailInstallButtonTitle(for: skill), "Reinstall")
+        XCTAssertEqual(viewModel.installButtonTitle(for: skill), MarketplaceInstallAction.reinstall.title)
+        XCTAssertEqual(viewModel.detailInstallButtonTitle(for: skill), MarketplaceInstallAction.reinstall.title)
     }
 
     func testInstallButtonTitleReturnsInstallForNewSkill() {
@@ -201,15 +201,15 @@ final class ClawHubBrowserViewModelTests: XCTestCase {
         let viewModel = ClawHubBrowserViewModel(skillManager: skillManager)
         let skill = makeClawHubSkill(slug: "browser-use")
 
-        XCTAssertEqual(viewModel.installButtonTitle(for: skill), "Install")
-        XCTAssertEqual(viewModel.detailInstallButtonTitle(for: skill), "Install")
+        XCTAssertEqual(viewModel.installButtonTitle(for: skill), MarketplaceInstallAction.install.title)
+        XCTAssertEqual(viewModel.detailInstallButtonTitle(for: skill), MarketplaceInstallAction.install.title)
     }
 
     func testTargetSelectionSummaryReturnsUnselectedWhenEmpty() {
         let skillManager = SkillManager()
         let viewModel = ClawHubBrowserViewModel(skillManager: skillManager)
 
-        XCTAssertEqual(viewModel.targetSelectionSummary(), "未选择 Agent")
+        XCTAssertEqual(viewModel.targetSelectionSummary(), AppLocalization.string("No Agent Selected"))
     }
 
     func testDetailInstallButtonTitleReturnsMixedWhenSelectedAgentsArePartiallyInstalled() {
@@ -224,7 +224,7 @@ final class ClawHubBrowserViewModelTests: XCTestCase {
 
         XCTAssertEqual(
             viewModel.detailInstallButtonTitle(for: makeClawHubSkill(slug: "browser-use")),
-            "Install / Reinstall"
+            MarketplaceInstallAction.mixed.title
         )
     }
 

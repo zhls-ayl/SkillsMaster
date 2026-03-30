@@ -76,24 +76,24 @@ struct SkillDetailView: View {
                 }
             )
             .confirmationDialog(
-                "未保存修改",
+                appLocalized("Unsaved Changes"),
                 isPresented: Binding(
                     get: { viewModel.pendingEditorAction != nil },
                     set: { if !$0 { viewModel.cancelPendingEditorAction() } }
                 ),
                 titleVisibility: .visible
             ) {
-                Button("保存") {
+                Button(appLocalized("Save")) {
                     Task { _ = await viewModel.saveCurrentEditorAndClose() }
                 }
-                Button("放弃修改", role: .destructive) {
+                Button(appLocalized("Discard Changes"), role: .destructive) {
                     viewModel.discardPendingEditorAction()
                 }
-                Button("取消", role: .cancel) {
+                Button(appLocalized("Cancel"), role: .cancel) {
                     viewModel.cancelPendingEditorAction()
                 }
             } message: {
-                Text("当前 `SKILL.md` 有未保存修改。")
+                Text(appLocalized("The current `SKILL.md` has unsaved changes."))
             }
         } else if let skill = viewModel.skill(id: skillID) {
             // 这里相当于 SwiftUI 版的 `guard let`：如果 skill 不存在，就直接展示 empty state。
@@ -140,7 +140,7 @@ struct SkillDetailView: View {
                         } label: {
                             Image(systemName: "folder")
                         }
-                        .help("在 Finder 中显示")
+                        .help(appLocalized("Show in Finder"))
 
                         // 在 Terminal 中打开。
                         Button {
@@ -148,7 +148,7 @@ struct SkillDetailView: View {
                         } label: {
                             Image(systemName: "terminal")
                         }
-                        .help("在 Terminal 中打开")
+                        .help(appLocalized("Open in Terminal"))
                     }
 
                     ManualTranslationToolbarButton(
@@ -164,22 +164,22 @@ struct SkillDetailView: View {
                         } label: {
                             Image(systemName: "pencil")
                         }
-                        .help("Edit SKILL.md")
+                        .help(appLocalized("Edit SKILL.md"))
 
                         Button {
                             viewModel.openInExternalEditor(skill: skill)
                         } label: {
                             Image(systemName: "square.and.arrow.up")
                         }
-                        .help("在外置编辑器中打开 SKILL.md")
+                        .help(appLocalized("Open SKILL.md in External Editor"))
                     }
                 } 
             }
         } else {
             EmptyStateView(
                 icon: "questionmark.circle",
-                title: "找不到 Skill",
-                subtitle: "当前选中的 Skill 可能已被删除"
+                title: appLocalized("Skill not found"),
+                subtitle: appLocalized("The selected Skill may have been deleted.")
             )
         }
     }
@@ -211,25 +211,25 @@ struct SkillDetailView: View {
     @ViewBuilder
     private func skillMetadataSection(_ skill: Skill) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Skill Metadata")
+            Text(appLocalized("Skill Metadata"))
                 .font(.headline)
 
             Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 6) {
                 if let author = skill.metadata.author {
                     GridRow {
-                        Text("Author").foregroundStyle(.secondary)
+                        Text(appLocalized("Author")).foregroundStyle(.secondary)
                         Text(author).textSelection(.enabled)
                     }
                 }
                 if let version = skill.metadata.version {
                     GridRow {
-                        Text("Version").foregroundStyle(.secondary)
+                        Text(appLocalized("Version")).foregroundStyle(.secondary)
                         Text(version).textSelection(.enabled)
                     }
                 }
                 if let license = skill.metadata.license {
                     GridRow {
-                        Text("License").foregroundStyle(.secondary)
+                        Text(appLocalized("License")).foregroundStyle(.secondary)
                         Text(license).textSelection(.enabled)
                     }
                 }
@@ -244,7 +244,7 @@ struct SkillDetailView: View {
     @ViewBuilder
     private func agentAssignmentSection(_ skill: Skill) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Agent 分配")
+            Text(appLocalized("Agent Assignments"))
                 .font(.headline)
 
             AgentToggleView(skill: skill, viewModel: viewModel)
@@ -255,11 +255,11 @@ struct SkillDetailView: View {
     @ViewBuilder
     private func markdownSection(_ skill: Skill) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("文档")
+            Text(appLocalized("Documentation"))
                 .font(.headline)
 
             if skill.markdownBody.isEmpty {
-                Text("暂无文档")
+                Text(appLocalized("No documentation available."))
                     .foregroundStyle(.tertiary)
                     .italic()
             } else {
@@ -291,12 +291,12 @@ struct SkillDetailView: View {
         let inputIsEmpty = viewModel.repoURLInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
 
         VStack(alignment: .leading, spacing: 8) {
-            Text("包信息")
+            Text(appLocalized("Package Info"))
                 .font(.headline)
 
             pathRow(skill)
 
-            Text("当前 Skill 尚未关联 Repository。完成关联后才能检查更新。")
+            Text(appLocalized("This Skill is not linked to a Repository yet. Link it before checking for updates."))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
@@ -304,7 +304,7 @@ struct SkillDetailView: View {
             HStack(spacing: 8) {
                 // `$viewModel.repoURLInput` 是输入内容的双向绑定。
                 // `@Bindable` 让 `@Observable` 对象的属性也能支持 `$` 语法。
-                TextField("owner/repo", text: $viewModel.repoURLInput)
+                TextField(appLocalized("owner/repo"), text: $viewModel.repoURLInput)
                     .textFieldStyle(.roundedBorder)
                     // `.onSubmit` 会在用户按下回车时触发。
                     .onSubmit {
@@ -316,11 +316,11 @@ struct SkillDetailView: View {
                     // 关联ing 中：显示 `ProgressView` 作为 loading 指示器。
                     ProgressView()
                         .controlSize(.small)
-                    Text("关联ing...")
+                    Text(appLocalized("Linking..."))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else {
-                    Button("关联") {
+                    Button(appLocalized("Link")) {
                         Task { await viewModel.linkToRepository(skill: skill) }
                     }
                     .disabled(inputIsEmpty)
@@ -346,7 +346,7 @@ struct SkillDetailView: View {
         VStack(alignment: .leading, spacing: 8) {
             // 标题行：`包信息` + 更新检查按钮。
             HStack {
-                Text("包信息")
+                Text(appLocalized("Package Info"))
                     .font(.headline)
 
                 Spacer()
@@ -360,11 +360,11 @@ struct SkillDetailView: View {
             // `Grid` 是 macOS 14+ 提供的网格布局，概念上类似 HTML 的 CSS Grid。
             Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 6) {
                 GridRow {
-                    Text("Path").foregroundStyle(.secondary)
+                    Text(appLocalized("Path")).foregroundStyle(.secondary)
                     pathValueView(skill)
                 }
                 GridRow {
-                    Text("Source").foregroundStyle(.secondary)
+                    Text(appLocalized("Source")).foregroundStyle(.secondary)
                     Text(lockEntry.source).textSelection(.enabled)
                 }
                 GridRow {
@@ -380,13 +380,13 @@ struct SkillDetailView: View {
                 }
                 if let sourceVersion = lockEntry.sourceVersion, !sourceVersion.isEmpty {
                     GridRow {
-                        Text("Version").foregroundStyle(.secondary)
+                        Text(appLocalized("Version")).foregroundStyle(.secondary)
                         Text(sourceVersion).textSelection(.enabled)
                     }
                 }
                 if let originType = lockEntry.originSourceType, !originType.isEmpty {
                     GridRow {
-                        Text("Upstream").foregroundStyle(.secondary)
+                    Text(appLocalized("Upstream")).foregroundStyle(.secondary)
                         upstreamValueView(lockEntry)
                     }
                 }
@@ -395,12 +395,12 @@ struct SkillDetailView: View {
                 if canCheckGitUpdate(skill) {
                     GridRow {
                         if let commitHash = skill.localCommitHash {
-                            Text("Commit").foregroundStyle(.secondary)
+                            Text(appLocalized("Commit")).foregroundStyle(.secondary)
                             Text(commitHash)
                                 .font(.system(.body, design: .monospaced))
                                 .textSelection(.enabled)
                         } else {
-                            Text("Tree Hash").foregroundStyle(.secondary)
+                            Text(appLocalized("Tree Hash")).foregroundStyle(.secondary)
                             Text(lockEntry.skillFolderHash)
                                 .font(.system(.body, design: .monospaced))
                                 .textSelection(.enabled)
@@ -408,11 +408,11 @@ struct SkillDetailView: View {
                     }
                 }
                 GridRow {
-                    Text("Installed").foregroundStyle(.secondary)
+                    Text(appLocalized("Installed")).foregroundStyle(.secondary)
                     Text(lockEntry.installedAt.formattedDate)
                 }
                 GridRow {
-                    Text("Updated").foregroundStyle(.secondary)
+                    Text(appLocalized("Updated")).foregroundStyle(.secondary)
                     Text(lockEntry.updatedAt.formattedDate)
                 }
             }
@@ -462,7 +462,7 @@ struct SkillDetailView: View {
                 .contentTransition(.symbolEffect(.replace))
         }
         .buttonStyle(.plain)
-        .help("复制路径到剪贴板")
+        .help(appLocalized("Copy path to clipboard"))
         .animation(.easeInOut(duration: 0.2), value: pathCopied)
     }
 
@@ -481,7 +481,7 @@ struct SkillDetailView: View {
             HStack(spacing: 4) {
                 ProgressView()
                     .controlSize(.small)
-                Text("检查中...")
+                Text(appLocalized("Checking..."))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -490,7 +490,7 @@ struct SkillDetailView: View {
             HStack(spacing: 4) {
                 ProgressView()
                     .controlSize(.small)
-                Text("更新中...")
+                Text(appLocalized("Updating..."))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -498,11 +498,11 @@ struct SkillDetailView: View {
             // 检测到可用更新：展示 hash 对比、GitHub 链接和 `更新` 按钮。
             VStack(alignment: .trailing, spacing: 4) {
                 HStack(spacing: 8) {
-                    Label("发现更新", systemImage: "arrow.up.circle.fill")
+                    Label(appLocalized("Update available"), systemImage: "arrow.up.circle.fill")
                         .font(.caption)
                         .foregroundStyle(.orange)
 
-                    Button("更新") {
+                    Button(appLocalized("Update")) {
                         Task { await viewModel.updateSkill(skill) }
                     }
                     .controlSize(.small)
@@ -514,7 +514,7 @@ struct SkillDetailView: View {
             }
         } else if viewModel.showUpToDate {
             // 已是最新版本（2 秒后自动消失）。
-            Label("已是最新", systemImage: "checkmark.circle.fill")
+            Label(appLocalized("Up to Date"), systemImage: "checkmark.circle.fill")
                 .font(.caption)
                 .foregroundStyle(.green)
         } else if let error = viewModel.updateError {
@@ -535,7 +535,7 @@ struct SkillDetailView: View {
                 Image(systemName: "arrow.triangle.2.circlepath")
             }
             .controlSize(.small)
-            .help("Check for updates")
+            .help(appLocalized("Check for updates"))
         }
     }
 
@@ -580,7 +580,7 @@ struct SkillDetailView: View {
                         NSWorkspace.shared.open(url)
                     } label: {
                         HStack(spacing: 2) {
-                            Text("在 GitHub 查看变更")
+                            Text(appLocalized("View changes on GitHub"))
                             // `arrow.up.right` 是常见的 external link 图标（↗）。
                             Image(systemName: "arrow.up.right")
                         }
@@ -649,7 +649,7 @@ struct SkillDetailView: View {
                 Text(label)
                 Text(lockEntry.originSource ?? urlString)
                     .foregroundStyle(.secondary)
-                Link("打开", destination: url)
+                Link(appLocalized("Open"), destination: url)
             }
             .textSelection(.enabled)
         } else {

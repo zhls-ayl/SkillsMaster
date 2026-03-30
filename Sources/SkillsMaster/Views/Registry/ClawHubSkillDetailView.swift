@@ -51,7 +51,7 @@ struct ClawHubSkillDetailView: View {
                     .textSelection(.enabled)
 
                 if isInstalled {
-                    Text("Installed")
+                    Text(appLocalized("Installed"))
                         .font(.caption)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
@@ -62,7 +62,7 @@ struct ClawHubSkillDetailView: View {
             }
 
             HStack(spacing: 4) {
-                Text("Slug:")
+                Text(appLocalized("Slug:"))
                     .foregroundStyle(.secondary)
                 Text(skill.slug)
                     .textSelection(.enabled)
@@ -78,55 +78,55 @@ struct ClawHubSkillDetailView: View {
 
     private var packageInfoSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Package Info")
+            Text(appLocalized("Package Info"))
                 .font(.headline)
 
             Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 6) {
                 GridRow {
-                    Text("Marketplace").foregroundStyle(.secondary)
-                    Text("ClawHub")
+                    Text(appLocalized("Marketplace")).foregroundStyle(.secondary)
+                    Text(appLocalized("ClawHub"))
                 }
                 GridRow {
-                    Text("Downloads").foregroundStyle(.secondary)
+                    Text(appLocalized("Downloads")).foregroundStyle(.secondary)
                     Text(skill.formattedDownloads)
                 }
                 GridRow {
-                    Text("Stars").foregroundStyle(.secondary)
+                    Text(appLocalized("Stars")).foregroundStyle(.secondary)
                     Text(skill.formattedStars)
                 }
                 if let version = viewModel.selectedSkillDetail?.installVersion ?? skill.latestVersion {
                     GridRow {
-                        Text("Latest Version").foregroundStyle(.secondary)
+                        Text(appLocalized("Latest Version")).foregroundStyle(.secondary)
                         Text(version).textSelection(.enabled)
                     }
                 }
                 if let owner = ownerText {
                     GridRow {
-                        Text("Owner").foregroundStyle(.secondary)
+                        Text(appLocalized("Owner")).foregroundStyle(.secondary)
                         Text(owner).textSelection(.enabled)
                     }
                 }
                 if let updatedDate = skill.formattedUpdatedDate {
                     GridRow {
-                        Text("Updated").foregroundStyle(.secondary)
+                        Text(appLocalized("Updated")).foregroundStyle(.secondary)
                         Text(updatedDate)
                     }
                 }
                 if let publishedDate = viewModel.selectedSkillDetail?.formattedLatestVersionDate {
                     GridRow {
-                        Text("Latest Publish Date").foregroundStyle(.secondary)
+                        Text(appLocalized("Latest Publish Date")).foregroundStyle(.secondary)
                         Text(publishedDate)
                     }
                 }
                 if let license = viewModel.selectedSkillDetail?.license {
                     GridRow {
-                        Text("License").foregroundStyle(.secondary)
+                        Text(appLocalized("License")).foregroundStyle(.secondary)
                         Text(license)
                     }
                 }
                 if let moderation = moderationText {
                     GridRow {
-                        Text("Moderation").foregroundStyle(.secondary)
+                        Text(appLocalized("Moderation")).foregroundStyle(.secondary)
                         Text(moderation)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -157,25 +157,25 @@ struct ClawHubSkillDetailView: View {
             Divider()
 
             VStack(alignment: .leading, spacing: 8) {
-                Text("Skill Metadata")
+                Text(appLocalized("Skill Metadata"))
                     .font(.headline)
 
                 Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 6) {
                     if let author = metadata.author {
                         GridRow {
-                            Text("Author").foregroundStyle(.secondary)
+                            Text(appLocalized("Author")).foregroundStyle(.secondary)
                             Text(author).textSelection(.enabled)
                         }
                     }
                     if let version = metadata.version {
                         GridRow {
-                            Text("Version").foregroundStyle(.secondary)
+                            Text(appLocalized("Version")).foregroundStyle(.secondary)
                             Text(version).textSelection(.enabled)
                         }
                     }
                     if let license = metadata.license {
                         GridRow {
-                            Text("License").foregroundStyle(.secondary)
+                            Text(appLocalized("License")).foregroundStyle(.secondary)
                             Text(license).textSelection(.enabled)
                         }
                     }
@@ -189,7 +189,7 @@ struct ClawHubSkillDetailView: View {
 
     private var actionsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Actions")
+            Text(appLocalized("Actions"))
                 .font(.headline)
 
             HStack(spacing: 12) {
@@ -216,7 +216,7 @@ struct ClawHubSkillDetailView: View {
                 Button {
                     NSWorkspace.shared.open(detailPageURL)
                 } label: {
-                    Label("View on ClawHub", systemImage: "safari")
+                    Label(appLocalized("View on ClawHub"), systemImage: "safari")
                 }
                 .buttonStyle(.bordered)
             }
@@ -225,7 +225,7 @@ struct ClawHubSkillDetailView: View {
                 agentTypes: viewModel.targetAgentTypes,
                 selectedAgents: viewModel.selectedTargetAgents,
                 selectionSummary: viewModel.targetSelectionSummary(),
-                noteText: "安装时会先写入 SkillsMaster canonical 目录，再按各 Agent 的默认安装方式建立 direct install。",
+                noteText: appLocalized("Skills are first written into the SkillsMaster canonical directory, then materialized as direct installs using each Agent's default install mode."),
                 isAgentDetected: viewModel.isAgentDetected(_:),
                 onToggle: viewModel.toggleTargetAgent(_:)
             )
@@ -234,14 +234,14 @@ struct ClawHubSkillDetailView: View {
 
     private var skillContentSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Skill Content")
+            Text(appLocalized("Skill Content"))
                 .font(.headline)
 
             if viewModel.isLoadingContent {
                 HStack(spacing: 8) {
                     ProgressView()
                         .controlSize(.small)
-                    Text("Loading SKILL.md from ClawHub...")
+                    Text(appLocalized("Loading SKILL.md from ClawHub..."))
                         .foregroundStyle(.secondary)
                         .font(.subheadline)
                 }
@@ -260,7 +260,7 @@ struct ClawHubSkillDetailView: View {
                     Button {
                         NSWorkspace.shared.open(detailPageURL)
                     } label: {
-                        Label("View on ClawHub instead", systemImage: "safari")
+                        Label(appLocalized("View on ClawHub instead"), systemImage: "safari")
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
@@ -274,7 +274,7 @@ struct ClawHubSkillDetailView: View {
                         manuallyShowsChineseTranslation: viewModel.isShowingManualTranslation(for: skill.id)
                     )
                 } else {
-                    Text("No content available.")
+                    Text(appLocalized("No content available."))
                         .foregroundStyle(.secondary)
                         .font(.subheadline)
                         .italic()

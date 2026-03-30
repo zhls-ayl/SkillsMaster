@@ -13,6 +13,7 @@ struct AgentFileDetailView: View {
 
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
+        formatter.locale = AppLocalization.currentLocale()
         formatter.dateStyle = .medium
         formatter.timeStyle = .short
         return formatter
@@ -47,24 +48,24 @@ struct AgentFileDetailView: View {
             viewModel.loadSelectedItemDetails()
         }
         .confirmationDialog(
-            "未保存修改",
+            AppLocalization.string("Unsaved Changes"),
             isPresented: Binding(
                 get: { viewModel.pendingNavigationAction != nil },
                 set: { if !$0 { viewModel.cancelPendingNavigationAction() } }
             ),
             titleVisibility: .visible
         ) {
-            Button("保存") {
+            Button(AppLocalization.string("Save")) {
                 Task { _ = await viewModel.savePendingNavigationAction() }
             }
-            Button("放弃修改", role: .destructive) {
+            Button(AppLocalization.string("Discard Changes"), role: .destructive) {
                 viewModel.discardPendingNavigationAction()
             }
-            Button("取消", role: .cancel) {
+            Button(AppLocalization.string("Cancel"), role: .cancel) {
                 viewModel.cancelPendingNavigationAction()
             }
         } message: {
-            Text("当前文件有未保存修改。")
+            Text(AppLocalization.string("The current file has unsaved changes."))
         }
     }
 
@@ -79,19 +80,24 @@ struct AgentFileDetailView: View {
             }
 
             Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
-                detailRow("根目录", value: viewModel.rootDisplayPath)
-                detailRow("状态", value: viewModel.rootExists ? "已存在" : "尚未创建")
-                detailRow("受保护路径", value: viewModel.protectedURL.path)
+                detailRow(AppLocalization.string("Root Directory"), value: viewModel.rootDisplayPath)
+                detailRow(
+                    AppLocalization.string("Status"),
+                    value: viewModel.rootExists
+                        ? AppLocalization.string("Exists")
+                        : AppLocalization.string("Not Created")
+                )
+                detailRow(AppLocalization.string("Protected Path"), value: viewModel.protectedURL.path)
             }
             .font(.subheadline)
 
             protectionNotice(
-                title: "只读保护",
-                message: "`skills/` 目录及其全部子内容由 SkillsMaster 管理。在 Agent Files 中只能浏览与跳转，不能新建、重命名、删除或打开到外部编辑器。"
+                title: AppLocalization.string("Read-Only Protection"),
+                message: AppLocalization.string("The `skills/` directory and all of its contents are managed by SkillsMaster. In Agent Files you can only browse and navigate them, not create, rename, delete, or open them in an external editor.")
             )
 
             if !viewModel.rootExists {
-                Text("当前根目录不存在。使用左侧工具栏新建文件或文件夹时，SkillsMaster 会自动创建该 Agent 的配置目录。")
+                Text(AppLocalization.string("The root directory does not exist yet. When you create a file or folder from the toolbar, SkillsMaster creates this Agent's configuration directory automatically."))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -119,7 +125,7 @@ struct AgentFileDetailView: View {
                         .fontWeight(.bold)
 
                     if item.isProtected {
-                        Text("只读")
+                        Text(AppLocalization.string("Read Only"))
                             .font(.caption)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
@@ -136,51 +142,51 @@ struct AgentFileDetailView: View {
             }
 
             Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
-                detailRow("路径", value: item.url.path)
-                detailRow("相对路径", value: item.relativePath)
-                detailRow("类型", value: itemTypeDescription(item))
-                detailRow("隐藏文件", value: item.isHidden ? "是" : "否")
-                detailRow("Symbolic Link", value: item.isSymbolicLink ? "是" : "否")
+                detailRow(AppLocalization.string("Path"), value: item.url.path)
+                detailRow(AppLocalization.string("Relative Path"), value: item.relativePath)
+                detailRow(AppLocalization.string("Type"), value: itemTypeDescription(item))
+                detailRow(AppLocalization.string("Hidden"), value: item.isHidden ? AppLocalization.string("Yes") : AppLocalization.string("No"))
+                detailRow(AppLocalization.string("Symbolic Link"), value: item.isSymbolicLink ? AppLocalization.string("Yes") : AppLocalization.string("No"))
 
                 if item.isDirectory {
                     if item.isSymbolicLink {
-                        detailRow("已加载子项", value: "symlink 目标不递归展开")
+                        detailRow(AppLocalization.string("Loaded Children"), value: AppLocalization.string("Symbolic link targets are not expanded recursively"))
                     } else if let loadedChildCount = viewModel.loadedChildCount(for: item) {
-                        detailRow("已加载子项", value: "\(loadedChildCount)")
+                        detailRow(AppLocalization.string("Loaded Children"), value: "\(loadedChildCount)")
                     } else {
-                        detailRow("已加载子项", value: "展开目录后加载")
+                        detailRow(AppLocalization.string("Loaded Children"), value: AppLocalization.string("Loaded after expanding the directory"))
                     }
                 } else if viewModel.isLoadingSelectedItemDetails {
-                    detailRow("详情", value: "加载中...")
+                    detailRow(AppLocalization.string("Details"), value: AppLocalization.string("Loading..."))
                 } else if let details = viewModel.selectedItemDetails {
                     if let modifiedDate = details.modifiedDate {
-                        detailRow("修改时间", value: dateFormatter.string(from: modifiedDate))
+                        detailRow(AppLocalization.string("Modified"), value: dateFormatter.string(from: modifiedDate))
                     }
                     if let fileSize = details.fileSize {
-                        detailRow("大小", value: byteCountFormatter.string(fromByteCount: Int64(fileSize)))
+                        detailRow(AppLocalization.string("Size"), value: byteCountFormatter.string(fromByteCount: Int64(fileSize)))
                     }
-                    detailRow("文本文件", value: details.isTextFile ? "是" : "否")
+                    detailRow(AppLocalization.string("Text File"), value: details.isTextFile ? AppLocalization.string("Yes") : AppLocalization.string("No"))
                 }
             }
             .font(.subheadline)
 
             if let reason = item.protectionReason {
-                protectionNotice(title: "受保护路径", message: reason)
+                protectionNotice(title: AppLocalization.string("Protected Path"), message: reason)
             } else if item.isSymbolicLink {
-                Text("当前项是 symbolic link。列表中只展示链接本身，不会递归展开其目标目录。")
+                Text(AppLocalization.string("This item is a symbolic link. The list only shows the link itself and does not recursively expand its target directory."))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             } else if let details = viewModel.selectedItemDetails,
                       !item.isDirectory,
                       !details.isTextFile {
-                Text("当前只允许通过系统默认应用打开文本文件。非文本文件可在 Finder 中定位后自行处理。")
+                Text(AppLocalization.string("Only text files can be opened from here with the system default app. For non-text files, locate them in Finder and handle them there."))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             } else if !item.isDirectory,
                       !item.isSymbolicLink,
                       viewModel.previewViewModel == nil,
                       viewModel.selectedItemDetails?.isTextFile == true {
-                Text("当前文本文件暂不支持内置预览，可通过外置编辑器查看。")
+                Text(AppLocalization.string("This text file does not support the built-in preview yet. Use an external editor to inspect it."))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -201,7 +207,7 @@ struct AgentFileDetailView: View {
     @ViewBuilder
     private func previewSection(_ previewViewModel: TextFilePreviewViewModel) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("内容")
+            Text(AppLocalization.string("Content"))
                 .font(.headline)
 
             TextFilePreviewView(viewModel: previewViewModel)
@@ -216,31 +222,31 @@ struct AgentFileDetailView: View {
         canOpenInTerminal: Bool
     ) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("操作")
+            Text(AppLocalization.string("Actions"))
                 .font(.headline)
 
             HStack(spacing: 12) {
                 if canEditInternally {
-                    Button("编辑") {
+                    Button(AppLocalization.string("Edit")) {
                         viewModel.startEditingSelectedItem()
                     }
                     .buttonStyle(.borderedProminent)
                 }
 
                 if canOpenInExternalEditor {
-                    Button("外置编辑器打开") {
+                    Button(AppLocalization.string("Open in External Editor")) {
                         viewModel.openSelectedInExternalEditor()
                     }
                     .buttonStyle(.bordered)
                 }
 
-                Button("在 Finder 中显示") {
+                Button(AppLocalization.string("Show in Finder")) {
                     viewModel.revealSelectedOrRootInFinder()
                 }
                 .buttonStyle(.bordered)
                 .disabled(!canRevealInFinder)
 
-                Button("在 Terminal 中打开") {
+                Button(AppLocalization.string("Open in Terminal")) {
                     viewModel.openSelectedOrRootInTerminal()
                 }
                 .buttonStyle(.bordered)
@@ -258,7 +264,7 @@ struct AgentFileDetailView: View {
                 Image(systemName: "folder")
             }
             .buttonStyle(.borderless)
-            .help("在 Finder 中显示")
+            .help(AppLocalization.string("Show in Finder"))
             .disabled(!viewModel.canRevealSelectedOrRoot)
 
             Button {
@@ -267,7 +273,7 @@ struct AgentFileDetailView: View {
                 Image(systemName: "terminal")
             }
             .buttonStyle(.borderless)
-            .help("在 Terminal 中打开")
+            .help(AppLocalization.string("Open in Terminal"))
             .disabled(!viewModel.canOpenSelectedOrRootInTerminal)
 
             if viewModel.canEditSelectedInternally {
@@ -277,7 +283,7 @@ struct AgentFileDetailView: View {
                     Image(systemName: "pencil")
                 }
                 .buttonStyle(.borderless)
-                .help("编辑")
+                .help(AppLocalization.string("Edit"))
             }
 
             if viewModel.canOpenSelectedInExternalEditor {
@@ -287,7 +293,7 @@ struct AgentFileDetailView: View {
                     Image(systemName: "square.and.arrow.up")
                 }
                 .buttonStyle(.borderless)
-                .help("在外置编辑器中打开")
+                .help(AppLocalization.string("Open in External Editor"))
             }
         }
     }
@@ -321,11 +327,13 @@ struct AgentFileDetailView: View {
 
     private func itemTypeDescription(_ item: AgentFileItem) -> String {
         if item.isDirectory {
-            return item.isSymbolicLink ? "文件夹 symbolic link" : "文件夹"
+            return item.isSymbolicLink
+                ? AppLocalization.string("Folder Symbolic Link")
+                : AppLocalization.string("Folder")
         }
         if item.isSymbolicLink {
-            return "文件 symbolic link"
+            return AppLocalization.string("File Symbolic Link")
         }
-        return "文件"
+        return AppLocalization.string("File")
     }
 }

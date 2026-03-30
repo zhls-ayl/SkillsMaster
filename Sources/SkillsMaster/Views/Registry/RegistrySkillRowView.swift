@@ -27,7 +27,7 @@ struct RegistrySkillRowView: View {
                     // "Installed" badge — matches the existing SkillInstallView pattern
                     // (green capsule with "Installed" text)
                     if isInstalled {
-                        Text("Installed")
+                        Text(appLocalized("Installed"))
                             .font(.caption2)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
@@ -59,7 +59,7 @@ struct RegistrySkillRowView: View {
                     // (each digit occupies the same width, like tabular figures in typography)
                     .monospacedDigit()
 
-                Text("installs")
+                Text(appLocalized("installs"))
                     .font(.caption2)
                     // .tertiary is lighter than .secondary — used for least important text
                     .foregroundStyle(.tertiary)

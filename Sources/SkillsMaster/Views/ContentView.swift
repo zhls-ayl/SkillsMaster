@@ -119,8 +119,8 @@ struct ContentView: View {
                 } else {
                     EmptyStateView(
                         icon: "globe",
-                        title: "请选择 Skill",
-                        subtitle: "请从 Skills.sh 中选择一个 Skill 查看详情"
+                        title: AppLocalization.string("Select a Skill"),
+                        subtitle: AppLocalization.string("Please select a Skill from Skills.sh to view details.")
                     )
                 }
             } else if selectedSidebarItem == .clawHub {
@@ -135,8 +135,8 @@ struct ContentView: View {
                 } else {
                     EmptyStateView(
                         icon: "shippingbox",
-                        title: "请选择 Skill",
-                        subtitle: "请从 ClawHub 中选择一个 Skill 查看详情"
+                        title: AppLocalization.string("Select a Skill"),
+                        subtitle: AppLocalization.string("Please select a Skill from ClawHub to view details.")
                     )
                 }
             } else if selectedSidebarItem == .skillsHub {
@@ -151,8 +151,8 @@ struct ContentView: View {
                 } else {
                     EmptyStateView(
                         icon: "shippingbox.circle",
-                        title: "请选择 Skill",
-                        subtitle: "请从 SkillsHub 中选择一个 Skill 查看详情"
+                        title: AppLocalization.string("Select a Skill"),
+                        subtitle: AppLocalization.string("Please select a Skill from SkillsHub to view details.")
                     )
                 }
             } else if case .agentFiles(let agentType) = selectedSidebarItem,
@@ -177,8 +177,8 @@ struct ContentView: View {
                 } else {
                     EmptyStateView(
                         icon: "archivebox",
-                        title: "请选择 Skill",
-                        subtitle: "请从 Repository 中选择一个 Skill 查看详情"
+                        title: AppLocalization.string("Select a Skill"),
+                        subtitle: AppLocalization.string("Please select a Skill from the Repository to view details.")
                     )
                 }
             } else if let skillID = selectedSkillID, let vm = detailVM {
@@ -196,8 +196,8 @@ struct ContentView: View {
             } else {
                 EmptyStateView(
                     icon: "square.stack.3d.up",
-                    title: "请选择 Skill",
-                    subtitle: "请从列表中选择一个 Skill 查看详情"
+                    title: AppLocalization.string("Select a Skill"),
+                    subtitle: AppLocalization.string("Please select a Skill from the list to view details.")
                 )
             }
         }
@@ -234,14 +234,14 @@ struct ContentView: View {
             rebuildAgentFilesVMs()
         }
         .confirmationDialog(
-            "未保存修改",
+            AppLocalization.string("Unsaved Changes"),
             isPresented: Binding(
                 get: { pendingNavigationAction != nil },
                 set: { if !$0 { pendingNavigationAction = nil } }
             ),
             titleVisibility: .visible
         ) {
-            Button("保存") {
+            Button(AppLocalization.string("Save")) {
                 Task {
                     let didSave = await saveCurrentEditorForNavigation()
                     if didSave {
@@ -249,15 +249,15 @@ struct ContentView: View {
                     }
                 }
             }
-            Button("放弃修改", role: .destructive) {
+            Button(AppLocalization.string("Discard Changes"), role: .destructive) {
                 discardCurrentEditorForNavigation()
                 performPendingNavigationAction()
             }
-            Button("取消", role: .cancel) {
+            Button(AppLocalization.string("Cancel"), role: .cancel) {
                 pendingNavigationAction = nil
             }
         } message: {
-            Text("当前编辑器有未保存修改。")
+            Text(AppLocalization.string("The current editor has unsaved changes."))
         }
         .alert(
             item: Binding(
@@ -268,10 +268,10 @@ struct ContentView: View {
             Alert(
                 title: Text(prompt.title),
                 message: Text(prompt.message),
-                primaryButton: .default(Text("知道了")) {
+                primaryButton: .default(Text(AppLocalization.string("Got It"))) {
                     skillManager.dismissTranslationPackPrompt()
                 },
-                secondaryButton: .default(Text("下次不再提示")) {
+                secondaryButton: .default(Text(AppLocalization.string("Don't show again"))) {
                     skillManager.dontShowTranslationPackPromptAgain()
                 }
             )

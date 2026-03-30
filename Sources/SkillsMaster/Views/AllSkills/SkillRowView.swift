@@ -58,7 +58,7 @@ struct SkillRowView: View {
                 }
 
                 if let version = skill.metadata.version {
-                    Label("v\(version)", systemImage: "tag")
+                    Label(version, systemImage: "tag")
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                 }
@@ -97,20 +97,20 @@ struct SkillRowView: View {
             Image(systemName: "arrow.up.circle.fill")
                 .foregroundStyle(.orange)
                 .font(.caption)
-                .help("有可用更新")
+                .help(AppLocalization.string("Update available"))
         case .upToDate:
             // 已是最新: green checkmark in filled circle icon
             Image(systemName: "checkmark.circle.fill")
                 .foregroundStyle(.green)
                 .font(.caption)
-                .help("已是最新")
+                .help(AppLocalization.string("Up to Date"))
         case .error(let message):
             // 检查失败：yellow warning triangle icon, hover shows error details
             // .help() sets mouse hover tooltip (native macOS feature)
             Image(systemName: "exclamationmark.triangle.fill")
                 .foregroundStyle(.yellow)
                 .font(.caption)
-                .help("检查失败：\(message)")
+                .help(AppLocalization.format("Check failed: %@", message))
         }
     }
 }

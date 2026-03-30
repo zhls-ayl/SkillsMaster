@@ -15,15 +15,15 @@ actor SkillsHubService {
         var displayName: String {
             switch self {
             case .score:
-                return "综合"
+                return AppLocalization.string("Score")
             case .downloads:
-                return "下载量"
+                return AppLocalization.string("Downloads")
             case .stars:
-                return "收藏"
+                return AppLocalization.string("Stars")
             case .installs:
-                return "安装量"
+                return AppLocalization.string("Installs")
             case .name:
-                return "名称"
+                return AppLocalization.string("Name")
             }
         }
     }
@@ -59,18 +59,18 @@ actor SkillsHubService {
         var errorDescription: String? {
             switch self {
             case .invalidURL:
-                return "无法构造有效的 SkillsHub 请求地址。"
+                return AppLocalization.string("Failed to construct a valid SkillsHub request URL.")
             case .invalidResponse(let statusCode, let message):
                 if message.isEmpty {
-                    return "SkillsHub 请求失败，状态码 \(statusCode)。"
+                    return AppLocalization.format("SkillsHub request failed with status code %d.", statusCode)
                 }
-                return "SkillsHub 请求失败（\(statusCode)）：\(message)"
+                return AppLocalization.format("SkillsHub request failed (%d): %@", statusCode, message)
             case .skillNotFound(let slug):
-                return "未找到 SkillsHub skill：\(slug)"
+                return AppLocalization.format("SkillsHub skill not found: %@", slug)
             case .invalidArchive(let slug):
-                return "SkillsHub skill 包无效：\(slug)"
+                return AppLocalization.format("Invalid SkillsHub skill archive: %@", slug)
             case .emptySkillContent(let slug):
-                return "SkillsHub skill 包中缺少有效的 SKILL.md：\(slug)"
+                return AppLocalization.format("The SkillsHub package does not contain a valid SKILL.md: %@", slug)
             }
         }
     }
@@ -362,7 +362,7 @@ actor SkillsHubService {
 
     private func validate(response: URLResponse, data: Data) throws {
         guard let httpResponse = response as? HTTPURLResponse else {
-            throw ServiceError.invalidResponse(statusCode: -1, message: "收到的不是 HTTP 响应。")
+            throw ServiceError.invalidResponse(statusCode: -1, message: AppLocalization.string("Received a non-HTTP response."))
         }
 
         guard (200..<300).contains(httpResponse.statusCode) else {

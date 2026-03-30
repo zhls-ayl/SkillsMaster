@@ -8,7 +8,7 @@
 - `AGENTS.md`：仓库协作原则、决策边界、验证要求、高风险改动规则
 
 ## 建议阅读顺序
-- 想快速了解项目：先读 `README.md`
+- 想快速了解项目：英文读者先读 `README.md`，中文读者先读 `README_CN.md`
 - 想继续理解实现与专题文档：再读 `docs/architecture.md`
 - 想理解 ClawHub 浏览、详情与安装链路：补读 `docs/clawhub.md`
 - 想理解 SkillsHub 浏览、archive 详情、安装与更新链路：补读 `docs/skillhub.md`
@@ -17,7 +17,7 @@
 - 想确认能力边界与未实现项：补读 `docs/roadmap.md`
 
 ## 文档更新落点
-- 改项目定位、使用方式、入口说明、截图结构：更新 `README.md`
+- 改项目定位、使用方式、入口说明、截图结构：同步更新 `README.md` 与 `README_CN.md`
 - 改文档目录、阅读顺序、文档维护规则：更新 `docs/Index.md`
 - 改模块职责、路径约定、扫描/同步/迁移逻辑、存储结构：更新 `docs/architecture.md`
 - 改 ClawHub 入口、模型、API 对接、分页、详情加载、安装落盘与限制条件：更新 `docs/clawhub.md`

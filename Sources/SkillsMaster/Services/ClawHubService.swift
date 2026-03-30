@@ -15,12 +15,12 @@ actor ClawHubService {
 
         var displayName: String {
             switch self {
-            case .downloads: return "Downloads"
-            case .newest: return "Newest"
-            case .updated: return "Updated"
-            case .installs: return "Installs"
-            case .stars: return "Stars"
-            case .name: return "Name"
+            case .downloads: return AppLocalization.string("Downloads")
+            case .newest: return AppLocalization.string("Newest")
+            case .updated: return AppLocalization.string("Updated")
+            case .installs: return AppLocalization.string("Installs")
+            case .stars: return AppLocalization.string("Stars")
+            case .name: return AppLocalization.string("Name")
             }
         }
 
@@ -42,8 +42,8 @@ actor ClawHubService {
 
         var displayName: String {
             switch self {
-            case .descending: return "Desc"
-            case .ascending: return "Asc"
+            case .descending: return AppLocalization.string("Desc")
+            case .ascending: return AppLocalization.string("Asc")
             }
         }
     }

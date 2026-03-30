@@ -6,6 +6,7 @@ import PackageDescription
 
 let package = Package(
     name: "SkillsMaster",
+    defaultLocalization: "en",
 
     // Specify minimum platform: macOS 14 (Sonoma), because we use the @Observable macro (new feature in macOS 14+)
     platforms: [.macOS(.v14)],
@@ -33,6 +34,7 @@ let package = Package(
             // .process optimizes based on file type (e.g., PNG compression), .copy copies as is
             // .icns files need to use .copy to preserve original format, as SPM doesn't recognize .icns type
             resources: [
+                .process("Resources/Localization"),
                 .copy("Resources/AppIcon.icns"),
                 .copy("Resources/AgentIcons")
             ]

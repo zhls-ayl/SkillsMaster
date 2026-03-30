@@ -54,7 +54,7 @@ struct SkillsHubSkillDetailView: View {
                     .textSelection(.enabled)
 
                 if viewModel.isFeatured(skill) {
-                    Text("Featured")
+                    Text(appLocalized("Featured"))
                         .font(.caption)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
@@ -64,7 +64,7 @@ struct SkillsHubSkillDetailView: View {
                 }
 
                 if isInstalled {
-                    Text("Installed")
+                    Text(appLocalized("Installed"))
                         .font(.caption)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
@@ -75,7 +75,7 @@ struct SkillsHubSkillDetailView: View {
             }
 
             HStack(spacing: 4) {
-                Text("Slug:")
+                Text(appLocalized("Slug:"))
                     .foregroundStyle(.secondary)
                 Text(skill.slug)
                     .textSelection(.enabled)
@@ -91,17 +91,17 @@ struct SkillsHubSkillDetailView: View {
 
     private var packageInfoSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Package Info")
+            Text(appLocalized("Package Info"))
                 .font(.headline)
 
             Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 6) {
                 GridRow {
-                    Text("Marketplace").foregroundStyle(.secondary)
-                    Text("SkillsHub")
+                    Text(appLocalized("Marketplace")).foregroundStyle(.secondary)
+                    Text(appLocalized("SkillsHub"))
                 }
                 if let upstream = upstreamDisplayName {
                     GridRow {
-                        Text("Upstream").foregroundStyle(.secondary)
+                        Text(appLocalized("Upstream")).foregroundStyle(.secondary)
                         if let url = upstreamURL {
                             Link(upstream, destination: url)
                         } else {
@@ -111,49 +111,49 @@ struct SkillsHubSkillDetailView: View {
                 }
                 if let category = skill.category {
                     GridRow {
-                        Text("Category").foregroundStyle(.secondary)
+                        Text(appLocalized("Category")).foregroundStyle(.secondary)
                         Text(category.displayName)
                     }
                 }
                 GridRow {
-                    Text("Downloads").foregroundStyle(.secondary)
+                    Text(appLocalized("Downloads")).foregroundStyle(.secondary)
                     Text(skill.formattedDownloads)
                 }
                 GridRow {
-                    Text("Installs").foregroundStyle(.secondary)
+                    Text(appLocalized("Installs")).foregroundStyle(.secondary)
                     Text(skill.formattedInstalls)
                 }
                 GridRow {
-                    Text("Stars").foregroundStyle(.secondary)
+                    Text(appLocalized("Stars")).foregroundStyle(.secondary)
                     Text(skill.formattedStars)
                 }
                 if let version = viewModel.selectedSkillDetail?.installVersion ?? skill.latestVersion {
                     GridRow {
-                        Text("Latest Version").foregroundStyle(.secondary)
+                        Text(appLocalized("Latest Version")).foregroundStyle(.secondary)
                         Text(version).textSelection(.enabled)
                     }
                 }
                 if let ownerName = skill.ownerName, !ownerName.isEmpty {
                     GridRow {
-                        Text("Owner").foregroundStyle(.secondary)
+                        Text(appLocalized("Owner")).foregroundStyle(.secondary)
                         Text(ownerName).textSelection(.enabled)
                     }
                 }
                 if let updatedDate = skill.formattedUpdatedDate {
                     GridRow {
-                        Text("Updated").foregroundStyle(.secondary)
+                        Text(appLocalized("Updated")).foregroundStyle(.secondary)
                         Text(updatedDate)
                     }
                 }
                 if let publishedDate = viewModel.selectedSkillDetail?.formattedPublishedDate {
                     GridRow {
-                        Text("Published").foregroundStyle(.secondary)
+                        Text(appLocalized("Published")).foregroundStyle(.secondary)
                         Text(publishedDate)
                     }
                 }
                 if let fileCount = viewModel.selectedSkillDetail?.extractedFiles.count {
                     GridRow {
-                        Text("Files").foregroundStyle(.secondary)
+                        Text(appLocalized("Files")).foregroundStyle(.secondary)
                         Text("\(fileCount)")
                     }
                 }
@@ -162,7 +162,7 @@ struct SkillsHubSkillDetailView: View {
 
             if let tags = tagsText {
                 HStack(alignment: .top) {
-                    Text("Tags")
+                    Text(appLocalized("Tags"))
                         .foregroundStyle(.secondary)
                         .font(.subheadline)
                         .frame(width: 72, alignment: .leading)
@@ -177,7 +177,7 @@ struct SkillsHubSkillDetailView: View {
 
     private var actionsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Actions")
+            Text(appLocalized("Actions"))
                 .font(.headline)
 
             HStack(spacing: 12) {
@@ -215,7 +215,7 @@ struct SkillsHubSkillDetailView: View {
                 agentTypes: viewModel.targetAgentTypes,
                 selectedAgents: viewModel.selectedTargetAgents,
                 selectionSummary: viewModel.targetSelectionSummary(),
-                noteText: "安装时会先写入 SkillsMaster canonical 目录，再按各 Agent 的默认安装方式建立 direct install。",
+                noteText: appLocalized("Skills are first written into the SkillsMaster canonical directory, then materialized as direct installs using each Agent's default install mode."),
                 isAgentDetected: viewModel.isAgentDetected(_:),
                 onToggle: viewModel.toggleTargetAgent(_:)
             )
@@ -225,14 +225,14 @@ struct SkillsHubSkillDetailView: View {
     @ViewBuilder
     private var skillContentSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Skill Content")
+            Text(appLocalized("Skill Content"))
                 .font(.headline)
 
             if viewModel.isLoadingDetail {
                 HStack(spacing: 8) {
                     ProgressView()
                         .controlSize(.small)
-                    Text("正在加载 SkillsHub skill 包...")
+                    Text(appLocalized("Loading SkillsHub package..."))
                         .foregroundStyle(.secondary)
                         .font(.subheadline)
                 }
@@ -265,7 +265,7 @@ struct SkillsHubSkillDetailView: View {
                 )
                     .textSelection(.enabled)
             } else {
-                Text("请选择一个 SkillsHub skill 查看详情。")
+                Text(appLocalized("Select a SkillsHub skill to view details."))
                     .foregroundStyle(.secondary)
             }
         }
@@ -286,25 +286,25 @@ struct SkillsHubSkillDetailView: View {
             Divider()
 
             VStack(alignment: .leading, spacing: 8) {
-                Text("Skill Metadata")
+                Text(appLocalized("Skill Metadata"))
                     .font(.headline)
 
                 Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 6) {
                     if let author = metadata.author {
                         GridRow {
-                            Text("Author").foregroundStyle(.secondary)
+                            Text(appLocalized("Author")).foregroundStyle(.secondary)
                             Text(author).textSelection(.enabled)
                         }
                     }
                     if let version = metadata.version {
                         GridRow {
-                            Text("Version").foregroundStyle(.secondary)
+                            Text(appLocalized("Version")).foregroundStyle(.secondary)
                             Text(version).textSelection(.enabled)
                         }
                     }
                     if let license = metadata.license {
                         GridRow {
-                            Text("License").foregroundStyle(.secondary)
+                            Text(appLocalized("License")).foregroundStyle(.secondary)
                             Text(license).textSelection(.enabled)
                         }
                     }
@@ -324,7 +324,7 @@ struct SkillsHubSkillDetailView: View {
     private var upstreamDisplayName: String? {
         switch viewModel.selectedSkillDetail?.originSourceType ?? skill.originSourceType {
         case "clawhub":
-            return "ClawHub"
+            return appLocalized("ClawHub")
         default:
             return nil
         }
@@ -338,6 +338,6 @@ struct SkillsHubSkillDetailView: View {
     }
 
     private var upstreamButtonTitle: String {
-        upstreamDisplayName.map { "View on \($0)" } ?? "View Upstream"
+        upstreamDisplayName.map { AppLocalization.format("View on %@", $0) } ?? appLocalized("View Upstream")
     }
 }
