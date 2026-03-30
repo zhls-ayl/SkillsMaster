@@ -24,7 +24,7 @@ SkillsMaster 的目标就是把这些操作变成一套一致的本地图形界�
 - 在 `Installed > All Skills` 中搜索、排序、删除、编辑、重新分配 Agent，并检查更新
 - 提供 `Agent Files` 视图浏览各 Agent 配置目录，支持文本预览、内置编辑、Finder/终端/外部编辑器跳转
 - 支持为每个 Agent 单独设置默认安装方式：`symbolic link` 或 `physical copy`
-- 支持从 Git 仓库、`Skills.sh`、ClawHub、SkillsHub 与 Custom Repository 安装 Skills
+- 支持从 `Skills.sh`、ClawHub、SkillsHub 与 Custom Repository 安装 Skills
 - 支持批量检查 Git 来源与 SkillsHub 来源 Skill 更新
 - 支持应用自更新，并优先使用 GitHub Release 中的 `universal.zip`
 - 支持 GitHub Release 多产物分发：`universal.zip`、`arm64.zip`、`x86_64.zip`、`universal.dmg`
@@ -91,7 +91,7 @@ cd SkillsMaster
 
 - `Installed`：查看、编辑、分配、删除、检查更新本地已安装 Skills
 - `Marketplace`：从 `Skills.sh`、ClawHub、SkillsHub 浏览并安装 Skills
-- `Repositories`：接入 GitHub / GitLab Custom Repository 并按仓库同步、浏览、安装
+- `Repositories`：添加 SSH、公开 HTTPS 或 `HTTPS + Token` 的 Custom Repository，并按仓库同步、浏览、安装
 - `Agents`：浏览每个 Agent 的 Skills 和配置目录文件
 
 ## 用户需要知道的约定

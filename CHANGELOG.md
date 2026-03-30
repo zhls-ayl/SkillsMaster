@@ -7,6 +7,21 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.2.9] - 2026-03-30
+### Added
+- `Settings > Repositories` 新增 `HTTPS (Public)` 认证模式，允许为任意支持匿名 `git clone` 的公开 HTTPS 仓库（包括自建 Git 服务）添加 Custom Repository，而不再强制要求填写 Token。
+- 为 Custom Repository 认证模式补充回归测试，覆盖 `SSH`、`HTTPS (Public)`、`HTTPS + Token` 的 URL 转换、兼容推断与校验行为。
+
+### Changed
+- `Repositories` 新增仓库流程现在显式区分 `SSH`、`HTTPS (Public)` 与 `HTTPS + Token` 三种认证方式；公开 HTTPS 仓库会直接走匿名 clone/pull，而 Token 模式继续使用 Keychain 中的凭据。
+- 同步更新 `README.md`、`README_CN.md`、架构文档、本地化字符串与截图资源，使仓库添加与安装路径说明对齐当前实现。
+
+### Removed
+- 移除主界面工具栏中的 `+` 手动 GitHub 仓库安装入口，以及对应的 Install sheet、ViewModel、最近扫描仓库历史与相关调用链；Git 仓库安装现在统一通过 `Settings > Repositories` 添加后再浏览安装。
+
+### Fixed
+- 修复 `Repositories` 对公开 HTTPS 仓库一律要求 Token 的问题，恢复对无需鉴权的 GitHub / GitLab / 自建 Git 仓库的正常接入与同步。
+
 ## [0.2.8] - 2026-03-30
 ### Fixed
 - 修复单架构发布包（尤其 `arm64.zip` / `x86_64.zip`）中 SwiftPM resource bundle 放置路径与运行时查找规则不一致的问题，避免用户解压安装后应用在启动阶段因 `Bundle.module` 断言而直接崩溃。

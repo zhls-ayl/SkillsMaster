@@ -1,6 +1,6 @@
 import Foundation
 
-/// `GitService` 封装了仓库内所有 git CLI 操作，是 F10（One-Click Install）和 F12（Update Check）的基础设施。
+/// `GitService` 封装了仓库内所有 git CLI 操作，是 Git 来源安装与更新检查的基础设施。
 ///
 /// 由于 git 操作会涉及临时目录、filesystem read/write 和外部进程调用，
 /// 这里使用 `actor` 保证 thread safety，避免多个任务同时执行 git 命令导致 data race。

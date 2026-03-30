@@ -69,8 +69,7 @@ SkillsMaster 是一个基于 SwiftUI 的 macOS 应用，用于管理多代理 Sk
 - 注册表技能：通过 `SkillRegistryService` 获取索引，并在详情页内联勾选 Agent 后执行安装
 - ClawHub：通过 `ClawHubService` 拉取 marketplace 列表、详情、`SKILL.md` 与 archive，由 `ClawHubBrowserViewModel` 编排浏览/安装，并通过 `SkillManager.installClawHubSkill(...)` 安装到 canonical 目录后按目标 Agent 集合落盘；详细链路见 `docs/clawhub.md`
 - SkillsHub：通过 `SkillsHubService` 拉取 SkillsHub 列表、精选、轻量搜索与 archive，由 `SkillsHubBrowserViewModel` 编排浏览/安装，并通过 `SkillManager.installSkillsHubSkill(...)` 安装到 canonical 目录后按目标 Agent 集合落盘；详细链路见 `docs/skillhub.md`
-- 远程仓库安装：通过 `GitService` 克隆 / 扫描 / 拷贝到 canonical 目录
-- 自定义仓库：由 `RepositoryManager` 管理配置、同步与轻量索引缓存，由 `RepositoryBrowserViewModel` 驱动浏览与安装；列表使用缓存索引，详情页按需加载完整 `SKILL.md`，并在详情页内联勾选 Agent 后执行安装。`~/.skillsmaster/repos` 下的 clone 目录视为 SkillsMaster 内部缓存，不作为用户手动编辑的工作目录；若检测到本地未提交改动，会跳过扫描缓存以避免展示过期索引。
+- 自定义仓库：由 `RepositoryManager` 管理配置、同步与轻量索引缓存，由 `RepositoryBrowserViewModel` 驱动浏览与安装；支持 `SSH`、匿名 `HTTPS (Public)` 与 `HTTPS + Token` 三种认证模式。列表使用缓存索引，详情页按需加载完整 `SKILL.md`，并在详情页内联勾选 Agent 后执行安装。`~/.skillsmaster/repos` 下的 clone 目录视为 SkillsMaster 内部缓存，不作为用户手动编辑的工作目录；若检测到本地未提交改动，会跳过扫描缓存以避免展示过期索引。
 
 统一安装后都会落到 canonical 目录，再按各 Agent 的默认安装方式把 direct install 落到代理目录，并由 `LockFileManager` 更新 lock file。Marketplace 与 Custom Repository 详情页默认不预选 Agent；空选择点击按钮会弹 alert；若已选 Agent 中同时包含“已直接安装”和“未直接安装”的目标，主按钮显示 `Install / Reinstall`。对于 physical copy，后续更新、重新安装和应用内编辑也会同步覆盖 Agent 目录副本。
 

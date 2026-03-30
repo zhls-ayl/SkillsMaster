@@ -307,7 +307,7 @@ actor RepositoryManager {
     }
 
     private func httpAuthorization(for repo: SkillRepository) throws -> String? {
-        guard repo.authType == .httpsToken else { return nil }
+        guard repo.authType.requiresToken else { return nil }
 
         guard let key = repo.credentialKey, !key.isEmpty else {
             throw RepositoryError.missingCredentials("Missing HTTPS token key for repository '\(repo.name)'")

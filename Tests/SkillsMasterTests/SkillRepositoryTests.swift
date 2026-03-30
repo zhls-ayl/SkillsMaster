@@ -9,6 +9,12 @@ final class SkillRepositoryTests: XCTestCase {
         XCTAssertEqual(output, "https://github.com/org/repo.git")
     }
 
+    func testConvertSSHToPublicHTTPS() {
+        let input = "git@github.com:org/repo.git"
+        let output = SkillRepository.convertRepoURL(input, to: .httpsPublic)
+        XCTAssertEqual(output, "https://github.com/org/repo.git")
+    }
+
     func testConvertHTTPSToSSH() {
         let input = "https://gitlab.com/team/private-skills.git"
         let output = SkillRepository.convertRepoURL(input, to: .ssh)
@@ -27,6 +33,24 @@ final class SkillRepositoryTests: XCTestCase {
         XCTAssertEqual(output, input)
     }
 
+    func testPublicAuthTypeDoesNotRequireToken() {
+        XCTAssertFalse(SkillRepository.AuthType.httpsPublic.requiresToken)
+        XCTAssertTrue(SkillRepository.AuthType.httpsToken.requiresToken)
+    }
+
+    func testInferHTTPSDefaultsToTokenForBackwardCompatibility() {
+        let inferred = SkillRepository.AuthType.infer(from: "https://git.example.com/group/skills.git")
+        XCTAssertEqual(inferred, .httpsToken)
+    }
+
+    func testValidatePublicHTTPSURLAcceptsEnterpriseHost() {
+        let result = SkillRepository.validate(
+            repoURL: "https://git.example.com/group/skills.git",
+            authType: .httpsPublic
+        )
+        XCTAssertNil(result)
+    }
+
     func testDecodeSyncOnLaunchDefaultsToFalseWhenMissing() throws {
         let json = """
         {
@@ -43,6 +67,24 @@ final class SkillRepositoryTests: XCTestCase {
         let data = Data(json.utf8)
         let repo = try JSONDecoder().decode(SkillRepository.self, from: data)
         XCTAssertFalse(repo.syncOnLaunch)
+    }
+
+    func testDecodeExplicitPublicHTTPSAuthType() throws {
+        let json = """
+        {
+          "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+          "name": "public-skills",
+          "repoURL": "https://example.com/org/repo.git",
+          "authType": "httpsPublic",
+          "platform": "github",
+          "isEnabled": true,
+          "localSlug": "org-repo"
+        }
+        """
+
+        let data = Data(json.utf8)
+        let repo = try JSONDecoder().decode(SkillRepository.self, from: data)
+        XCTAssertEqual(repo.authType, .httpsPublic)
     }
 
     func testDecodeSyncOnLaunchTrueWhenPresent() throws {
