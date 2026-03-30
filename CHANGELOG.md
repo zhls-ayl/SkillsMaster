@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Fixed
+- 修复发布自动化在当前仓库未开启 GitHub auto-merge 且 `set -u` 打开时，cask 同步尾段可能因为临时文件清理逻辑出错而提前退出的问题。
 
 ## [0.2.10] - 2026-03-31
 ### Added

@@ -87,7 +87,6 @@ merge_pr_with_wait() {
   local attempt_file
 
   attempt_file="$(mktemp)"
-  trap 'rm -f "${attempt_file}"' RETURN
 
   for _ in $(seq 1 180); do
     local state merged_at
@@ -96,17 +95,20 @@ merge_pr_with_wait() {
 
     if [[ -n "$merged_at" ]]; then
       ok "PR #${pr_number} in ${repo} has merged"
+      rm -f "${attempt_file}"
       return 0
     fi
 
     if [[ "$state" == "CLOSED" ]]; then
       error "PR #${pr_number} in ${repo} was closed without merge"
+      rm -f "${attempt_file}"
       exit 1
     fi
 
     if GH_TOKEN="${RELEASE_SYNC_TOKEN}" gh pr merge "$pr_number" --repo "$repo" --merge --delete-branch >"${attempt_file}" 2>&1; then
       cat "${attempt_file}" >&2
       ok "Merged PR #${pr_number} in ${repo}"
+      rm -f "${attempt_file}"
       return 0
     fi
 
@@ -118,6 +120,7 @@ merge_pr_with_wait() {
   if [[ -n "$last_output" ]]; then
     echo "${last_output}" >&2
   fi
+  rm -f "${attempt_file}"
   exit 1
 }
 
