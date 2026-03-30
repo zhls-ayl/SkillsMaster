@@ -18,7 +18,7 @@
 ```
 
 其中：
-- `ship.sh` 会优先读取 / 校验 `VERSION` 与 `CHANGELOG.md`，必要时自动创建发布准备 PR 并开启 auto-merge
+- `ship.sh` 会优先读取 / 校验 `VERSION` 与 `CHANGELOG.md`，必要时自动创建发布准备 PR；如果仓库未开启 GitHub auto-merge，脚本会等待检查通过后直接 merge，而不是依赖仓库级 auto-merge 开关
 - 远端 `Release Orchestrator` workflow 会等待发布准备 PR 合并，然后创建 tag、等待 `Release` workflow 成功，并在 release 产物发布后自动同步当前仓库与独立 tap 仓库的 cask
 - 如果希望只验证而不真正执行，可以先跑：
 
@@ -29,7 +29,7 @@
 要让自动化走完整条链路，还需要在 GitHub 仓库 secrets 中配置：
 - `RELEASE_SYNC_TOKEN`
   - 必须至少有当前仓库 `SkillsMaster` 与 tap 仓库 `homebrew-skillsmaster` 的写权限
-  - 自动化会用它推 tag、创建 / 更新 PR、开启 auto-merge，并同步两个仓库的 cask
+  - 自动化会用它推 tag、创建 / 更新 PR、在检查通过后直接 merge PR，并同步两个仓库的 cask
 
 ## 底层手工流程（fallback / 调试）
 ```bash
