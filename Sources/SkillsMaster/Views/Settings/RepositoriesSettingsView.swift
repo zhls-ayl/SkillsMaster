@@ -23,16 +23,16 @@ struct RepositoriesSettingsView: View {
                         .font(.system(size: 36))
                         .foregroundStyle(.secondary)
 
-                    Text("No Custom Repositories")
+                    Text(appLocalized("No Custom Repositories"))
                         .font(.headline)
 
-                    Text("Add a GitHub or GitLab repository to use as a custom Skills source.")
+                    Text(appLocalized("Add a GitHub or GitLab repository to use as a custom Skills source."))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: 300)
 
-                    Button("添加 Repository") {
+                    Button(appLocalized("Add Repository")) {
                         showAddSheet = true
                     }
                     .buttonStyle(.borderedProminent)
@@ -67,7 +67,7 @@ struct RepositoriesSettingsView: View {
                     Image(systemName: "plus")
                 }
                 .buttonStyle(.borderless)
-                .help("Add a custom repository")
+                .help(appLocalized("Add a custom repository"))
 
                 Spacer()
             }
@@ -126,7 +126,7 @@ private struct RepositoryRowView: View {
             // Last synced timestamp or "Never"
             VStack(alignment: .trailing, spacing: 2) {
                 if let date = repo.effectiveLastSyncedAt {
-                    Text("Synced")
+                    Text(appLocalized("Synced"))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                     TimelineView(.periodic(from: .now, by: 60)) { context in
@@ -136,7 +136,7 @@ private struct RepositoryRowView: View {
                     }
                     .help(absoluteDateText(date))
                 } else {
-                    Text("Never synced")
+                    Text(appLocalized("Never synced"))
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
                 }
@@ -151,7 +151,7 @@ private struct RepositoryRowView: View {
                 Image(systemName: "slider.horizontal.3")
             }
             .buttonStyle(.borderless)
-            .help("Edit repository settings")
+            .help(appLocalized("Edit repository settings"))
             .disabled(isRemoving)
 
             Button(role: .destructive) {
@@ -166,17 +166,17 @@ private struct RepositoryRowView: View {
                 }
             }
             .buttonStyle(.borderless)
-            .help("移除 repository")
+            .help(appLocalized("Remove repository"))
             .disabled(isRemoving)
         }
         .padding(.vertical, 2)
-        .alert("移除 Repository?", isPresented: $showDeleteConfirmation) {
-            Button("移除", role: .destructive) {
+        .alert(appLocalized("Remove Repository?"), isPresented: $showDeleteConfirmation) {
+            Button(appLocalized("Remove"), role: .destructive) {
                 Task { await removeRepository() }
             }
-            Button("取消", role: .cancel) { }
+            Button(appLocalized("Cancel"), role: .cancel) { }
         } message: {
-            Text("This removes the repository config from SkillsMaster. Local clone files are kept.")
+            Text(appLocalized("This removes the repository config from SkillsMaster. Local clone files are kept."))
         }
         .sheet(isPresented: $showEditSheet) {
             EditRepositorySheet(repo: repo, isPresented: $showEditSheet)
@@ -259,35 +259,35 @@ private struct EditRepositorySheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Edit Repository")
+            Text(appLocalized("Edit Repository"))
                 .font(.headline)
                 .padding(.bottom, 4)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("Display Name")
+                Text(appLocalized("Display Name"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .fontWeight(.medium)
-                TextField("e.g. team-skills", text: $displayName)
+                TextField(appLocalized("e.g. team-skills"), text: $displayName)
                     .textFieldStyle(.roundedBorder)
             }
 
             VStack(alignment: .leading, spacing: 6) {
-                Toggle("同步 on Launch", isOn: $syncOnLaunch)
-                    .help("Controls only startup auto-sync. Manual '同步 Now' is always available.")
+                Toggle(appLocalized("Sync on Launch"), isOn: $syncOnLaunch)
+                    .help(appLocalized("Controls only startup auto-sync. Manual 'Sync Now' is always available."))
                 Text(syncOnLaunch
-                     ? "This repository will auto-sync when SkillsMaster starts."
-                     : "No startup auto-sync. Use '同步 Now' when needed.")
+                     ? appLocalized("This repository will auto-sync when SkillsMaster starts.")
+                     : appLocalized("No startup auto-sync. Use 'Sync Now' when needed."))
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
 
             VStack(alignment: .leading, spacing: 6) {
-                Toggle("Scan hidden paths", isOn: $scanHiddenPaths)
-                    .help("When enabled, SKILL.md files under hidden path segments (e.g. .claude) are included.")
+                Toggle(appLocalized("Scan hidden paths"), isOn: $scanHiddenPaths)
+                    .help(appLocalized("When enabled, SKILL.md files under hidden path segments (e.g. .claude) are included."))
                 Text(scanHiddenPaths
-                     ? "Hidden path scanning is enabled for this repository."
-                     : "Only non-hidden paths are scanned for this repository.")
+                     ? appLocalized("Hidden path scanning is enabled for this repository.")
+                     : appLocalized("Only non-hidden paths are scanned for this repository."))
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
@@ -296,12 +296,12 @@ private struct EditRepositorySheet: View {
 
             Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 6) {
                 GridRow {
-                    Text("Authentication")
+                    Text(appLocalized("Authentication"))
                         .foregroundStyle(.secondary)
                     Text(repo.authType.displayName)
                 }
                 GridRow {
-                    Text("Repository URL")
+                    Text(appLocalized("Repository URL"))
                         .foregroundStyle(.secondary)
                     Text(repo.repoURL)
                         .textSelection(.enabled)
@@ -326,14 +326,14 @@ private struct EditRepositorySheet: View {
             Spacer()
 
             HStack {
-                Button("取消") {
+                Button(appLocalized("Cancel")) {
                     isPresented = false
                 }
                 .keyboardShortcut(.cancelAction)
 
                 Spacer()
 
-                Button(isSaving ? "Saving…" : "保存") {
+                Button(isSaving ? appLocalized("Saving…") : appLocalized("Save")) {
                     Task { await save() }
                 }
                 .buttonStyle(.borderedProminent)
@@ -348,7 +348,7 @@ private struct EditRepositorySheet: View {
     private func save() async {
         let trimmedName = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else {
-            errorMessage = "Display Name cannot be empty"
+            errorMessage = appLocalized("Display Name cannot be empty")
             return
         }
 
@@ -404,17 +404,17 @@ struct AddRepositorySheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             // Sheet title
-            Text("Add Custom Repository")
+            Text(appLocalized("Add Custom Repository"))
                 .font(.headline)
                 .padding(.bottom, 4)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("Authentication")
+                Text(appLocalized("Authentication"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .fontWeight(.medium)
 
-                Picker("Authentication", selection: $authType) {
+                Picker(appLocalized("Authentication"), selection: $authType) {
                     ForEach(SkillRepository.AuthType.allCases, id: \.self) { mode in
                         Text(mode.displayName).tag(mode)
                     }
@@ -428,14 +428,14 @@ struct AddRepositorySheet: View {
 
             // Repository URL field
             VStack(alignment: .leading, spacing: 4) {
-                Text("Repository URL")
+                Text(appLocalized("Repository URL"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .fontWeight(.medium)
 
                 // TextField is SwiftUI's single-line text input
                 TextField(
-                    authType == .ssh ? "git@host:org/repo.git" : "https://host/org/repo.git",
+                    authType == .ssh ? appLocalized("git@host:org/repo.git") : appLocalized("https://host/org/repo.git"),
                     text: $repoURL
                 )
                     .textFieldStyle(.roundedBorder)
@@ -452,37 +452,37 @@ struct AddRepositorySheet: View {
                     }
 
                 Text(authType == .ssh
-                     ? "SSH requires keys configured in ~/.ssh"
-                     : "Use HTTPS URL with a Personal Access Token")
+                     ? appLocalized("SSH requires keys configured in ~/.ssh")
+                     : appLocalized("Use HTTPS URL with a Personal Access Token"))
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
 
             if authType == .httpsToken {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("HTTPS Username")
+                    Text(appLocalized("HTTPS Username"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .fontWeight(.medium)
 
-                    TextField("git", text: $httpUsername)
+                    TextField(appLocalized("git"), text: $httpUsername)
                         .textFieldStyle(.roundedBorder)
 
-                    Text("For GitHub, 'x-access-token' or your username both work; enterprise Git may require account username.")
+                    Text(appLocalized("For GitHub, 'x-access-token' or your username both work; enterprise Git may require account username."))
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Access Token")
+                    Text(appLocalized("Access Token"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .fontWeight(.medium)
 
-                    SecureField("Enter PAT token", text: $accessToken)
+                    SecureField(appLocalized("Enter PAT token"), text: $accessToken)
                         .textFieldStyle(.roundedBorder)
 
-                    Text("Token is stored securely in macOS Keychain, not in config files.")
+                    Text(appLocalized("Token is stored securely in macOS Keychain, not in config files."))
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
                 }
@@ -490,37 +490,37 @@ struct AddRepositorySheet: View {
 
             // Display name field
             VStack(alignment: .leading, spacing: 4) {
-                Text("Display Name")
+                Text(appLocalized("Display Name"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .fontWeight(.medium)
 
-                TextField("e.g. team-skills", text: $displayName)
+                TextField(appLocalized("e.g. team-skills"), text: $displayName)
                     .textFieldStyle(.roundedBorder)
 
-                Text("How this repository appears in the sidebar.")
+                Text(appLocalized("How this repository appears in the sidebar."))
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
 
             VStack(alignment: .leading, spacing: 6) {
-                Toggle("同步 on Launch", isOn: $syncOnLaunch)
-                    .help("When enabled, this repository auto-syncs when SkillsMaster starts. Disabled by default for better startup performance.")
+                Toggle(appLocalized("Sync on Launch"), isOn: $syncOnLaunch)
+                    .help(appLocalized("When enabled, this repository auto-syncs when SkillsMaster starts. Disabled by default for better startup performance."))
 
                 Text(syncOnLaunch
-                     ? "This repository will auto-sync at app startup."
-                     : "Default mode: no startup auto-sync. You can always sync manually with '同步 Now'.")
+                     ? appLocalized("This repository will auto-sync at app startup.")
+                     : appLocalized("Default mode: no startup auto-sync. You can always sync manually with 'Sync Now'."))
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
 
             VStack(alignment: .leading, spacing: 6) {
-                Toggle("Scan hidden paths", isOn: $scanHiddenPaths)
-                    .help("Disabled by default to avoid duplicate/ambiguous skills from hidden mirrors. Enable only when your skills are intentionally stored under hidden directories.")
+                Toggle(appLocalized("Scan hidden paths"), isOn: $scanHiddenPaths)
+                    .help(appLocalized("Disabled by default to avoid duplicate/ambiguous skills from hidden mirrors. Enable only when your skills are intentionally stored under hidden directories."))
 
                 Text(scanHiddenPaths
-                     ? "Includes SKILL.md under hidden folders (path segments starting with '.')."
-                     : "Default mode: only scans non-hidden paths. This avoids accidental duplicates from hidden mirror folders.")
+                     ? appLocalized("Includes SKILL.md under hidden folders (path segments starting with '.').")
+                     : appLocalized("Default mode: only scans non-hidden paths. This avoids accidental duplicates from hidden mirror folders."))
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
@@ -543,14 +543,14 @@ struct AddRepositorySheet: View {
 
             // Action buttons
             HStack {
-                Button("取消") {
+                Button(appLocalized("Cancel")) {
                     isPresented = false
                 }
                 .keyboardShortcut(.cancelAction)  // Esc key dismisses
 
                 Spacer()
 
-                Button(isAdding ? "Adding…" : "添加 Repository") {
+                Button(isAdding ? appLocalized("Adding…") : appLocalized("Add Repository")) {
                     Task { await addRepository() }
                 }
                 .buttonStyle(.borderedProminent)
@@ -572,7 +572,7 @@ struct AddRepositorySheet: View {
         }
         let token = accessToken.trimmingCharacters(in: .whitespacesAndNewlines)
         if authType == .httpsToken && token.isEmpty {
-            errorMessage = "Access Token is required for HTTPS mode"
+            errorMessage = appLocalized("Access Token is required for HTTPS mode")
             return
         }
 

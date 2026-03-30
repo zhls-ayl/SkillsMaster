@@ -1,6 +1,6 @@
 # SkillsMaster
 
-English | [简体中文](README.zh-Hans.md)
+English | [简体中文](README_CN.md)
 
 SkillsMaster is a native macOS app for managing Skills and Agent root files across multiple AI coding agents from one unified desktop interface.
 
@@ -152,7 +152,7 @@ For inline English-to-Chinese translation in detail pages:
 ## Documentation
 
 - [`README.md`](README.md): English overview, install, quick start, screenshots
-- [`README.zh-Hans.md`](README.zh-Hans.md): Chinese overview, install, quick start, screenshots
+- [`README_CN.md`](README_CN.md): Chinese overview, install, quick start, screenshots
 - [`docs/Index.md`](docs/Index.md): documentation navigation and update guide
 - [`docs/architecture.md`](docs/architecture.md): implementation structure and storage paths
 - [`docs/development.md`](docs/development.md): development workflow and verification

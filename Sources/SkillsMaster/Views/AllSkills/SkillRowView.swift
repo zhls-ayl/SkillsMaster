@@ -58,7 +58,7 @@ struct SkillRowView: View {
                 }
 
                 if let version = skill.metadata.version {
-                    Label("v\(version)", systemImage: "tag")
+                    Label(version, systemImage: "tag")
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                 }

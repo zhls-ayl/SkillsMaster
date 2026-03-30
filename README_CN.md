@@ -150,7 +150,7 @@ cd SkillsMaster
 ## 文档入口
 
 - [`README.md`](README.md)：英文项目概览、安装方式、能力摘要、界面预览
-- [`README.zh-Hans.md`](README.zh-Hans.md)：中文项目概览、安装方式、能力摘要、界面预览
+- [`README_CN.md`](README_CN.md)：中文项目概览、安装方式、能力摘要、界面预览
 - [`docs/Index.md`](docs/Index.md)：文档导航、阅读顺序、更新落点
 - [`docs/architecture.md`](docs/architecture.md)：核心实现结构、路径约定、更新与安装链路
 - [`docs/development.md`](docs/development.md)：开发工作流、测试与验证方式

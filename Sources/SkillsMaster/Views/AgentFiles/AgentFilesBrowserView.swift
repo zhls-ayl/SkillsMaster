@@ -12,15 +12,17 @@ struct AgentFilesBrowserView: View {
     var body: some View {
         Group {
             if viewModel.isLoading && viewModel.entries.isEmpty {
-                ProgressView("Loading files...")
+                ProgressView(AppLocalization.string("Loading files..."))
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if viewModel.entries.isEmpty {
                 EmptyStateView(
                     icon: viewModel.rootExists ? "folder" : "folder.badge.questionmark",
-                    title: viewModel.rootExists ? "Directory is Empty" : "Root Directory Not Created",
+                    title: viewModel.rootExists
+                        ? AppLocalization.string("Directory is Empty")
+                        : AppLocalization.string("Root Directory Not Created"),
                     subtitle: viewModel.rootExists
-                        ? "Use the toolbar to create a file or folder."
-                        : "When you create a file or folder from the toolbar, SkillsMaster creates this Agent's root directory automatically."
+                        ? AppLocalization.string("Use the toolbar to create a file or folder.")
+                        : AppLocalization.string("When you create a file or folder from the toolbar, SkillsMaster creates this Agent's root directory automatically.")
                 )
             } else {
                 List(selection: selectionBinding) {
@@ -40,7 +42,7 @@ struct AgentFilesBrowserView: View {
                 } label: {
                     Image(systemName: "doc.badge.plus")
                 }
-                .help("New File")
+                .help(AppLocalization.string("New File"))
                 .disabled(!viewModel.canCreateInCurrentDirectory || viewModel.isEditingTextFile)
 
                 Button {
@@ -48,7 +50,7 @@ struct AgentFilesBrowserView: View {
                 } label: {
                     Image(systemName: "folder.badge.plus")
                 }
-                .help("New Folder")
+                .help(AppLocalization.string("New Folder"))
                 .disabled(!viewModel.canCreateInCurrentDirectory || viewModel.isEditingTextFile)
 
                 Button {
@@ -57,7 +59,7 @@ struct AgentFilesBrowserView: View {
                 } label: {
                     Image(systemName: "pencil")
                 }
-                .help("Rename")
+                .help(AppLocalization.string("Rename"))
                 .disabled(!viewModel.canRenameSelectedItem || viewModel.isEditingTextFile)
 
                 Button(role: .destructive) {
@@ -65,7 +67,7 @@ struct AgentFilesBrowserView: View {
                 } label: {
                     Image(systemName: "trash")
                 }
-                .help("Delete")
+                .help(AppLocalization.string("Delete"))
                 .disabled(!viewModel.canDeleteSelectedItem || viewModel.isEditingTextFile)
 
                 Button {
@@ -73,7 +75,7 @@ struct AgentFilesBrowserView: View {
                 } label: {
                     Image(systemName: "arrow.clockwise")
                 }
-                .help("Refresh")
+                .help(AppLocalization.string("Refresh"))
             }
         }
         .task(id: viewModel.agentType) {
@@ -93,14 +95,14 @@ struct AgentFilesBrowserView: View {
             )
         }
         .confirmationDialog(
-            "Confirm Deletion",
+            AppLocalization.string("Confirm Deletion"),
             isPresented: Binding(
                 get: { pendingDeleteItem != nil },
                 set: { if !$0 { pendingDeleteItem = nil } }
             ),
             titleVisibility: .visible
         ) {
-            Button("Delete", role: .destructive) {
+            Button(AppLocalization.string("Delete"), role: .destructive) {
                 do {
                     try viewModel.deleteSelectedItem()
                 } catch {
@@ -108,7 +110,7 @@ struct AgentFilesBrowserView: View {
                 }
                 pendingDeleteItem = nil
             }
-            Button("Cancel", role: .cancel) {
+            Button(AppLocalization.string("Cancel"), role: .cancel) {
                 pendingDeleteItem = nil
             }
         } message: {
@@ -117,19 +119,19 @@ struct AgentFilesBrowserView: View {
             }
         }
         .confirmationDialog(
-            "Target Already Exists",
+            AppLocalization.string("Target Already Exists"),
             isPresented: Binding(
                 get: { pendingOverwriteAction != nil },
                 set: { if !$0 { pendingOverwriteAction = nil } }
             ),
             titleVisibility: .visible
         ) {
-            Button("Replace", role: .destructive) {
+            Button(AppLocalization.string("Replace"), role: .destructive) {
                 guard let pendingOverwriteAction else { return }
                 performOverwrite(pendingOverwriteAction)
                 self.pendingOverwriteAction = nil
             }
-            Button("Cancel", role: .cancel) {
+            Button(AppLocalization.string("Cancel"), role: .cancel) {
                 pendingOverwriteAction = nil
             }
         } message: {
@@ -138,7 +140,7 @@ struct AgentFilesBrowserView: View {
             }
         }
         .alert(
-            "Action Failed",
+            AppLocalization.string("Action Failed"),
             isPresented: Binding(
                 get: { localErrorMessage != nil || viewModel.errorMessage != nil },
                 set: { newValue in
@@ -149,12 +151,12 @@ struct AgentFilesBrowserView: View {
                 }
             )
         ) {
-            Button("OK", role: .cancel) {
+            Button(AppLocalization.string("OK"), role: .cancel) {
                 localErrorMessage = nil
                 viewModel.errorMessage = nil
             }
         } message: {
-            Text(localErrorMessage ?? viewModel.errorMessage ?? "Unknown Error")
+            Text(localErrorMessage ?? viewModel.errorMessage ?? AppLocalization.string("Unknown Error"))
         }
     }
 
@@ -214,9 +216,15 @@ struct AgentFilesBrowserView: View {
 
     private func deleteMessage(for item: AgentFileItem) -> String {
         if item.isDirectory {
-            return "This will permanently delete the folder \"\(item.name)\" and all of its contents."
+            return AppLocalization.format(
+                "This will permanently delete the folder \"%@\" and all of its contents.",
+                item.name
+            )
         }
-        return "This will permanently delete the file \"\(item.name)\"."
+        return AppLocalization.format(
+            "This will permanently delete the file \"%@\".",
+            item.name
+        )
     }
 }
 
@@ -235,7 +243,7 @@ private struct AgentFileTreeRowsView: View {
                     HStack(spacing: 8) {
                         ProgressView()
                             .controlSize(.small)
-                        Text("Loading...")
+                        Text(AppLocalization.string("Loading..."))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -269,12 +277,12 @@ private struct AgentFileRowView: View {
 
             if item.isProtected {
                 Spacer(minLength: 8)
-                Text("Read Only")
+                Text(AppLocalization.string("Read Only"))
                     .font(.caption2)
                     .foregroundStyle(.orange)
             } else if item.isSymbolicLink {
                 Spacer(minLength: 8)
-                Text("symlink")
+                Text(AppLocalization.string("Symbolic Link"))
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
@@ -322,20 +330,20 @@ private struct NamePromptContext: Identifiable {
     var title: String {
         switch kind {
         case .newFile:
-            return "New File"
+            return AppLocalization.string("New File")
         case .newFolder:
-            return "New Folder"
+            return AppLocalization.string("New Folder")
         case .rename:
-            return "Rename"
+            return AppLocalization.string("Rename")
         }
     }
 
     var actionTitle: String {
         switch kind {
         case .rename:
-            return "Save"
+            return AppLocalization.string("Save")
         case .newFile, .newFolder:
-            return "Create"
+            return AppLocalization.string("Create")
         }
     }
 }
@@ -347,11 +355,11 @@ private struct PendingOverwriteAction {
     var message: String {
         switch kind {
         case .newFile:
-            return "A file with the same name already exists. Confirm to replace the existing file."
+            return AppLocalization.string("A file with the same name already exists. Confirm to replace the existing file.")
         case .newFolder:
-            return "A file or folder with the same name already exists. Confirm to remove it and create a new folder."
+            return AppLocalization.string("A file or folder with the same name already exists. Confirm to remove it and create a new folder.")
         case .rename:
-            return "The target name already exists. Confirm to remove the existing target and continue renaming."
+            return AppLocalization.string("The target name already exists. Confirm to remove the existing target and continue renaming.")
         }
     }
 }
@@ -389,7 +397,7 @@ private struct NamePromptSheet: View {
                     .font(.headline)
 
             VStack(alignment: .leading, spacing: 8) {
-                Text("Directory")
+                Text(AppLocalization.string("Directory"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
@@ -399,7 +407,7 @@ private struct NamePromptSheet: View {
                     .foregroundStyle(.secondary)
             }
 
-            TextField("Name", text: $name)
+            TextField(AppLocalization.string("Name"), text: $name)
                 .textFieldStyle(.roundedBorder)
                 .onSubmit {
                     onConfirm(name)
@@ -408,7 +416,7 @@ private struct NamePromptSheet: View {
             HStack {
                 Spacer()
 
-                Button("Cancel", role: .cancel) {
+                Button(AppLocalization.string("Cancel"), role: .cancel) {
                     onCancel()
                 }
 

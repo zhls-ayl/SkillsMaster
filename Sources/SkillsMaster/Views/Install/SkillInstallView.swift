@@ -83,14 +83,14 @@ struct SkillInstallView: View {
                 .font(.system(size: 48))
                 .foregroundStyle(.secondary)
 
-            Text("Enter a GitHub repository to scan for skills")
+            Text(AppLocalization.string("Enter a GitHub repository to scan for skills"))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
             // URL input field
             // TextField is similar to HTML's <input type="text">, placeholder is gray hint text
             HStack {
-                TextField("owner/repo or GitHub URL", text: $viewModel.repoURLInput)
+                TextField(AppLocalization.string("owner/repo or GitHub URL"), text: $viewModel.repoURLInput)
                     .textFieldStyle(.roundedBorder)
                     // onSubmit listens for return key event (similar to HTML form submit)
                     .onSubmit {
@@ -98,7 +98,7 @@ struct SkillInstallView: View {
                         Task { await viewModel.fetchRepository() }
                     }
 
-                Button("Scan") {
+                Button(AppLocalization.string("Scan")) {
                     Task { await viewModel.fetchRepository() }
                 }
                 .disabled(viewModel.repoURLInput.trimmingCharacters(in: .whitespaces).isEmpty)
@@ -111,7 +111,7 @@ struct SkillInstallView: View {
             // Users can click a history item to auto-fill the URL and trigger Scan
             if !viewModel.repoHistory.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("最近使用的 Repositories")
+                    Text(AppLocalization.string("Recently Used Repositories"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, 40)
@@ -199,7 +199,7 @@ struct SkillInstallView: View {
             // Skill list (scrollable)
             // List is macOS native list component, with built-in selection, scrolling, etc.
             List {
-                Section("已发现 Skills（\(viewModel.discoveredSkills.count))") {
+                Section(AppLocalization.format("Discovered Skills (%d)", viewModel.discoveredSkills.count)) {
                     ForEach(viewModel.discoveredSkills) { skill in
                         skillRow(skill)
                     }
@@ -213,7 +213,7 @@ struct SkillInstallView: View {
             VStack(spacing: 12) {
                 // Agent selection area (two-row layout to avoid horizontal squeezing)
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("安装到：")
+                    Text(AppLocalization.string("Install to:"))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
 
@@ -255,7 +255,7 @@ struct SkillInstallView: View {
 
                     Spacer()
 
-                    Button("安装") {
+                    Button(AppLocalization.string("Install")) {
                         Task { await viewModel.installSelected() }
                     }
                     .disabled(viewModel.selectedSkillNames.isEmpty || viewModel.selectedAgents.isEmpty)
@@ -288,7 +288,7 @@ struct SkillInstallView: View {
                 .font(.system(size: 48))
                 .foregroundStyle(.green)
 
-            Text("Installation Complete")
+            Text(AppLocalization.string("Installation Complete"))
                 .font(.headline)
 
             Text(
@@ -300,17 +300,17 @@ struct SkillInstallView: View {
 
             HStack(spacing: 12) {
                 if viewModel.isLocalSource {
-                    Button("返回选择页") {
+                    Button(AppLocalization.string("Back to Selection")) {
                         viewModel.backToSelectionForLocalInstall()
                     }
                 } else {
                     // "安装 More" button: reset state and start over
-                    Button("安装 More") {
+                    Button(AppLocalization.string("Install More")) {
                         viewModel.reset()
                     }
                 }
 
-                Button("完成") {
+                Button(AppLocalization.string("Done")) {
                     // dismiss() closes current sheet
                     dismiss()
                 }
@@ -331,7 +331,7 @@ struct SkillInstallView: View {
                 .font(.system(size: 48))
                 .foregroundStyle(.orange)
 
-            Text("出现问题了")
+            Text(AppLocalization.string("Something went wrong"))
                 .font(.headline)
 
             Text(message)
@@ -339,7 +339,7 @@ struct SkillInstallView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
 
-            Button("重试") {
+            Button(AppLocalization.string("Try Again")) {
                 viewModel.reset()
             }
 
@@ -375,7 +375,7 @@ struct SkillInstallView: View {
 
                     // "Already installed" badge
                     if isAlreadyInstalled {
-                        Text("Installed")
+                        Text(AppLocalization.string("Installed"))
                             .font(.caption2)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)

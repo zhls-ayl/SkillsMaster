@@ -48,24 +48,24 @@ struct AgentFileDetailView: View {
             viewModel.loadSelectedItemDetails()
         }
         .confirmationDialog(
-            "Unsaved Changes",
+            AppLocalization.string("Unsaved Changes"),
             isPresented: Binding(
                 get: { viewModel.pendingNavigationAction != nil },
                 set: { if !$0 { viewModel.cancelPendingNavigationAction() } }
             ),
             titleVisibility: .visible
         ) {
-            Button("Save") {
+            Button(AppLocalization.string("Save")) {
                 Task { _ = await viewModel.savePendingNavigationAction() }
             }
-            Button("Discard Changes", role: .destructive) {
+            Button(AppLocalization.string("Discard Changes"), role: .destructive) {
                 viewModel.discardPendingNavigationAction()
             }
-            Button("Cancel", role: .cancel) {
+            Button(AppLocalization.string("Cancel"), role: .cancel) {
                 viewModel.cancelPendingNavigationAction()
             }
         } message: {
-            Text("The current file has unsaved changes.")
+            Text(AppLocalization.string("The current file has unsaved changes."))
         }
     }
 
@@ -80,19 +80,24 @@ struct AgentFileDetailView: View {
             }
 
             Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
-                detailRow("Root Directory", value: viewModel.rootDisplayPath)
-                detailRow("Status", value: viewModel.rootExists ? "Exists" : "Not Created")
-                detailRow("Protected Path", value: viewModel.protectedURL.path)
+                detailRow(AppLocalization.string("Root Directory"), value: viewModel.rootDisplayPath)
+                detailRow(
+                    AppLocalization.string("Status"),
+                    value: viewModel.rootExists
+                        ? AppLocalization.string("Exists")
+                        : AppLocalization.string("Not Created")
+                )
+                detailRow(AppLocalization.string("Protected Path"), value: viewModel.protectedURL.path)
             }
             .font(.subheadline)
 
             protectionNotice(
-                title: "Read-Only Protection",
-                message: "The `skills/` directory and all of its contents are managed by SkillsMaster. In Agent Files you can only browse and navigate them, not create, rename, delete, or open them in an external editor."
+                title: AppLocalization.string("Read-Only Protection"),
+                message: AppLocalization.string("The `skills/` directory and all of its contents are managed by SkillsMaster. In Agent Files you can only browse and navigate them, not create, rename, delete, or open them in an external editor.")
             )
 
             if !viewModel.rootExists {
-                Text("The root directory does not exist yet. When you create a file or folder from the toolbar, SkillsMaster creates this Agent's configuration directory automatically.")
+                Text(AppLocalization.string("The root directory does not exist yet. When you create a file or folder from the toolbar, SkillsMaster creates this Agent's configuration directory automatically."))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -120,7 +125,7 @@ struct AgentFileDetailView: View {
                         .fontWeight(.bold)
 
                     if item.isProtected {
-                        Text("Read Only")
+                        Text(AppLocalization.string("Read Only"))
                             .font(.caption)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
@@ -137,51 +142,51 @@ struct AgentFileDetailView: View {
             }
 
             Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
-                detailRow("Path", value: item.url.path)
-                detailRow("Relative Path", value: item.relativePath)
-                detailRow("Type", value: itemTypeDescription(item))
-                detailRow("Hidden", value: item.isHidden ? "Yes" : "No")
-                detailRow("Symbolic Link", value: item.isSymbolicLink ? "Yes" : "No")
+                detailRow(AppLocalization.string("Path"), value: item.url.path)
+                detailRow(AppLocalization.string("Relative Path"), value: item.relativePath)
+                detailRow(AppLocalization.string("Type"), value: itemTypeDescription(item))
+                detailRow(AppLocalization.string("Hidden"), value: item.isHidden ? AppLocalization.string("Yes") : AppLocalization.string("No"))
+                detailRow(AppLocalization.string("Symbolic Link"), value: item.isSymbolicLink ? AppLocalization.string("Yes") : AppLocalization.string("No"))
 
                 if item.isDirectory {
                     if item.isSymbolicLink {
-                        detailRow("Loaded Children", value: "Symbolic link targets are not expanded recursively")
+                        detailRow(AppLocalization.string("Loaded Children"), value: AppLocalization.string("Symbolic link targets are not expanded recursively"))
                     } else if let loadedChildCount = viewModel.loadedChildCount(for: item) {
-                        detailRow("Loaded Children", value: "\(loadedChildCount)")
+                        detailRow(AppLocalization.string("Loaded Children"), value: "\(loadedChildCount)")
                     } else {
-                        detailRow("Loaded Children", value: "Loaded after expanding the directory")
+                        detailRow(AppLocalization.string("Loaded Children"), value: AppLocalization.string("Loaded after expanding the directory"))
                     }
                 } else if viewModel.isLoadingSelectedItemDetails {
-                    detailRow("Details", value: "Loading...")
+                    detailRow(AppLocalization.string("Details"), value: AppLocalization.string("Loading..."))
                 } else if let details = viewModel.selectedItemDetails {
                     if let modifiedDate = details.modifiedDate {
-                        detailRow("Modified", value: dateFormatter.string(from: modifiedDate))
+                        detailRow(AppLocalization.string("Modified"), value: dateFormatter.string(from: modifiedDate))
                     }
                     if let fileSize = details.fileSize {
-                        detailRow("Size", value: byteCountFormatter.string(fromByteCount: Int64(fileSize)))
+                        detailRow(AppLocalization.string("Size"), value: byteCountFormatter.string(fromByteCount: Int64(fileSize)))
                     }
-                    detailRow("Text File", value: details.isTextFile ? "Yes" : "No")
+                    detailRow(AppLocalization.string("Text File"), value: details.isTextFile ? AppLocalization.string("Yes") : AppLocalization.string("No"))
                 }
             }
             .font(.subheadline)
 
             if let reason = item.protectionReason {
-                protectionNotice(title: "Protected Path", message: reason)
+                protectionNotice(title: AppLocalization.string("Protected Path"), message: reason)
             } else if item.isSymbolicLink {
-                Text("This item is a symbolic link. The list only shows the link itself and does not recursively expand its target directory.")
+                Text(AppLocalization.string("This item is a symbolic link. The list only shows the link itself and does not recursively expand its target directory."))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             } else if let details = viewModel.selectedItemDetails,
                       !item.isDirectory,
                       !details.isTextFile {
-                Text("Only text files can be opened from here with the system default app. For non-text files, locate them in Finder and handle them there.")
+                Text(AppLocalization.string("Only text files can be opened from here with the system default app. For non-text files, locate them in Finder and handle them there."))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             } else if !item.isDirectory,
                       !item.isSymbolicLink,
                       viewModel.previewViewModel == nil,
                       viewModel.selectedItemDetails?.isTextFile == true {
-                Text("This text file does not support the built-in preview yet. Use an external editor to inspect it.")
+                Text(AppLocalization.string("This text file does not support the built-in preview yet. Use an external editor to inspect it."))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -202,7 +207,7 @@ struct AgentFileDetailView: View {
     @ViewBuilder
     private func previewSection(_ previewViewModel: TextFilePreviewViewModel) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Content")
+            Text(AppLocalization.string("Content"))
                 .font(.headline)
 
             TextFilePreviewView(viewModel: previewViewModel)
@@ -217,31 +222,31 @@ struct AgentFileDetailView: View {
         canOpenInTerminal: Bool
     ) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Actions")
+            Text(AppLocalization.string("Actions"))
                 .font(.headline)
 
             HStack(spacing: 12) {
                 if canEditInternally {
-                    Button("Edit") {
+                    Button(AppLocalization.string("Edit")) {
                         viewModel.startEditingSelectedItem()
                     }
                     .buttonStyle(.borderedProminent)
                 }
 
                 if canOpenInExternalEditor {
-                    Button("Open in External Editor") {
+                    Button(AppLocalization.string("Open in External Editor")) {
                         viewModel.openSelectedInExternalEditor()
                     }
                     .buttonStyle(.bordered)
                 }
 
-                Button("Show in Finder") {
+                Button(AppLocalization.string("Show in Finder")) {
                     viewModel.revealSelectedOrRootInFinder()
                 }
                 .buttonStyle(.bordered)
                 .disabled(!canRevealInFinder)
 
-                Button("Open in Terminal") {
+                Button(AppLocalization.string("Open in Terminal")) {
                     viewModel.openSelectedOrRootInTerminal()
                 }
                 .buttonStyle(.bordered)
@@ -259,7 +264,7 @@ struct AgentFileDetailView: View {
                 Image(systemName: "folder")
             }
             .buttonStyle(.borderless)
-            .help("Show in Finder")
+            .help(AppLocalization.string("Show in Finder"))
             .disabled(!viewModel.canRevealSelectedOrRoot)
 
             Button {
@@ -268,7 +273,7 @@ struct AgentFileDetailView: View {
                 Image(systemName: "terminal")
             }
             .buttonStyle(.borderless)
-            .help("Open in Terminal")
+            .help(AppLocalization.string("Open in Terminal"))
             .disabled(!viewModel.canOpenSelectedOrRootInTerminal)
 
             if viewModel.canEditSelectedInternally {
@@ -278,7 +283,7 @@ struct AgentFileDetailView: View {
                     Image(systemName: "pencil")
                 }
                 .buttonStyle(.borderless)
-                .help("Edit")
+                .help(AppLocalization.string("Edit"))
             }
 
             if viewModel.canOpenSelectedInExternalEditor {
@@ -288,7 +293,7 @@ struct AgentFileDetailView: View {
                     Image(systemName: "square.and.arrow.up")
                 }
                 .buttonStyle(.borderless)
-                .help("Open in External Editor")
+                .help(AppLocalization.string("Open in External Editor"))
             }
         }
     }
@@ -322,11 +327,13 @@ struct AgentFileDetailView: View {
 
     private func itemTypeDescription(_ item: AgentFileItem) -> String {
         if item.isDirectory {
-            return item.isSymbolicLink ? "Folder Symbolic Link" : "Folder"
+            return item.isSymbolicLink
+                ? AppLocalization.string("Folder Symbolic Link")
+                : AppLocalization.string("Folder")
         }
         if item.isSymbolicLink {
-            return "File Symbolic Link"
+            return AppLocalization.string("File Symbolic Link")
         }
-        return "File"
+        return AppLocalization.string("File")
     }
 }

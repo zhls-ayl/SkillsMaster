@@ -125,7 +125,7 @@ struct MarkdownContentView: View {
                 HStack {
                     ProgressView()
                         .controlSize(.small)
-                    Text("Rendering...")
+                    Text(appLocalized("Rendering..."))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -189,12 +189,12 @@ private struct TranslatedParagraphView: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             } else if translationFailed {
-                Text("翻译失败")
+                Text(appLocalized("Translation failed"))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .italic()
             } else {
-                Text("翻译中…")
+                Text(appLocalized("Translating..."))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .italic()

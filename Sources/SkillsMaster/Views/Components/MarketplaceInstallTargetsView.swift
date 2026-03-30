@@ -11,7 +11,7 @@ struct MarketplaceInstallTargetsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Install Targets")
+            Text(appLocalized("Install Targets"))
                 .font(.caption)
                 .foregroundStyle(.secondary)
 

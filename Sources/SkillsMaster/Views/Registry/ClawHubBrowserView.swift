@@ -22,8 +22,8 @@ struct ClawHubBrowserView: View {
                 }
             }
         }
-        .navigationTitle("ClawHub")
-        .searchable(text: $viewModel.searchText, prompt: "Search ClawHub skills...")
+        .navigationTitle(appLocalized("ClawHub"))
+        .searchable(text: $viewModel.searchText, prompt: Text(appLocalized("Search ClawHub skills...")))
         .onChange(of: viewModel.searchText) { _, _ in
             viewModel.onSearchTextChanged()
         }
@@ -34,7 +34,7 @@ struct ClawHubBrowserView: View {
                 } label: {
                     Image(systemName: "arrow.clockwise")
                 }
-                .help("刷新 ClawHub 列表")
+                .help(appLocalized("Refresh ClawHub list"))
             }
 
             ToolbarItem {
@@ -45,7 +45,7 @@ struct ClawHubBrowserView: View {
                 } label: {
                     Image(systemName: "safari")
                 }
-                .help("在浏览器打开 ClawHub")
+                .help(appLocalized("Open ClawHub in browser"))
             }
         }
         .task {
@@ -55,7 +55,7 @@ struct ClawHubBrowserView: View {
             Alert(
                 title: Text(notice.title),
                 message: Text(notice.message),
-                dismissButton: .default(Text("OK"))
+                dismissButton: .default(Text(appLocalized("OK")))
             )
         }
     }
@@ -136,17 +136,17 @@ struct ClawHubBrowserView: View {
             }
 
             Menu {
-                Button {
-                    viewModel.toggleHighlightedOnly()
-                } label: {
-                    menuRowLabel(title: "Highlighted", systemImage: "sparkles", isSelected: viewModel.highlightedOnly)
-                }
+            Button {
+                viewModel.toggleHighlightedOnly()
+            } label: {
+                menuRowLabel(title: appLocalized("Highlighted"), systemImage: "sparkles", isSelected: viewModel.highlightedOnly)
+            }
 
-                Button {
-                    viewModel.toggleNonSuspiciousOnly()
-                } label: {
-                    menuRowLabel(title: "Safe Only", systemImage: "checkmark.shield", isSelected: viewModel.nonSuspiciousOnly)
-                }
+            Button {
+                viewModel.toggleNonSuspiciousOnly()
+            } label: {
+                menuRowLabel(title: appLocalized("Safe Only"), systemImage: "checkmark.shield", isSelected: viewModel.nonSuspiciousOnly)
+            }
             } label: {
                 compactMenuChip(
                     title: compactFilterTitle,
@@ -196,13 +196,13 @@ struct ClawHubBrowserView: View {
             controlChip(isSelected: viewModel.highlightedOnly) {
                 viewModel.toggleHighlightedOnly()
             } label: {
-                Label("Highlighted", systemImage: "sparkles")
+                Label(appLocalized("Highlighted"), systemImage: "sparkles")
             }
 
             controlChip(isSelected: viewModel.nonSuspiciousOnly) {
                 viewModel.toggleNonSuspiciousOnly()
             } label: {
-                Label("Safe Only", systemImage: "checkmark.shield")
+                Label(appLocalized("Safe Only"), systemImage: "checkmark.shield")
             }
         }
     }
@@ -211,7 +211,7 @@ struct ClawHubBrowserView: View {
         VStack(spacing: 12) {
             ProgressView()
                 .controlSize(.large)
-            Text(viewModel.isSearchActive ? "正在搜索 ClawHub..." : "正在加载 ClawHub skills...")
+            Text(viewModel.isSearchActive ? appLocalized("Searching ClawHub...") : appLocalized("Loading ClawHub skills..."))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
@@ -235,7 +235,7 @@ struct ClawHubBrowserView: View {
                 HStack(spacing: 8) {
                     ProgressView()
                         .controlSize(.small)
-                    Text("正在加载更多...")
+                    Text(appLocalized("Loading more..."))
                         .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, alignment: .center)
@@ -243,14 +243,14 @@ struct ClawHubBrowserView: View {
                 .listRowSeparator(.hidden)
             } else if let loadMoreErrorMessage = viewModel.loadMoreErrorMessage {
                 VStack(spacing: 6) {
-                    Text("加载更多失败")
+                    Text(appLocalized("Failed to load more"))
                         .font(.subheadline)
                         .fontWeight(.medium)
                     Text(loadMoreErrorMessage)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
-                    Button("重试") {
+                    Button(appLocalized("Retry")) {
                         Task { await viewModel.retryLoadMore() }
                     }
                     .buttonStyle(.bordered)
@@ -271,14 +271,14 @@ struct ClawHubBrowserView: View {
                 Image(systemName: "exclamationmark.triangle")
                     .font(.system(size: 40))
                     .foregroundStyle(.orange)
-                Text("加载 ClawHub 失败")
+                Text(appLocalized("Failed to load ClawHub"))
                     .font(.title3)
                     .fontWeight(.medium)
                 Text(errorMessage)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
-                Button("重试") {
+                Button(appLocalized("Retry")) {
                     Task { await viewModel.refresh() }
                 }
                 .buttonStyle(.bordered)
@@ -287,14 +287,14 @@ struct ClawHubBrowserView: View {
         } else if viewModel.isSearchActive {
             EmptyStateView(
                 icon: "magnifyingglass",
-                title: "无结果",
-                subtitle: "没有匹配 \"\(viewModel.searchText)\" 的 ClawHub skill"
+                title: appLocalized("No Results"),
+                subtitle: AppLocalization.format("No ClawHub skill matches \"%@\"", viewModel.searchText)
             )
         } else {
             EmptyStateView(
                 icon: "shippingbox",
-                title: "暂无 Skills",
-                subtitle: "ClawHub 当前没有返回可展示的 skills"
+                title: appLocalized("No Skills to display"),
+                subtitle: appLocalized("ClawHub did not return any displayable skills.")
             )
         }
     }
@@ -351,10 +351,10 @@ struct ClawHubBrowserView: View {
 
     private var compactFilterTitle: String {
         switch (viewModel.highlightedOnly, viewModel.nonSuspiciousOnly) {
-        case (false, false): return "Filters"
-        case (true, false): return "Highlighted"
-        case (false, true): return "Safe Only"
-        case (true, true): return "Highlighted + Safe"
+        case (false, false): return appLocalized("Filters")
+        case (true, false): return appLocalized("Highlighted")
+        case (false, true): return appLocalized("Safe Only")
+        case (true, true): return appLocalized("Highlighted + Safe")
         }
     }
 
@@ -389,7 +389,7 @@ private struct ClawHubSkillRowView: View {
                             .font(.headline)
 
                         if isInstalled {
-                            Text("Installed")
+                            Text(appLocalized("Installed"))
                                 .font(.caption)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 3)

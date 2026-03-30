@@ -7,13 +7,13 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
-## [0.2.7] - 2026-03-29
+## [0.2.7] - 2026-03-30
 ### Added
 - 新增应用级语言偏好与语言切换基础设施，支持在 `Settings > App Language` 中手动切换 `English` 与 `简体中文`，默认继续跟随系统语言。
 - 新增国际化回归测试，覆盖应用语言设置对应的本地化解析结果，防止后续再次出现“切换语言但 UI 不生效”的回归。
 
 ### Changed
-- 将项目对外入口调整为双语结构：`README.md` 作为英文主入口，新增 `README.zh-Hans.md` 作为中文入口，并同步更新文档索引。
+- 将项目对外入口调整为双语结构：`README.md` 作为英文主入口，新增 `README_CN.md` 作为中文入口，并同步更新文档索引。
 - 统一整理 `Installed`、`Marketplace`、`Repositories`、`Agents`、`Settings` 与各类 Skill 详情页中的预置 UI 文案，使中英文切换覆盖主流程界面、按钮、弹窗、提示与状态文本。
 - 优化简体中文语料，在保留 `Skill`、`Agent`、`Repository`、`Marketplace`、`Terminal` 等关键术语的基础上，对面向中文用户的界面描述做更自然的本地化表达。
 

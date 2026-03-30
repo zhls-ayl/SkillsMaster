@@ -73,9 +73,9 @@ struct SidebarView: View {
     var body: some View {
         List(selection: $selection) {
             // Section creates groups (shown as collapsible groups in macOS sidebar)
-            Section("Installed") {
+            Section(AppLocalization.string("Installed")) {
                 sidebarRow {
-                    Label("All Skills", systemImage: "square.grid.2x2")
+                    Label(AppLocalization.string("All Skills"), systemImage: "square.grid.2x2")
                 }
                 .badge(skillManager.skills.count)
                 // IMPORTANT: keep .tag as the outermost row modifier.
@@ -87,19 +87,19 @@ struct SidebarView: View {
             }
 
             // F09: skills.sh browser — browse and search the online catalog
-            Section("Marketplace") {
+            Section(AppLocalization.string("Marketplace")) {
                 sidebarRow {
-                    Label("Skills.sh", systemImage: "globe")
+                    Label(AppLocalization.string("Skills.sh"), systemImage: "globe")
                 }
                 .tag(SidebarItem.skillsSh)
 
                 sidebarRow {
-                    Label("ClawHub", systemImage: "shippingbox")
+                    Label(AppLocalization.string("ClawHub"), systemImage: "shippingbox")
                 }
                 .tag(SidebarItem.clawHub)
 
                 sidebarRow {
-                    Label("SkillsHub", systemImage: "shippingbox.circle")
+                    Label(AppLocalization.string("SkillsHub"), systemImage: "shippingbox.circle")
                 }
                 .tag(SidebarItem.skillsHub)
             }
@@ -108,7 +108,7 @@ struct SidebarView: View {
             // ForEach on an empty array renders nothing, so the section header would still appear.
             // We wrap in an `if !isEmpty` guard to fully hide the section when no repos are configured.
             if !skillManager.repositories.isEmpty {
-                Section("Repositories") {
+                Section(AppLocalization.string("Repositories")) {
                     ForEach(skillManager.repositories) { repo in
                         let item = SidebarItem.repository(repo.id)
                         let syncStatus = skillManager.repoSyncStatuses[repo.id] ?? .idle
@@ -137,8 +137,8 @@ struct SidebarView: View {
                 }
             }
 
-            Section("Agents") {
-                DisclosureGroup("Agent Files") {
+            Section(AppLocalization.string("Agents")) {
+                DisclosureGroup(AppLocalization.string("Agent Files")) {
                     ForEach(fileAgentTypes) { agentType in
                         sidebarRow {
                             Label {
@@ -151,7 +151,7 @@ struct SidebarView: View {
                     }
                 }
 
-                DisclosureGroup("Agents Skills") {
+                DisclosureGroup(AppLocalization.string("Agents Skills")) {
                     ForEach(skillAgentTypes) { agentType in
                         let agent = skillManager.agents.first { $0.type == agentType }
 
@@ -175,7 +175,7 @@ struct SidebarView: View {
         }
         // macOS sidebar standard style
         .listStyle(.sidebar)
-        .navigationTitle("SkillsMaster")
+        .navigationTitle(AppLocalization.string("SkillsMaster"))
         // Sidebar top toolbar action buttons (native macOS toolbar style)
         // Works with .navigationSplitViewColumnWidth(min: 180) minimum width constraint in ContentView,
         // ensures sidebar won't be too narrow when window state is restored, preventing ToolbarItem overflow/hiding
@@ -193,7 +193,7 @@ struct SidebarView: View {
                         Image(systemName: "arrow.up.circle.fill")
                             .foregroundStyle(.orange)
                     }
-                    .help("发现可用更新，点击打开设置。")
+                    .help(AppLocalization.string("Update available, click to open Settings."))
                 }
             }
 
@@ -205,7 +205,7 @@ struct SidebarView: View {
                 } label: {
                     Image(systemName: "plus")
                 }
-                .help("从 GitHub 安装 Skill")
+                .help(AppLocalization.string("Install Skill from GitHub"))
             }
 
             // F12: Batch check updates for all skills
@@ -239,7 +239,7 @@ struct SidebarView: View {
                         Image(systemName: "arrow.triangle.2.circlepath")
                     }
                 }
-                .help("检查全部 Skills 更新")
+                .help(AppLocalization.string("Check all Skills for updates"))
                 .disabled(skillManager.isCheckingUpdates)
             }
 
@@ -250,7 +250,7 @@ struct SidebarView: View {
                 } label: {
                     Image(systemName: "arrow.clockwise")
                 }
-                .help("刷新 Skills")
+                .help(AppLocalization.string("Refresh Skills"))
             }
         }
         // F10: Install sheet modal

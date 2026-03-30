@@ -16,6 +16,6 @@ struct ManualTranslationToolbarButton: View {
                         .fill(isActive ? Color.accentColor.opacity(0.18) : .clear)
                 }
         }
-        .help(isActive ? "Show Original" : "Translate Current Skill")
+        .help(isActive ? appLocalized("Show Original") : appLocalized("Translate Current Skill"))
     }
 }

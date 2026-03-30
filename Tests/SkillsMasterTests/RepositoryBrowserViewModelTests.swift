@@ -78,7 +78,7 @@ final class RepositoryBrowserViewModelTests: XCTestCase {
 
         XCTAssertEqual(
             vm.detailInstallButtonTitle(for: makeDiscoveredSkill(id: "repo-skill")),
-            "Install / Reinstall"
+            AppLocalization.string("Install / Reinstall")
         )
     }
 

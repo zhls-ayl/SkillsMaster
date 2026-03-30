@@ -36,6 +36,7 @@ enum AppLocalization {
     }
 
     static func currentBundle(userDefaults: UserDefaults = .standard) -> Bundle {
+        let availableLocalizations = Bundle.module.localizations
         let languageCandidates: [String] = {
             switch currentLanguageMode(userDefaults: userDefaults) {
             case .system:
@@ -49,7 +50,13 @@ enum AppLocalization {
         }()
 
         for candidate in languageCandidates {
-            if let path = Bundle.module.path(forResource: candidate, ofType: "lproj"),
+            guard let resolvedLocalization = availableLocalizations.first(where: {
+                normalizedLocalizationIdentifier($0) == normalizedLocalizationIdentifier(candidate)
+            }) else {
+                continue
+            }
+
+            if let path = Bundle.module.path(forResource: resolvedLocalization, ofType: "lproj"),
                let bundle = Bundle(path: path) {
                 return bundle
             }
@@ -103,4 +110,15 @@ enum AppLocalization {
 
         return Array(NSOrderedSet(array: candidates)) as? [String] ?? candidates
     }
+
+    private static func normalizedLocalizationIdentifier(_ identifier: String) -> String {
+        identifier
+            .replacingOccurrences(of: "_", with: "-")
+            .lowercased()
+    }
+}
+
+@inline(__always)
+func appLocalized(_ value: String.LocalizationValue) -> String {
+    AppLocalization.string(value)
 }

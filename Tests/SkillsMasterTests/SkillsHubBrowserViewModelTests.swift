@@ -197,7 +197,7 @@ final class SkillsHubBrowserViewModelTests: XCTestCase {
 
         XCTAssertEqual(
             viewModel.detailInstallButtonTitle(for: makeSkillsHubSkill(slug: "github")),
-            "Install / Reinstall"
+            AppLocalization.string("Install / Reinstall")
         )
     }
 

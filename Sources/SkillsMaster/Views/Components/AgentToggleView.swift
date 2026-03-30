@@ -121,7 +121,7 @@ private struct AgentToggleRow: View {
 
             // Show "Not installed" for agents that are not available on the system
             if !isAgentAvailable && !isOn {
-                Text("Not installed")
+                Text(appLocalized("Not installed"))
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             }

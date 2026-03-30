@@ -20,8 +20,8 @@ struct SkillsHubBrowserView: View {
                 }
             }
         }
-        .navigationTitle("SkillsHub")
-        .searchable(text: $viewModel.searchText, prompt: "Search SkillsHub skills...")
+        .navigationTitle(appLocalized("SkillsHub"))
+        .searchable(text: $viewModel.searchText, prompt: Text(appLocalized("Search SkillsHub skills...")))
         .onChange(of: viewModel.searchText) { _, _ in
             viewModel.onSearchTextChanged()
         }
@@ -32,7 +32,7 @@ struct SkillsHubBrowserView: View {
                 } label: {
                     Image(systemName: "arrow.clockwise")
                 }
-                .help("Refresh SkillsHub list")
+                .help(appLocalized("Refresh SkillsHub list"))
             }
 
             ToolbarItem {
@@ -43,7 +43,7 @@ struct SkillsHubBrowserView: View {
                 } label: {
                     Image(systemName: "safari")
                 }
-                .help("Open SkillsHub in browser")
+                .help(appLocalized("Open SkillsHub in browser"))
             }
         }
         .task {
@@ -53,7 +53,7 @@ struct SkillsHubBrowserView: View {
             Alert(
                 title: Text(notice.title),
                 message: Text(notice.message),
-                dismissButton: .default(Text("OK"))
+                dismissButton: .default(Text(appLocalized("OK")))
             )
         }
     }
@@ -134,7 +134,7 @@ struct SkillsHubBrowserView: View {
             Button {
                 viewModel.goToPreviousPage()
             } label: {
-                Label("Previous Page", systemImage: "chevron.left")
+                Label(appLocalized("Previous Page"), systemImage: "chevron.left")
             }
             .disabled(viewModel.currentPage <= 1 || viewModel.isLoading)
 
@@ -146,7 +146,7 @@ struct SkillsHubBrowserView: View {
             Button {
                 viewModel.goToNextPage()
             } label: {
-                Label("Next Page", systemImage: "chevron.right")
+                Label(appLocalized("Next Page"), systemImage: "chevron.right")
             }
             .disabled(viewModel.currentPage >= viewModel.totalPages || viewModel.isLoading)
 
@@ -163,7 +163,7 @@ struct SkillsHubBrowserView: View {
         VStack(spacing: 12) {
             ProgressView()
                 .controlSize(.large)
-            Text(viewModel.isSearchActive ? "Searching SkillsHub..." : "Loading SkillsHub...")
+            Text(viewModel.isSearchActive ? appLocalized("Searching SkillsHub...") : appLocalized("Loading SkillsHub..."))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
@@ -174,12 +174,12 @@ struct SkillsHubBrowserView: View {
         if let errorMessage = viewModel.errorMessage {
             return AnyView(
                 VStack(spacing: 10) {
-                    Text("Failed to load SkillsHub")
+                    Text(appLocalized("Failed to load SkillsHub"))
                         .font(.headline)
                     Text(errorMessage)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
-                    Button("Try Again") {
+                    Button(appLocalized("Try Again")) {
                         Task { await viewModel.refresh() }
                     }
                     .buttonStyle(.borderedProminent)
@@ -192,10 +192,10 @@ struct SkillsHubBrowserView: View {
         return AnyView(
             EmptyStateView(
                 icon: "shippingbox",
-                title: "No Skills to display",
+                title: appLocalized("No Skills to display"),
                 subtitle: viewModel.isSearchActive
-                    ? "No SkillsHub skill matches the current search term."
-                    : "SkillsHub did not return any displayable skills."
+                    ? appLocalized("No SkillsHub skill matches the current search term.")
+                    : appLocalized("SkillsHub did not return any displayable skills.")
             )
         )
     }
@@ -248,11 +248,11 @@ private struct SkillsHubSkillRowView: View {
                         .lineLimit(1)
 
                     if isFeatured {
-                        badge("Featured", color: .blue)
+                        badge(appLocalized("Featured"), color: .blue)
                     }
 
                     if isInstalled {
-                        badge("Installed", color: .green)
+                        badge(appLocalized("Installed"), color: .green)
                     }
                 }
 

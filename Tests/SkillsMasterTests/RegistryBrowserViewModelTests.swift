@@ -180,7 +180,7 @@ final class RegistryBrowserViewModelTests: XCTestCase {
 
         XCTAssertEqual(
             vm.detailInstallButtonTitle(for: makeRegistrySkill(skillId: "ui-ux-pro-max", source: "alice/skills")),
-            "Install / Reinstall"
+            AppLocalization.string("Install / Reinstall")
         )
     }
 

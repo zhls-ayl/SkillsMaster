@@ -45,7 +45,7 @@ struct RepositoryBrowserView: View {
         // Dynamic navigation title: shows the repo's display name
         .navigationTitle(viewModel.repository.name)
         // Native macOS search bar — filters skill list locally (no network call)
-        .searchable(text: $viewModel.searchText, prompt: "Filter skills…")
+        .searchable(text: $viewModel.searchText, prompt: appLocalized("Filter skills…"))
         // Toolbar: Sync button
         .toolbar {
             ToolbarItem {
@@ -59,7 +59,7 @@ struct RepositoryBrowserView: View {
                         Image(systemName: "arrow.triangle.2.circlepath")
                     }
                 }
-                .help("Sync repository (git pull)")
+                .help(appLocalized("Sync repository (git pull)"))
                 .disabled(viewModel.isSyncing)
             }
         }
@@ -76,7 +76,7 @@ struct RepositoryBrowserView: View {
             Alert(
                 title: Text(notice.title),
                 message: Text(notice.message),
-                dismissButton: .default(Text("OK"))
+                dismissButton: .default(Text(appLocalized("OK")))
             )
         }
     }
@@ -103,12 +103,12 @@ struct RepositoryBrowserView: View {
                 HStack(spacing: 6) {
                     ProgressView()
                         .controlSize(.small)
-                    Text("Syncing...")
+                    Text(appLocalized("Syncing..."))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
             } else {
-                Button("Sync Now") {
+                Button(appLocalized("Sync Now")) {
                     Task { await viewModel.sync() }
                 }
                 .buttonStyle(.bordered)
@@ -124,7 +124,7 @@ struct RepositoryBrowserView: View {
                 }
                 .help(absoluteDateText(date))
             } else {
-                Text("Never synced")
+                Text(appLocalized("Never synced"))
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
@@ -158,7 +158,7 @@ struct RepositoryBrowserView: View {
                 .frame(maxWidth: 280)
 
             // Offer to sync immediately
-            Button("Sync Now") {
+            Button(appLocalized("Sync Now")) {
                 Task { await viewModel.sync() }
             }
             .buttonStyle(.borderedProminent)
@@ -190,9 +190,9 @@ struct RepositoryBrowserView: View {
             Image(systemName: "tray")
                 .font(.system(size: 36))
                 .foregroundStyle(.secondary)
-            Text("No Skills Found")
+            Text(appLocalized("No Skills Found"))
                 .font(.headline)
-            Text("This repository contains no SKILL.md files.")
+            Text(appLocalized("This repository contains no SKILL.md files."))
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -206,7 +206,7 @@ struct RepositoryBrowserView: View {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 32))
                 .foregroundStyle(.secondary)
-            Text("No skills match \"\(trimmedSearchText)\"")
+            Text(AppLocalization.format("No skills match \"%@\"", trimmedSearchText))
                 .font(.body)
                 .foregroundStyle(.secondary)
         }
@@ -268,7 +268,7 @@ private struct RepositorySkillRowView: View {
 
                     // "Installed" badge — same green capsule style as RegistrySkillRowView
                     if isInstalled {
-                        Text("Installed")
+                        Text(appLocalized("Installed"))
                             .font(.caption2)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)

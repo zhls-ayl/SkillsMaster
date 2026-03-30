@@ -20,16 +20,16 @@ struct AllSkillsView: View {
         Group {
             if skillManager.isLoading && skillManager.skills.isEmpty {
                 // Show progress indicator on first load
-                ProgressView("Scanning skills...")
+                ProgressView(AppLocalization.string("Scanning skills..."))
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if filteredSkills.isEmpty {
                 // Empty state
                 EmptyStateView(
                     icon: "magnifyingglass",
-                    title: "No Skills Found",
+                    title: AppLocalization.string("No Skills Found"),
                     subtitle: viewModel.searchText.isEmpty
-                        ? "Install skills using npx skills add or the CLI"
-                        : "No skills match your search"
+                        ? AppLocalization.string("Install skills using npx skills add or the CLI")
+                        : AppLocalization.string("No skills match your search")
                 )
             } else {
                 // Skill list
@@ -38,11 +38,11 @@ struct AllSkillsView: View {
                         .tag(skill.id)
                         // contextMenu is macOS's right-click menu
                         .contextMenu {
-                            Button("Open in Finder") {
+                            Button(AppLocalization.string("Open in Finder")) {
                                 ApplicationLauncher.revealInFinder(itemURL: skill.canonicalURL)
                             }
                             Divider()  // Menu separator
-                            Button("Delete", role: .destructive) {
+                            Button(AppLocalization.string("Delete"), role: .destructive) {
                                 viewModel.requestDelete(skill: skill)
                             }
                         }
@@ -52,14 +52,14 @@ struct AllSkillsView: View {
         }
         .navigationTitle(navigationTitle)
         // Search bar (macOS standard search field, displayed in toolbar)
-        .searchable(text: $viewModel.searchText, prompt: "Search skills...")
+        .searchable(text: $viewModel.searchText, prompt: AppLocalization.string("Search skills..."))
         // Toolbar: sorting and filtering
         .toolbar {
             // placement: .navigation places toolbar items on the left (navigation area), default .automatic places on right
             ToolbarItemGroup(placement: .navigation) {
                 Menu {
                     // Section creates titled groups in menus, similar to Android's menu group
-                    Section("Sort By") {
+                    Section(AppLocalization.string("Sort By")) {
                         ForEach(AllSkillsViewModel.SortOrder.allCases, id: \.self) { order in
                             Button {
                                 if viewModel.sortOrder == order {
@@ -99,16 +99,19 @@ struct AllSkillsView: View {
         }
         // Delete confirmation dialog
         // .alert similar to Android's AlertDialog or Web's confirm()
-        .alert("Delete Skill", isPresented: $viewModel.showDeleteConfirmation) {
-            Button("Cancel", role: .cancel) {
+        .alert(AppLocalization.string("Delete Skill"), isPresented: $viewModel.showDeleteConfirmation) {
+            Button(AppLocalization.string("Cancel"), role: .cancel) {
                 viewModel.cancelDelete()
             }
-            Button("Delete", role: .destructive) {
+            Button(AppLocalization.string("Delete"), role: .destructive) {
                 Task { await viewModel.confirmDelete() }
             }
         } message: {
             if let skill = viewModel.skillToDelete {
-                Text("Are you sure you want to delete \"\(skill.displayName)\"吗？这会删除该 Skill 目录及其全部 Agent 分配（软链接或物理复制），且无法撤销。")
+                Text(AppLocalization.format(
+                    "Are you sure you want to delete \"%@\"? This will remove the Skill directory and all Agent assignments (symbolic links or physical copies), and cannot be undone.",
+                    skill.displayName
+                ))
             }
         }
         // Error message
@@ -118,7 +121,7 @@ struct AllSkillsView: View {
                     Image(systemName: "exclamationmark.triangle")
                     Text(error)
                     Spacer()
-                    Button("Dismiss") {
+                    Button(AppLocalization.string("Dismiss")) {
                         skillManager.errorMessage = nil
                     }
                     .buttonStyle(.borderless)
@@ -135,6 +138,6 @@ struct AllSkillsView: View {
         if let agent = selectedAgentFilter {
             return agent.displayName
         }
-        return "All Skills"
+        return AppLocalization.string("All Skills")
     }
 }

@@ -3,13 +3,16 @@ import SwiftUI
 /// 展示 frontmatter 中未在主信息区出现的额外字段。
 struct SkillFrontmatterView: View {
     let fields: [FrontmatterField]
-    var title: String? = "Skill Metadata"
+    var title: String? = nil
 
     var body: some View {
         if !fields.isEmpty {
             VStack(alignment: .leading, spacing: 8) {
                 if let title {
                     Text(title)
+                        .font(.headline)
+                } else {
+                    Text(appLocalized("Skill Metadata"))
                         .font(.headline)
                 }
 
