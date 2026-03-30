@@ -19,6 +19,10 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - 发布文档、开发文档、README、协作规范与兼容说明已统一到“`VERSION` + `./run ship` + `Release Orchestrator`”的新发布模型，并明确 `RELEASE_SYNC_TOKEN` 是自动同步两个 cask 仓库所需的必备 secret。
 - `.github/workflows/ci.yml` 中的 `actions/checkout` 已升级到 `v6`，消除旧版 `v4` 在 GitHub Actions 上的 Node 20 deprecation 告警路径。
 
+### Fixed
+- 修复发布自动化对 GitHub 仓库“开启 auto-merge 功能”的隐式依赖；现在即使仓库未启用 auto-merge，`ship.sh` 与 `Release Orchestrator` 也会等待检查完成后主动 merge 对应 PR。
+- 修复 `Release Orchestrator` 在 `actions/checkout` 默认保留 `github.token` 凭据时，推 `v0.2.10` tag 仍被识别为 `github-actions[bot]` 并返回 403 的问题；当前 workflow 已显式关闭 `persist-credentials`，改为只使用 `RELEASE_SYNC_TOKEN` 进行发布写操作。
+
 ## [0.2.9] - 2026-03-30
 ### Added
 - `Settings > Repositories` 新增 `HTTPS (Public)` 认证模式，允许为任意支持匿名 `git clone` 的公开 HTTPS 仓库（包括自建 Git 服务）添加 Custom Repository，而不再强制要求填写 Token。

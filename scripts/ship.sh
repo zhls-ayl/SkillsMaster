@@ -161,6 +161,47 @@ wait_for_workflow_run() {
   exit 1
 }
 
+merge_pr_with_wait() {
+  local repo="$1"
+  local pr_number="$2"
+  local last_output=""
+  local attempt_file
+
+  attempt_file="$(mktemp)"
+  trap 'rm -f "${attempt_file}"' RETURN
+
+  for _ in $(seq 1 180); do
+    local state merged_at
+    state="$(gh pr view "$pr_number" --repo "$repo" --json state --jq '.state')"
+    merged_at="$(gh pr view "$pr_number" --repo "$repo" --json mergedAt --jq '.mergedAt // ""')"
+
+    if [[ -n "$merged_at" ]]; then
+      ok "PR #${pr_number} in ${repo} has merged"
+      return 0
+    fi
+
+    if [[ "$state" == "CLOSED" ]]; then
+      error "PR #${pr_number} in ${repo} was closed without merge"
+      exit 1
+    fi
+
+    if gh pr merge "$pr_number" --repo "$repo" --merge --delete-branch >"${attempt_file}" 2>&1; then
+      cat "${attempt_file}" >&2
+      ok "Merged PR #${pr_number} in ${repo}"
+      return 0
+    fi
+
+    last_output="$(cat "${attempt_file}")"
+    sleep 10
+  done
+
+  error "Timed out waiting to merge PR #${pr_number} in ${repo}"
+  if [[ -n "$last_output" ]]; then
+    echo "${last_output}" >&2
+  fi
+  exit 1
+}
+
 main() {
   require_cmd git
   require_cmd gh
@@ -283,8 +324,7 @@ main() {
     fi
 
     release_pr_number="$(find_or_create_release_pr "$repo" "$branch" "$version")"
-    gh pr merge "$release_pr_number" --repo "$repo" --auto --merge
-    ok "Release prep PR #${release_pr_number} is set to auto-merge"
+    merge_pr_with_wait "$repo" "$release_pr_number"
   else
     ok "Current main is already ready for v${version}; skipping release prep PR"
   fi

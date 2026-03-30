@@ -80,6 +80,47 @@ wait_for_pr_merge() {
   exit 1
 }
 
+merge_pr_with_wait() {
+  local repo="$1"
+  local pr_number="$2"
+  local last_output=""
+  local attempt_file
+
+  attempt_file="$(mktemp)"
+  trap 'rm -f "${attempt_file}"' RETURN
+
+  for _ in $(seq 1 180); do
+    local state merged_at
+    state="$(gh pr view "$pr_number" --repo "$repo" --json state --jq '.state')"
+    merged_at="$(gh pr view "$pr_number" --repo "$repo" --json mergedAt --jq '.mergedAt // ""')"
+
+    if [[ -n "$merged_at" ]]; then
+      ok "PR #${pr_number} in ${repo} has merged"
+      return 0
+    fi
+
+    if [[ "$state" == "CLOSED" ]]; then
+      error "PR #${pr_number} in ${repo} was closed without merge"
+      exit 1
+    fi
+
+    if GH_TOKEN="${RELEASE_SYNC_TOKEN}" gh pr merge "$pr_number" --repo "$repo" --merge --delete-branch >"${attempt_file}" 2>&1; then
+      cat "${attempt_file}" >&2
+      ok "Merged PR #${pr_number} in ${repo}"
+      return 0
+    fi
+
+    last_output="$(cat "${attempt_file}")"
+    sleep 10
+  done
+
+  error "Timed out waiting to merge PR #${pr_number} in ${repo}"
+  if [[ -n "$last_output" ]]; then
+    echo "${last_output}" >&2
+  fi
+  exit 1
+}
+
 resolve_release_commit() {
   if [[ "$RELEASE_PR_NUMBER" == "0" ]]; then
     git fetch origin main --tags
@@ -200,8 +241,7 @@ sync_current_repo_cask() {
     ok "Reusing existing current-repo cask PR #${pr_number}"
   fi
 
-  gh pr merge "${pr_number}" --repo "$CURRENT_REPO" --auto --merge
-  wait_for_pr_merge "$CURRENT_REPO" "${pr_number}"
+  merge_pr_with_wait "$CURRENT_REPO" "${pr_number}"
   git fetch origin main
   git switch -C main origin/main
 }
@@ -245,8 +285,7 @@ sync_tap_repo_cask() {
     ok "Reusing existing tap-repo PR #${pr_number}"
   fi
 
-  GH_TOKEN="${RELEASE_SYNC_TOKEN}" gh pr merge "${pr_number}" --repo "${TAP_REPO}" --auto --merge
-  wait_for_pr_merge "${TAP_REPO}" "${pr_number}"
+  merge_pr_with_wait "${TAP_REPO}" "${pr_number}"
 }
 
 write_summary() {
