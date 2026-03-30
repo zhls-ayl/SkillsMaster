@@ -212,6 +212,7 @@ sha256:6e0974f53f007926542f2cb74a7e9fbc1a5f9826b1189ac5464f2464af45bdb9
 - `build/SkillsMaster-v<version>-arm64.zip` 可成功生成
 - `build/SkillsMaster-v<version>-x86_64.zip` 可成功生成
 - `build/SkillsMaster-v<version>-universal.dmg` 可成功生成
+- 单架构 zip 解压后的 `.app` 必须能正常定位 SwiftPM resource bundle；至少要对 `arm64.zip` 做一次启动级 smoke test，避免出现“解压后 `Bundle.module` 路径不匹配、应用启动即崩溃”的发布回归
 - `CHANGELOG.md` 已记录当前版本的关键变更与缺陷修复
 - 通用二进制同时包含 `arm64` 与 `x86_64`
 - 单架构 zip 中的二进制分别只包含目标架构
