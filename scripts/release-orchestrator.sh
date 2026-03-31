@@ -253,9 +253,15 @@ sync_tap_repo_cask() {
   local sha256="$1"
   local tap_dir
   local pr_number=""
+  cleanup_tap_dir() {
+    if [[ -n "${tap_dir:-}" ]]; then
+      rm -rf "${tap_dir}"
+    fi
+    trap - RETURN
+  }
 
   tap_dir="$(mktemp -d)"
-  trap 'rm -rf "${tap_dir}"' RETURN
+  trap cleanup_tap_dir RETURN
 
   GH_TOKEN="${RELEASE_SYNC_TOKEN}" gh repo clone "${TAP_REPO}" "${tap_dir}" -- --quiet
 
@@ -269,6 +275,7 @@ sync_tap_repo_cask() {
 
   if git -C "${tap_dir}" diff --quiet -- Casks/skillsmaster.rb; then
     ok "Tap repository cask already matches ${VERSION}"
+    cleanup_tap_dir
     return 0
   fi
 
@@ -289,6 +296,7 @@ sync_tap_repo_cask() {
   fi
 
   merge_pr_with_wait "${TAP_REPO}" "${pr_number}"
+  cleanup_tap_dir
 }
 
 write_summary() {
