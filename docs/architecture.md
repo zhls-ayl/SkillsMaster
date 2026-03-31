@@ -34,8 +34,9 @@ SkillsMaster 是一个基于 SwiftUI 的 macOS 应用，用于管理多代理 Sk
 在 `Installed > All Skills > Skill Detail` 中，当前实现还提供了 Skill-scoped 的 `Related Files` 抽屉：
 - 默认仍以 `SKILL.md` 作为主页，不预先展开文件树
 - 仅当当前 Skill 文件夹内存在 `SKILL.md` 之外的文件或目录时，才显示 `Related Files` 入口
-- 抽屉固定提供 `SKILL.md` 的 `Home` 锚点；切到其他文件时，主内容区会显示相对路径、返回入口以及 Finder / Terminal / 外置编辑器 / 内置编辑动作
+- 抽屉固定提供 `SKILL.md` 的 `Home` 锚点；在 `management` 模式下切到其他文件时，主内容区会显示相对路径、返回入口以及 Finder / Terminal / 外置编辑器 / 内置编辑动作
 - 多文件浏览不复用 `Agent Files` 的只读保护语义；它以当前 Skill 目录为作用域，只处理该 Skill 内部的关联文件
+- 当 `Skill Detail` 处于 `contentOnly` 模式（例如 `Agents > Agents Skills`）时，`Related Files` 仍可用于浏览与预览当前 Skill 的关联文件，但不会展示 Finder / Terminal / 外置编辑器 / 内置编辑等管理动作，以保持原有只读语义
 
 ## 启动与刷新主流程
 1. `SkillsMasterApp` 注入全局 `SkillManager`
