@@ -104,6 +104,48 @@ struct SkillDetailView: View {
             }
             .toolbar {
                 ToolbarItemGroup {
+                    // 1. 翻译按钮（独立，内容模式切换）。
+                    if isShowingHomeContent {
+                        ManualTranslationToolbarButton(
+                            isActive: viewModel.isShowingManualTranslation(for: skillID)
+                        ) {
+                            viewModel.toggleManualTranslation(for: skillID)
+                        }
+                    }
+
+                    // 2. 操作菜单（合并编辑 + 导航，减少工具栏拥挤）。
+                    // 点击主按钮直接进入内置编辑（最高频操作），
+                    // 展开菜单可访问外部编辑器、Finder、Terminal。
+                    if displayMode.showsManagementUI && isShowingHomeContent {
+                        Menu {
+                            Button {
+                                viewModel.openInExternalEditor(skill: skill)
+                            } label: {
+                                Label(appLocalized("Open in External Editor"), systemImage: "arrow.up.forward.app")
+                            }
+
+                            Divider()
+
+                            Button {
+                                viewModel.revealInFinder(skill: skill)
+                            } label: {
+                                Label(appLocalized("Show in Finder"), systemImage: "folder")
+                            }
+
+                            Button {
+                                viewModel.openInTerminal(skill: skill)
+                            } label: {
+                                Label(appLocalized("Open in Terminal"), systemImage: "terminal")
+                            }
+                        } label: {
+                            Image(systemName: "pencil")
+                        } primaryAction: {
+                            viewModel.startEditing(skill: skill)
+                        }
+                        .help(appLocalized("Edit SKILL.md"))
+                    }
+
+                    // 3. 关联文件抽屉按钮（最右侧，靠近抽屉出现方向）。
                     if let relatedFilesViewModel, relatedFilesViewModel.hasRelatedFiles {
                         Button {
                             relatedFilesViewModel.toggleDrawer()
@@ -116,50 +158,7 @@ struct SkillDetailView: View {
                         }
                         .help(appLocalized("Browse files in this Skill"))
                     }
-
-                    if displayMode.showsManagementUI && isShowingHomeContent {
-                        // 在 Finder 中定位。
-                        Button {
-                            viewModel.revealInFinder(skill: skill)
-                        } label: {
-                            Image(systemName: "folder")
-                        }
-                        .help(appLocalized("Show in Finder"))
-
-                        // 在 Terminal 中打开。
-                        Button {
-                            viewModel.openInTerminal(skill: skill)
-                        } label: {
-                            Image(systemName: "terminal")
-                        }
-                        .help(appLocalized("Open in Terminal"))
-                    }
-
-                    if isShowingHomeContent {
-                        ManualTranslationToolbarButton(
-                            isActive: viewModel.isShowingManualTranslation(for: skillID)
-                        ) {
-                            viewModel.toggleManualTranslation(for: skillID)
-                        }
-                    }
-
-                    if displayMode.showsManagementUI && isShowingHomeContent {
-                        // 编辑按钮。
-                        Button {
-                            viewModel.startEditing(skill: skill)
-                        } label: {
-                            Image(systemName: "pencil")
-                        }
-                        .help(appLocalized("Edit SKILL.md"))
-
-                        Button {
-                            viewModel.openInExternalEditor(skill: skill)
-                        } label: {
-                            Image(systemName: "square.and.arrow.up")
-                        }
-                        .help(appLocalized("Open SKILL.md in External Editor"))
-                    }
-                } 
+                }
             }
         } else {
             EmptyStateView(

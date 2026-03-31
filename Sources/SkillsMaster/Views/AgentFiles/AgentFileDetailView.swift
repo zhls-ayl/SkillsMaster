@@ -258,43 +258,43 @@ struct AgentFileDetailView: View {
     @ViewBuilder
     private func previewActionButtons() -> some View {
         HStack(spacing: 8) {
-            Button {
-                viewModel.revealSelectedOrRootInFinder()
+            Menu {
+                if viewModel.canEditSelectedInternally {
+                    Button {
+                        viewModel.startEditingSelectedItem()
+                    } label: {
+                        Label(AppLocalization.string("Edit"), systemImage: "pencil")
+                    }
+                }
+
+                if viewModel.canOpenSelectedInExternalEditor {
+                    Button {
+                        viewModel.openSelectedInExternalEditor()
+                    } label: {
+                        Label(AppLocalization.string("Open in External Editor"), systemImage: "arrow.up.forward.app")
+                    }
+                }
+
+                Divider()
+
+                Button {
+                    viewModel.revealSelectedOrRootInFinder()
+                } label: {
+                    Label(AppLocalization.string("Show in Finder"), systemImage: "folder")
+                }
+                .disabled(!viewModel.canRevealSelectedOrRoot)
+
+                Button {
+                    viewModel.openSelectedOrRootInTerminal()
+                } label: {
+                    Label(AppLocalization.string("Open in Terminal"), systemImage: "terminal")
+                }
+                .disabled(!viewModel.canOpenSelectedOrRootInTerminal)
             } label: {
-                Image(systemName: "folder")
+                Image(systemName: "ellipsis.circle")
             }
             .buttonStyle(.borderless)
-            .help(AppLocalization.string("Show in Finder"))
-            .disabled(!viewModel.canRevealSelectedOrRoot)
-
-            Button {
-                viewModel.openSelectedOrRootInTerminal()
-            } label: {
-                Image(systemName: "terminal")
-            }
-            .buttonStyle(.borderless)
-            .help(AppLocalization.string("Open in Terminal"))
-            .disabled(!viewModel.canOpenSelectedOrRootInTerminal)
-
-            if viewModel.canEditSelectedInternally {
-                Button {
-                    viewModel.startEditingSelectedItem()
-                } label: {
-                    Image(systemName: "pencil")
-                }
-                .buttonStyle(.borderless)
-                .help(AppLocalization.string("Edit"))
-            }
-
-            if viewModel.canOpenSelectedInExternalEditor {
-                Button {
-                    viewModel.openSelectedInExternalEditor()
-                } label: {
-                    Image(systemName: "square.and.arrow.up")
-                }
-                .buttonStyle(.borderless)
-                .help(AppLocalization.string("Open in External Editor"))
-            }
+            .help(AppLocalization.string("Actions"))
         }
     }
 

@@ -74,6 +74,16 @@ struct SkillRelatedFilesDrawerView: View {
                     .padding(.vertical, 4)
                     .background(Color.secondary.opacity(0.08))
                     .clipShape(Capsule())
+
+                Button {
+                    viewModel.toggleDrawer()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.borderless)
+                .help(appLocalized("Close"))
             }
 
             if viewModel.shouldShowSearch {
@@ -330,43 +340,41 @@ struct SkillRelatedFileContentView: View {
             Spacer()
 
             if allowsManagementActions {
-                HStack(spacing: 8) {
-                    Button {
-                        viewModel.revealSelectedOrRootInFinder()
-                    } label: {
-                        Image(systemName: "folder")
-                    }
-                    .buttonStyle(.borderless)
-                    .help(appLocalized("Show in Finder"))
-
-                    Button {
-                        viewModel.openSelectedOrRootInTerminal()
-                    } label: {
-                        Image(systemName: "terminal")
-                    }
-                    .buttonStyle(.borderless)
-                    .help(appLocalized("Open in Terminal"))
-
+                Menu {
                     if viewModel.canEditSelectedFile {
                         Button {
                             viewModel.startEditingSelectedFile()
                         } label: {
-                            Image(systemName: "pencil")
+                            Label(appLocalized("Edit"), systemImage: "pencil")
                         }
-                        .buttonStyle(.borderless)
-                        .help(appLocalized("Edit"))
                     }
 
                     if viewModel.canOpenSelectedInExternalEditor {
                         Button {
                             viewModel.openSelectedInExternalEditor()
                         } label: {
-                            Image(systemName: "square.and.arrow.up")
+                            Label(appLocalized("Open in External Editor"), systemImage: "arrow.up.forward.app")
                         }
-                        .buttonStyle(.borderless)
-                        .help(appLocalized("Open in External Editor"))
                     }
+
+                    Divider()
+
+                    Button {
+                        viewModel.revealSelectedOrRootInFinder()
+                    } label: {
+                        Label(appLocalized("Show in Finder"), systemImage: "folder")
+                    }
+
+                    Button {
+                        viewModel.openSelectedOrRootInTerminal()
+                    } label: {
+                        Label(appLocalized("Open in Terminal"), systemImage: "terminal")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
                 }
+                .buttonStyle(.borderless)
+                .help(appLocalized("Actions"))
             }
         }
     }
