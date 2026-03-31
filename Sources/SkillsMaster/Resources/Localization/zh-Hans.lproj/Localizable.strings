@@ -61,6 +61,7 @@
 "Delete failed: %@" = "删除失败：%@";
 "Dismiss" = "关闭";
 "Update available" = "有可用更新";
+"Updates" = "检查更新";
 "Up to Date" = "已是最新";
 "Check failed: %@" = "检查失败：%@";
 "Select a Skill" = "请选择 Skill";
@@ -150,7 +151,7 @@
 "This repository contains no SKILL.md files." = "这个 repository 不包含任何 SKILL.md 文件。";
 "No skills match \"%@\"" = "没有匹配“%@”的 skills";
 "Search SkillsHub skills..." = "搜索 SkillsHub skills...";
-"Refresh SkillsHub list" = "刷新 SkillsHub 列表";
+"Refresh SkillsHub" = "刷新 SkillsHub";
 "Open SkillsHub in browser" = "在浏览器中打开 SkillsHub";
 "All Categories" = "全部分类";
 "Sort: %@" = "排序：%@";
@@ -211,7 +212,7 @@
 "上一页" = "上一页";
 "下一页" = "下一页";
 "搜索 SkillsHub skills..." = "搜索 SkillsHub skills...";
-"刷新 SkillsHub 列表" = "刷新 SkillsHub 列表";
+"刷新 SkillsHub" = "刷新 SkillsHub";
 "在浏览器打开 SkillsHub" = "在浏览器打开 SkillsHub";
 "全部分类" = "全部分类";
 "排序: %@" = "排序：%@";
@@ -371,9 +372,9 @@
 "Open skills.sh in browser" = "在浏览器中打开 skills.sh";
 "Package Info" = "包信息";
 "Check installed Skills for remote updates" = "检查已安装 Skills 的远端版本或 commit 更新";
-"Refresh ClawHub list" = "刷新 ClawHub 列表";
+"Refresh ClawHub" = "刷新 ClawHub";
 "Refresh Skills" = "刷新 Skills";
-"Refresh registry data" = "刷新 registry 数据";
+"Refresh Skills.sh" = "刷新 Skills.sh";
 "Rescan" = "重新扫描";
 "Rescan local Skills, Agents, lock file, and repository configuration" = "重新扫描本地 Skills、Agent、lock file 与仓库配置";
 "Reinstall" = "重装";

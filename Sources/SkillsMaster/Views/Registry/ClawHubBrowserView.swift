@@ -32,9 +32,11 @@ struct ClawHubBrowserView: View {
                 Button {
                     Task { await viewModel.refresh() }
                 } label: {
-                    Image(systemName: "arrow.clockwise")
+                    Label(appLocalized("Refresh ClawHub"), systemImage: "arrow.clockwise")
                 }
-                .help(appLocalized("Refresh ClawHub list"))
+                .labelStyle(.iconOnly)
+                .help(appLocalized("Refresh ClawHub"))
+                .accessibilityLabel(appLocalized("Refresh ClawHub"))
             }
 
             ToolbarItem {

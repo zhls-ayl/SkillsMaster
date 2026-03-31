@@ -30,9 +30,11 @@ struct SkillsHubBrowserView: View {
                 Button {
                     Task { await viewModel.refresh() }
                 } label: {
-                    Image(systemName: "arrow.clockwise")
+                    Label(appLocalized("Refresh SkillsHub"), systemImage: "arrow.clockwise")
                 }
-                .help(appLocalized("Refresh SkillsHub list"))
+                .labelStyle(.iconOnly)
+                .help(appLocalized("Refresh SkillsHub"))
+                .accessibilityLabel(appLocalized("Refresh SkillsHub"))
             }
 
             ToolbarItem {
