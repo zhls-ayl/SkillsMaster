@@ -73,9 +73,11 @@ struct RegistryBrowserView: View {
                         NSWorkspace.shared.open(url)
                     }
                 } label: {
-                    Image(systemName: "safari")
+                    Label(appLocalized("Official Site"), systemImage: "safari")
                 }
+                .labelStyle(.iconOnly)
                 .help(appLocalized("Open skills.sh in browser"))
+                .accessibilityLabel(appLocalized("Open skills.sh in browser"))
             }
         }
         // .task runs async code when the view first appears

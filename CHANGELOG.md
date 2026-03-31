@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+## [0.2.12] - 2026-03-31
+### Changed
+- 统一主界面 toolbar 中刷新类按钮的 icon-only 语义：`Marketplace` 与 `Repository` 等入口现在统一使用带标题语义的 `Label`，并补齐 accessibility label，减少仅用图标时 tooltip / hover 提示不稳定的问题。
+- 调整 `Skills.sh`、ClawHub、SkillsHub 三个 marketplace 入口的刷新按钮与站点按钮文案：刷新动作分别改为 `刷新 Skills.sh`、`刷新 ClawHub`、`刷新 SkillsHub`，站点入口统一使用 `官网 / Official Site` 作为 iconText。
+- 收紧 sidebar 顶部两个主动作按钮的文案区分：本地重扫明确为 `重新扫描 / Rescan`，远端更新检查在英文模式下缩短为 `Updates`，降低窄窗口和英文界面下的 toolbar 占位压力。
+
 ### Fixed
 - 修复 `Skill Detail > Related Files` 在 `Agents > Agents Skills` 的 `contentOnly` 只读模式下仍暴露 Finder / Terminal / 外置编辑器 / 内置编辑动作的问题；现在该入口仍可浏览关联文件，但会继续遵守原有“只读内容视图不展示管理按钮”的语义。
 

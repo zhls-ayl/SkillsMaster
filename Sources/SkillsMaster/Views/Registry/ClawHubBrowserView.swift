@@ -45,9 +45,11 @@ struct ClawHubBrowserView: View {
                         NSWorkspace.shared.open(url)
                     }
                 } label: {
-                    Image(systemName: "safari")
+                    Label(appLocalized("Official Site"), systemImage: "safari")
                 }
+                .labelStyle(.iconOnly)
                 .help(appLocalized("Open ClawHub in browser"))
+                .accessibilityLabel(appLocalized("Open ClawHub in browser"))
             }
         }
         .task {

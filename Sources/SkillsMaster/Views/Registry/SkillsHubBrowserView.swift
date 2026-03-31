@@ -43,9 +43,11 @@ struct SkillsHubBrowserView: View {
                         NSWorkspace.shared.open(url)
                     }
                 } label: {
-                    Image(systemName: "safari")
+                    Label(appLocalized("Official Site"), systemImage: "safari")
                 }
+                .labelStyle(.iconOnly)
                 .help(appLocalized("Open SkillsHub in browser"))
+                .accessibilityLabel(appLocalized("Open SkillsHub in browser"))
             }
         }
         .task {
