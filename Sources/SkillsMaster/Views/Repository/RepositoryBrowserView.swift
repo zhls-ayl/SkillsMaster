@@ -49,18 +49,21 @@ struct RepositoryBrowserView: View {
         // Toolbar: Sync button
         .toolbar {
             ToolbarItem {
-                Button {
-                    Task { await viewModel.sync() }
-                } label: {
-                    if viewModel.isSyncing {
-                        ProgressView()
-                            .controlSize(.small)
-                    } else {
-                        Image(systemName: "arrow.triangle.2.circlepath")
+                if viewModel.isSyncing {
+                    ProgressView()
+                        .controlSize(.small)
+                        .help(appLocalized("Sync repository (git pull)"))
+                        .accessibilityLabel(appLocalized("Sync repository (git pull)"))
+                } else {
+                    Button {
+                        Task { await viewModel.sync() }
+                    } label: {
+                        Label(appLocalized("Sync repository (git pull)"), systemImage: "arrow.triangle.2.circlepath")
                     }
+                    .labelStyle(.iconOnly)
+                    .help(appLocalized("Sync repository (git pull)"))
+                    .accessibilityLabel(appLocalized("Sync repository (git pull)"))
                 }
-                .help(appLocalized("Sync repository (git pull)"))
-                .disabled(viewModel.isSyncing)
             }
         }
         // Load skills when the view first appears

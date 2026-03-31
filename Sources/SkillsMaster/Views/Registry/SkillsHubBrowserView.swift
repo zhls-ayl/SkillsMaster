@@ -30,9 +30,11 @@ struct SkillsHubBrowserView: View {
                 Button {
                     Task { await viewModel.refresh() }
                 } label: {
-                    Image(systemName: "arrow.clockwise")
+                    Label(appLocalized("Refresh SkillsHub"), systemImage: "arrow.clockwise")
                 }
-                .help(appLocalized("Refresh SkillsHub list"))
+                .labelStyle(.iconOnly)
+                .help(appLocalized("Refresh SkillsHub"))
+                .accessibilityLabel(appLocalized("Refresh SkillsHub"))
             }
 
             ToolbarItem {
@@ -41,9 +43,11 @@ struct SkillsHubBrowserView: View {
                         NSWorkspace.shared.open(url)
                     }
                 } label: {
-                    Image(systemName: "safari")
+                    Label(appLocalized("Official Site"), systemImage: "safari")
                 }
+                .labelStyle(.iconOnly)
                 .help(appLocalized("Open SkillsHub in browser"))
+                .accessibilityLabel(appLocalized("Open SkillsHub in browser"))
             }
         }
         .task {

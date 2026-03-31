@@ -57,9 +57,11 @@ struct RegistryBrowserView: View {
                 Button {
                     Task { await viewModel.refresh() }
                 } label: {
-                    Image(systemName: "arrow.clockwise")
+                    Label(appLocalized("Refresh Skills.sh"), systemImage: "arrow.clockwise")
                 }
-                .help(appLocalized("Refresh registry data"))
+                .labelStyle(.iconOnly)
+                .help(appLocalized("Refresh Skills.sh"))
+                .accessibilityLabel(appLocalized("Refresh Skills.sh"))
             }
 
             // "Open in Browser" button — opens skills.sh in the default web browser
@@ -71,9 +73,11 @@ struct RegistryBrowserView: View {
                         NSWorkspace.shared.open(url)
                     }
                 } label: {
-                    Image(systemName: "safari")
+                    Label(appLocalized("Official Site"), systemImage: "safari")
                 }
+                .labelStyle(.iconOnly)
                 .help(appLocalized("Open skills.sh in browser"))
+                .accessibilityLabel(appLocalized("Open skills.sh in browser"))
             }
         }
         // .task runs async code when the view first appears

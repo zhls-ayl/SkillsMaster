@@ -220,9 +220,13 @@ struct SidebarView: View {
                                 .foregroundStyle(.secondary)
                         }
                     } else {
-                        Image(systemName: "arrow.triangle.2.circlepath")
+                        Label(
+                            AppLocalization.string("Updates"),
+                            systemImage: "arrow.triangle.2.circlepath"
+                        )
                     }
                 }
+                .labelStyle(.iconOnly)
                 .help(AppLocalization.string("Check installed Skills for remote updates"))
                 .accessibilityLabel(AppLocalization.string("Check for Updates"))
                 .disabled(skillManager.isCheckingUpdates)
@@ -233,8 +237,9 @@ struct SidebarView: View {
                 Button {
                     Task { await skillManager.refresh() }
                 } label: {
-                    Image(systemName: "arrow.clockwise")
+                    Label(AppLocalization.string("Rescan"), systemImage: "arrow.clockwise")
                 }
+                .labelStyle(.iconOnly)
                 .help(AppLocalization.string("Rescan local Skills, Agents, lock file, and repository configuration"))
                 .accessibilityLabel(AppLocalization.string("Rescan"))
             }

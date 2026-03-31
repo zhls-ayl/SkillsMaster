@@ -73,9 +73,11 @@ struct AgentFilesBrowserView: View {
                 Button {
                     viewModel.reload()
                 } label: {
-                    Image(systemName: "arrow.clockwise")
+                    Label(AppLocalization.string("Refresh"), systemImage: "arrow.clockwise")
                 }
+                .labelStyle(.iconOnly)
                 .help(AppLocalization.string("Refresh"))
+                .accessibilityLabel(AppLocalization.string("Refresh"))
             }
         }
         .task(id: viewModel.agentType) {

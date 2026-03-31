@@ -60,6 +60,7 @@
 "Delete failed: %@" = "Delete failed: %@";
 "Dismiss" = "Dismiss";
 "Update available" = "Update available";
+"Updates" = "Updates";
 "Up to Date" = "Up to Date";
 "Check failed: %@" = "Check failed: %@";
 "Select a Skill" = "Select a Skill";
@@ -150,8 +151,9 @@
 "No skills match \"%@\"" = "No skills match \"%@\"";
 "Filter skills…" = "Filter skills…";
 "Search SkillsHub skills..." = "Search SkillsHub skills...";
-"Refresh SkillsHub list" = "Refresh SkillsHub list";
+"Refresh SkillsHub" = "Refresh SkillsHub";
 "Open SkillsHub in browser" = "Open SkillsHub in browser";
+"Official Site" = "Official Site";
 "All Categories" = "All Categories";
 "Sort: %@" = "Sort: %@";
 "Previous Page" = "Previous Page";
@@ -211,7 +213,7 @@
 "上一页" = "Previous Page";
 "下一页" = "Next Page";
 "搜索 SkillsHub skills..." = "Search SkillsHub skills...";
-"刷新 SkillsHub 列表" = "Refresh SkillsHub list";
+"刷新 SkillsHub" = "Refresh SkillsHub";
 "在浏览器打开 SkillsHub" = "Open SkillsHub in browser";
 "全部分类" = "All Categories";
 "排序: %@" = "Sort: %@";
@@ -319,9 +321,9 @@
 "Open ClawHub in browser" = "Open ClawHub in browser";
 "Open skills.sh in browser" = "Open skills.sh in browser";
 "Package Info" = "Package Info";
-"Refresh ClawHub list" = "Refresh ClawHub list";
+"Refresh ClawHub" = "Refresh ClawHub";
 "Refresh Skills" = "Refresh Skills";
-"Refresh registry data" = "Refresh registry data";
+"Refresh Skills.sh" = "Refresh Skills.sh";
 "Rescan" = "Rescan";
 "Rescan local Skills, Agents, lock file, and repository configuration" = "Rescan local Skills, Agents, lock file, and repository configuration";
 "Reinstall" = "Reinstall";
