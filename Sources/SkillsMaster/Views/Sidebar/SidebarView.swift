@@ -223,7 +223,8 @@ struct SidebarView: View {
                         Image(systemName: "arrow.triangle.2.circlepath")
                     }
                 }
-                .help(AppLocalization.string("Check all Skills for updates"))
+                .help(AppLocalization.string("Check installed Skills for remote updates"))
+                .accessibilityLabel(AppLocalization.string("Check for Updates"))
                 .disabled(skillManager.isCheckingUpdates)
             }
 
@@ -234,7 +235,8 @@ struct SidebarView: View {
                 } label: {
                     Image(systemName: "arrow.clockwise")
                 }
-                .help(AppLocalization.string("Refresh Skills"))
+                .help(AppLocalization.string("Rescan local Skills, Agents, lock file, and repository configuration"))
+                .accessibilityLabel(AppLocalization.string("Rescan"))
             }
         }
     }

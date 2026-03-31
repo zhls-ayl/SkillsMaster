@@ -41,6 +41,7 @@ struct SkillDetailView: View {
 
     /// 复制路径按钮的反馈状态：为 `true` 时显示绿色勾选，1.5 秒后自动恢复。
     @State private var pathCopied = false
+    @State private var relatedFilesViewModel: SkillRelatedFilesViewModel?
 
     private var headerDescriptionText: String {
         guard let skill = viewModel.skill(id: skillID) else { return "" }
@@ -96,44 +97,27 @@ struct SkillDetailView: View {
                 Text(appLocalized("The current `SKILL.md` has unsaved changes."))
             }
         } else if let skill = viewModel.skill(id: skillID) {
-            // 这里相当于 SwiftUI 版的 `guard let`：如果 skill 不存在，就直接展示 empty state。
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    // 头部信息区。
-                    headerSection(skill)
-
-                    if shouldShowSkillMetadata {
-                        Divider()
-                        skillMetadataSection(skill)
-                    }
-
-                    if displayMode.showsManagementUI {
-                        // Package 信息区（含 update 状态），进入详情页后优先展示。
-                        // 如果存在 `lockEntry`，展示完整 package 信息；否则展示手动关联 repo 的 UI。
-                        Divider()
-                        if let lockEntry = skill.lockEntry {
-                            lockFileSection(skill, lockEntry)
-                        } else {
-                            linkToRepoSection(skill)
-                        }
-
-                        Divider()
-
-                        // Agent assignment 区域。
-                        agentAssignmentSection(skill)
-                    }
-
-                    Divider()
-
-                    // Markdown 正文区域。
-                    markdownSection(skill)
-                }
-                .padding()
-            }
+            detailContainer(skill)
             .navigationTitle(skill.displayName)
+            .task(id: skill.canonicalURL.standardizedFileURL.path) {
+                prepareRelatedFilesViewModel(for: skill)
+            }
             .toolbar {
                 ToolbarItemGroup {
-                    if displayMode.showsManagementUI {
+                    if let relatedFilesViewModel, relatedFilesViewModel.hasRelatedFiles {
+                        Button {
+                            relatedFilesViewModel.toggleDrawer()
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "sidebar.right")
+                                Text("\(relatedFilesViewModel.extraItemCount)")
+                                    .font(.caption)
+                            }
+                        }
+                        .help(appLocalized("Browse files in this Skill"))
+                    }
+
+                    if displayMode.showsManagementUI && isShowingHomeContent {
                         // 在 Finder 中定位。
                         Button {
                             viewModel.revealInFinder(skill: skill)
@@ -151,13 +135,15 @@ struct SkillDetailView: View {
                         .help(appLocalized("Open in Terminal"))
                     }
 
-                    ManualTranslationToolbarButton(
-                        isActive: viewModel.isShowingManualTranslation(for: skillID)
-                    ) {
-                        viewModel.toggleManualTranslation(for: skillID)
+                    if isShowingHomeContent {
+                        ManualTranslationToolbarButton(
+                            isActive: viewModel.isShowingManualTranslation(for: skillID)
+                        ) {
+                            viewModel.toggleManualTranslation(for: skillID)
+                        }
                     }
 
-                    if displayMode.showsManagementUI {
+                    if displayMode.showsManagementUI && isShowingHomeContent {
                         // 编辑按钮。
                         Button {
                             viewModel.startEditing(skill: skill)
@@ -182,6 +168,90 @@ struct SkillDetailView: View {
                 subtitle: appLocalized("The selected Skill may have been deleted.")
             )
         }
+    }
+
+    private var isShowingHomeContent: Bool {
+        relatedFilesViewModel?.isShowingHomeContent ?? true
+    }
+
+    @ViewBuilder
+    private func detailContainer(_ skill: Skill) -> some View {
+        HStack(spacing: 0) {
+            Group {
+                if let relatedFilesViewModel, relatedFilesViewModel.isShowingSupplementalContent {
+                    SkillRelatedFileContentView(viewModel: relatedFilesViewModel)
+                } else {
+                    homeContent(skill)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            if let relatedFilesViewModel, relatedFilesViewModel.isDrawerPresented {
+                Divider()
+                SkillRelatedFilesDrawerView(viewModel: relatedFilesViewModel)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func homeContent(_ skill: Skill) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                // 头部信息区。
+                headerSection(skill)
+
+                if let relatedFilesViewModel,
+                   relatedFilesViewModel.hasCompletedInitialLoad,
+                   !relatedFilesViewModel.hasRelatedFiles,
+                   !relatedFilesViewModel.isLoading {
+                    onlySkillMarkdownNotice
+                }
+
+                if shouldShowSkillMetadata {
+                    Divider()
+                    skillMetadataSection(skill)
+                }
+
+                if displayMode.showsManagementUI {
+                    // Package 信息区（含 update 状态），进入详情页后优先展示。
+                    // 如果存在 `lockEntry`，展示完整 package 信息；否则展示手动关联 repo 的 UI。
+                    Divider()
+                    if let lockEntry = skill.lockEntry {
+                        lockFileSection(skill, lockEntry)
+                    } else {
+                        linkToRepoSection(skill)
+                    }
+
+                    Divider()
+
+                    // Agent assignment 区域。
+                    agentAssignmentSection(skill)
+                }
+
+                Divider()
+
+                // Markdown 正文区域。
+                markdownSection(skill)
+            }
+            .padding()
+        }
+    }
+
+    private var onlySkillMarkdownNotice: some View {
+        Text(appLocalized("This Skill contains only SKILL.md."))
+            .font(.caption)
+            .foregroundStyle(.secondary)
+    }
+
+    private func prepareRelatedFilesViewModel(for skill: Skill) {
+        let standardizedRoot = skill.canonicalURL.standardizedFileURL
+        if relatedFilesViewModel?.skillRootURL.path != standardizedRoot.path {
+            relatedFilesViewModel = SkillRelatedFilesViewModel(
+                skillRootURL: standardizedRoot,
+                toolPreferences: viewModel.toolPreferences
+            )
+        }
+        relatedFilesViewModel?.loadIfNeeded()
     }
 
     // MARK: - Sections

@@ -17,7 +17,7 @@ final class TextFileEditorViewModel {
 
     init(fileURL: URL) {
         self.fileURL = fileURL
-        self.fileKind = TextEditableFileKind.from(url: fileURL) ?? .markdown
+        self.fileKind = TextEditableFileKind.from(url: fileURL) ?? .plainText
     }
 
     var displayName: String {

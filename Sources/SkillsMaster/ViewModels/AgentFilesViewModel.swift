@@ -99,7 +99,8 @@ final class AgentFilesViewModel {
         guard let selectedItem else { return false }
         return !selectedItem.isProtected
             && !selectedItem.isDirectory
-            && TextEditableFileKind.from(url: selectedItem.url) != nil
+            && (TextEditableFileKind.from(url: selectedItem.url) != nil
+                || selectedItemDetails?.isTextFile == true)
     }
 
     var canOpenSelectedInExternalEditor: Bool {
@@ -247,6 +248,7 @@ final class AgentFilesViewModel {
 
                 guard !Task.isCancelled else { return }
                 selectedItemDetails = details
+                prepareSelectedItemPreview()
             } catch {
                 guard !Task.isCancelled else { return }
                 errorMessage = error.localizedDescription
@@ -544,7 +546,8 @@ final class AgentFilesViewModel {
               let selectedItem,
               !selectedItem.isDirectory,
               !selectedItem.isSymbolicLink,
-              TextEditableFileKind.from(url: selectedItem.url) != nil else {
+              (TextEditableFileKind.from(url: selectedItem.url) != nil
+                || selectedItemDetails?.isTextFile == true) else {
             previewViewModel = nil
             return
         }

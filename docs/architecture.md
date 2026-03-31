@@ -20,9 +20,22 @@ SkillsMaster 是一个基于 SwiftUI 的 macOS 应用，用于管理多代理 Sk
 - `ViewModels/TextFilePreviewViewModel.swift`：负责文本文件预览的加载、10 MB 降级和格式化后的展示内容
 - `Views/AgentFiles/`、`Views/Components/TextFilePreviewView.swift` 与 `Views/Editor/TextFileEditorView.swift`：负责文件树、详情、只读预览和纯文本编辑 UI
 
+其中与 `Skill Detail` 内多文件上下文浏览直接相关的代码目前包括：
+- `Models/SkillRelatedFileNode.swift`：定义 Skill-scoped 文件树节点与扫描快照
+- `Services/SkillFileBrowserService.swift`：负责以当前 Skill 根目录为边界递归扫描文件树、排除根 `SKILL.md` 与系统噪音文件，并生成 watch 路径集合
+- `ViewModels/SkillRelatedFilesViewModel.swift`：负责相关文件抽屉、文件选择、局部搜索、未保存保护、预览 / 编辑切换与外部变更后的 reload
+- `Views/Detail/SkillRelatedFilesView.swift`：负责右侧 `Related Files` 抽屉、文件树、上下文栏、不可预览占位与文件内容区 UI
+- `Views/Detail/SkillDetailView.swift`：继续承载 `SKILL.md` 首页，并在需要时挂接 Skill-scoped 文件抽屉与文件内容视图
+
 当前 `Skill Detail` 存在两种展示模式：
 - `Installed > All Skills` 进入时显示完整管理视图：Metadata、包信息、更新状态、Agent 分配与 Finder / Terminal / 编辑操作
 - `Agents > Agents Skills > 具体 Agent` 进入时显示只读内容视图：仅保留标题、描述、Metadata 与 Markdown 正文，不展示包信息、Agent 分配或任何管理按钮
+
+在 `Installed > All Skills > Skill Detail` 中，当前实现还提供了 Skill-scoped 的 `Related Files` 抽屉：
+- 默认仍以 `SKILL.md` 作为主页，不预先展开文件树
+- 仅当当前 Skill 文件夹内存在 `SKILL.md` 之外的文件或目录时，才显示 `Related Files` 入口
+- 抽屉固定提供 `SKILL.md` 的 `Home` 锚点；切到其他文件时，主内容区会显示相对路径、返回入口以及 Finder / Terminal / 外置编辑器 / 内置编辑动作
+- 多文件浏览不复用 `Agent Files` 的只读保护语义；它以当前 Skill 目录为作用域，只处理该 Skill 内部的关联文件
 
 ## 启动与刷新主流程
 1. `SkillsMasterApp` 注入全局 `SkillManager`
@@ -55,8 +68,9 @@ SkillsMaster 是一个基于 SwiftUI 的 macOS 应用，用于管理多代理 Sk
 - `Agent Files` 的根目录以 `configDirectoryPath` 为准；例如 Codex 为 `~/.codex`，Claude Code 为 `~/.claude`
 - 只有 CLI 已安装或配置目录已存在的 Agent，才会在 Sidebar 的 `Agents > Agent Files` 下显示
 - `skills/` 目录及其子树在 `Agent Files` 中视为受保护路径：允许浏览、允许只读预览、允许 Finder / Terminal 跳转，但不允许新建、重命名、删除、内置编辑或外置编辑
-- `Agent Files` 对 `.md`、`.json`、`.toml`、`.txt`、`.yaml`、`.yml`、`.log` 提供内置文本预览；其中 Markdown 走原生渲染，其他类型走等宽代码块展示，超过 10 MB 时统一回退为原始文本预览
-- `Agent Files` 的内置编辑格式与上述预览格式保持一致；`SKILL.md` 在 `Skill Detail` 中也复用同一套纯文本编辑器，但不会绕过 `Agent Files` 的只读保护规则
+- `Agent Files` 对 `.md`、`.json`、`.toml`、`.txt`、`.yaml`、`.yml`、`.log` 提供特化的内置文本预览；其他能够被判定为纯文本的文件（如脚本、dotfile、无扩展 README）也会回退到通用 plain-text 预览，其中 Markdown 走原生渲染，其他类型走等宽代码块展示，超过 10 MB 时统一回退为原始文本预览
+- `Agent Files` 的内置编辑会优先使用已知文本类型的格式信息；对未知扩展名但可判定为纯文本的文件，则回退到通用 plain-text 编辑。`SKILL.md` 在 `Skill Detail` 中也复用同一套纯文本编辑器，但不会绕过 `Agent Files` 的只读保护规则
+- `Skill Detail` 内的关联文件浏览复用相同的文本预览 / 编辑能力；根 `SKILL.md` 不计入关联文件 badge，根目录下的 `.DS_Store` 会被过滤，其他文本或二进制文件在不可内置预览时会落到明确的占位态
 - 外置编辑器是全局设置；默认终端也是全局设置，当前支持 Terminal / iTerm / Warp / Ghostty
 
 处理代理相关问题时，应优先查看：
