@@ -179,7 +179,10 @@ struct SkillDetailView: View {
         HStack(spacing: 0) {
             Group {
                 if let relatedFilesViewModel, relatedFilesViewModel.isShowingSupplementalContent {
-                    SkillRelatedFileContentView(viewModel: relatedFilesViewModel)
+                    SkillRelatedFileContentView(
+                        viewModel: relatedFilesViewModel,
+                        allowsManagementActions: displayMode.showsManagementUI
+                    )
                 } else {
                     homeContent(skill)
                 }

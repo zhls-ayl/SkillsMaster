@@ -200,6 +200,7 @@ private struct SkillFileTreeRowView: View {
 struct SkillRelatedFileContentView: View {
 
     @Bindable var viewModel: SkillRelatedFilesViewModel
+    let allowsManagementActions: Bool
 
     private let byteCountFormatter: ByteCountFormatter = {
         let formatter = ByteCountFormatter()
@@ -328,41 +329,43 @@ struct SkillRelatedFileContentView: View {
 
             Spacer()
 
-            HStack(spacing: 8) {
-                Button {
-                    viewModel.revealSelectedOrRootInFinder()
-                } label: {
-                    Image(systemName: "folder")
-                }
-                .buttonStyle(.borderless)
-                .help(appLocalized("Show in Finder"))
-
-                Button {
-                    viewModel.openSelectedOrRootInTerminal()
-                } label: {
-                    Image(systemName: "terminal")
-                }
-                .buttonStyle(.borderless)
-                .help(appLocalized("Open in Terminal"))
-
-                if viewModel.canEditSelectedFile {
+            if allowsManagementActions {
+                HStack(spacing: 8) {
                     Button {
-                        viewModel.startEditingSelectedFile()
+                        viewModel.revealSelectedOrRootInFinder()
                     } label: {
-                        Image(systemName: "pencil")
+                        Image(systemName: "folder")
                     }
                     .buttonStyle(.borderless)
-                    .help(appLocalized("Edit"))
-                }
+                    .help(appLocalized("Show in Finder"))
 
-                if viewModel.canOpenSelectedInExternalEditor {
                     Button {
-                        viewModel.openSelectedInExternalEditor()
+                        viewModel.openSelectedOrRootInTerminal()
                     } label: {
-                        Image(systemName: "square.and.arrow.up")
+                        Image(systemName: "terminal")
                     }
                     .buttonStyle(.borderless)
-                    .help(appLocalized("Open in External Editor"))
+                    .help(appLocalized("Open in Terminal"))
+
+                    if viewModel.canEditSelectedFile {
+                        Button {
+                            viewModel.startEditingSelectedFile()
+                        } label: {
+                            Image(systemName: "pencil")
+                        }
+                        .buttonStyle(.borderless)
+                        .help(appLocalized("Edit"))
+                    }
+
+                    if viewModel.canOpenSelectedInExternalEditor {
+                        Button {
+                            viewModel.openSelectedInExternalEditor()
+                        } label: {
+                            Image(systemName: "square.and.arrow.up")
+                        }
+                        .buttonStyle(.borderless)
+                        .help(appLocalized("Open in External Editor"))
+                    }
                 }
             }
         }
@@ -417,17 +420,19 @@ struct SkillRelatedFileContentView: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
-            HStack(spacing: 12) {
-                Button(appLocalized("Show in Finder")) {
-                    viewModel.revealSelectedOrRootInFinder()
-                }
-                .buttonStyle(.bordered)
-
-                if viewModel.canOpenSelectedInExternalEditor {
-                    Button(appLocalized("Open in External Editor")) {
-                        viewModel.openSelectedInExternalEditor()
+            if allowsManagementActions {
+                HStack(spacing: 12) {
+                    Button(appLocalized("Show in Finder")) {
+                        viewModel.revealSelectedOrRootInFinder()
                     }
                     .buttonStyle(.bordered)
+
+                    if viewModel.canOpenSelectedInExternalEditor {
+                        Button(appLocalized("Open in External Editor")) {
+                            viewModel.openSelectedInExternalEditor()
+                        }
+                        .buttonStyle(.bordered)
+                    }
                 }
             }
         }
