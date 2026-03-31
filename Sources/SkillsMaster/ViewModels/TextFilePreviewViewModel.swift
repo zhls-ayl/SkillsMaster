@@ -18,9 +18,9 @@ final class TextFilePreviewViewModel {
         self.fileKind = TextEditableFileKind.from(url: fileURL) ?? .plainText
     }
 
-    func loadIfNeeded() {
+    func loadIfNeeded() async {
         guard !hasLoadedOnce else { return }
-        Task { await load() }
+        await load()
     }
 
     func load() async {
