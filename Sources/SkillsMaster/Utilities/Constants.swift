@@ -54,6 +54,9 @@ enum Constants {
     /// Cache file for custom repository lightweight scan indexes
     static let repositoryScanCachePath = "~/.skillsmaster/.repository-scan-cache.json"
 
+    /// Whether the fixed LocalSkill source should be shown in Settings / Sidebar.
+    static let localSkillRepositoryEnabledKey = "localSkillRepositoryEnabled"
+
     /// UserDefaults key for app appearance preference.
     /// Stored as `AppThemeMode.rawValue` (`system` / `light` / `dark`).
     static let appThemeModeKey = "appThemeMode"

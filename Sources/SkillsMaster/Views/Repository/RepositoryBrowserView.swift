@@ -15,6 +15,7 @@ struct RepositoryBrowserView: View {
     @Bindable var viewModel: RepositoryBrowserViewModel
 
     @Environment(SkillManager.self) private var skillManager
+    @Environment(\.openSettings) private var openSettings
 
     var body: some View {
         VStack(spacing: 0) {
@@ -49,7 +50,16 @@ struct RepositoryBrowserView: View {
         // Toolbar: Sync button
         .toolbar {
             ToolbarItem {
-                if viewModel.isSyncing {
+                if viewModel.repository.isLocalCollection {
+                    Button {
+                        openSettings()
+                    } label: {
+                        Label(appLocalized("Open Settings"), systemImage: "gearshape")
+                    }
+                    .labelStyle(.iconOnly)
+                    .help(appLocalized("Open Settings"))
+                    .accessibilityLabel(appLocalized("Open Settings"))
+                } else if viewModel.isSyncing {
                     ProgressView()
                         .controlSize(.small)
                         .help(appLocalized("Sync repository (git pull)"))
@@ -75,6 +85,10 @@ struct RepositoryBrowserView: View {
         .onChange(of: skillManager.repoSyncStatuses[viewModel.repository.id]) { _, newStatus in
             Task { await viewModel.handleSyncStatusChange(newStatus) }
         }
+        .onChange(of: skillManager.skills) { _, _ in
+            guard viewModel.repository.isLocalCollection else { return }
+            Task { await viewModel.loadSkills() }
+        }
         .alert(item: $viewModel.notice) { notice in
             Alert(
                 title: Text(notice.title),
@@ -90,19 +104,28 @@ struct RepositoryBrowserView: View {
     private var repoHeader: some View {
         HStack(spacing: 8) {
             // Platform icon
-            Image(systemName: viewModel.repository.platform.iconName)
+            Image(systemName: viewModel.repository.isLocalCollection ? "externaldrive.badge.plus" : viewModel.repository.platform.iconName)
                 .foregroundStyle(.secondary)
 
-            // Repository URL (truncated in the middle to fit)
-            Text(viewModel.repository.repoURL)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .truncationMode(.middle)
+            if viewModel.repository.isLocalCollection {
+                Text(appLocalized("Imported local skills copied into the SkillsMaster library."))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            } else {
+                // Repository URL (truncated in the middle to fit)
+                Text(viewModel.repository.repoURL)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
 
             Spacer()
 
-            if viewModel.isSyncing {
+            if viewModel.repository.isLocalCollection {
+                EmptyView()
+            } else if viewModel.isSyncing {
                 HStack(spacing: 6) {
                     ProgressView()
                         .controlSize(.small)
@@ -119,7 +142,11 @@ struct RepositoryBrowserView: View {
             }
 
             // Last synced timestamp
-            if let date = viewModel.repository.effectiveLastSyncedAt {
+            if viewModel.repository.isLocalCollection {
+                Text(appLocalized("Managed Locally"))
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            } else if let date = viewModel.repository.effectiveLastSyncedAt {
                 TimelineView(.periodic(from: .now, by: 60)) { context in
                     Text(AppLocalization.format("Synced %@", gitStyleRelativeTime(from: date, now: context.date)))
                         .font(.caption2)
@@ -160,13 +187,16 @@ struct RepositoryBrowserView: View {
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: 280)
 
-            // Offer to sync immediately
-            Button(appLocalized("Sync Now")) {
-                Task { await viewModel.sync() }
+            Button(viewModel.repository.isLocalCollection ? appLocalized("Open Settings") : appLocalized("Sync Now")) {
+                if viewModel.repository.isLocalCollection {
+                    openSettings()
+                } else {
+                    Task { await viewModel.sync() }
+                }
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.small)
-            .disabled(viewModel.isSyncing)
+            .disabled(viewModel.isSyncing && !viewModel.repository.isLocalCollection)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -193,12 +223,24 @@ struct RepositoryBrowserView: View {
             Image(systemName: "tray")
                 .font(.system(size: 36))
                 .foregroundStyle(.secondary)
-            Text(appLocalized("No Skills Found"))
+            Text(viewModel.repository.isLocalCollection ? appLocalized("No Local Skills Imported") : appLocalized("No Skills Found"))
                 .font(.headline)
-            Text(appLocalized("This repository contains no SKILL.md files."))
+            Text(
+                viewModel.repository.isLocalCollection
+                    ? appLocalized("Use Settings → Repositories → Add Repository to import local SKILL.md files or folders.")
+                    : appLocalized("This repository contains no SKILL.md files.")
+            )
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
+
+            if viewModel.repository.isLocalCollection {
+                Button(appLocalized("Open Settings")) {
+                    openSettings()
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

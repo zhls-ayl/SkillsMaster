@@ -229,6 +229,9 @@ struct RepositorySkillDetailView: View {
 
     private var installHelpText: String {
         if let installDisabledReason = viewModel.installDisabledReason { return installDisabledReason }
+        if repository.isLocalCollection {
+            return appLocalized("Install this imported local skill to the selected Agents")
+        }
         return appLocalized("Install this skill from the local repository clone")
     }
 }

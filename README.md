@@ -94,7 +94,7 @@ For inline English-to-Chinese translation in detail pages:
 
 - `Installed`: inspect, edit, assign, delete, and update local Skills
 - `Marketplace`: browse and install from `Skills.sh`, ClawHub, and SkillsHub
-- `Repositories`: add SSH, public HTTPS, or token-authenticated HTTPS repositories; then sync, browse, and install from them
+- `Repositories`: add SSH, public HTTPS, or token-authenticated HTTPS repositories, or import local `SKILL.md` / skill folders into the fixed `LocalSkill` source; then browse and install from them
 - `Agents`: inspect Agent Skills and Agent root files
 
 ## Important Paths

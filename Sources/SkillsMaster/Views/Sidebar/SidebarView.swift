@@ -118,7 +118,7 @@ struct SidebarView: View {
                                         .controlSize(.mini)
                                         .frame(width: 16, height: 16)
                                 } else {
-                                    Image(systemName: repo.platform.iconName)
+                                    Image(systemName: repo.isLocalCollection ? "externaldrive.badge.plus" : repo.platform.iconName)
                                         .foregroundStyle(
                                             syncStatus == .idle
                                                 ? Color.secondary
