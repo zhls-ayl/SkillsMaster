@@ -5,9 +5,10 @@
 - 多代理检测与本地 Skills 扫描
 - 三栏式 All Skills / Detail / Sidebar 原生界面
 - 按 Agent 浏览配置根目录文件，并保护 `skills/` 子树只读
-- 纯文本内置编辑器，覆盖 `SKILL.md`、`.json`、`.md`、`.toml`
+- 纯文本内置编辑器，覆盖 `SKILL.md`、`.json`、`.md`、`.toml`，并对其他可判定为纯文本的文件回退到通用 plain-text 编辑
 - 全局外置编辑器与默认终端配置
 - `SKILL.md` 解析、编辑与 Markdown 渲染
+- Skill Detail 内以 `SKILL.md` 为主页的多文件上下文浏览能力
 - 从 Git 仓库安装 Skills，并写入规范目录与lock file
 - 注册表浏览与安装
 - 自定义仓库配置、同步、浏览与本地安装

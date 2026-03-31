@@ -10,6 +10,7 @@
 ## 建议阅读顺序
 - 想快速了解项目：英文读者先读 `README.md`，中文读者先读 `README_CN.md`
 - 想继续理解实现与专题文档：再读 `docs/architecture.md`
+- 想参与 Skill 详情页内的多文件浏览设计与实现：补读 `docs/skill-detail-files.md`
 - 想理解 ClawHub 浏览、详情与安装链路：补读 `docs/clawhub.md`
 - 想理解 SkillsHub 浏览、archive 详情、安装与更新链路：补读 `docs/skillhub.md`
 - 想参与开发或验证改动：继续读 `docs/development.md`
@@ -20,6 +21,7 @@
 - 改项目定位、使用方式、入口说明、截图结构：同步更新 `README.md` 与 `README_CN.md`
 - 改文档目录、阅读顺序、文档维护规则：更新 `docs/Index.md`
 - 改模块职责、路径约定、扫描/同步/迁移逻辑、存储结构：更新 `docs/architecture.md`
+- 改 Skill 详情页内的多文件浏览方案、交互状态、实现分层与验收标准：更新 `docs/skill-detail-files.md`
 - 改 ClawHub 入口、模型、API 对接、分页、详情加载、安装落盘与限制条件：更新 `docs/clawhub.md`
 - 改 SkillsHub 入口、模型、浏览接口、archive 详情、安装落盘与更新语义：更新 `docs/skillhub.md`
 - 改本地开发方式、测试方法、工程约束、协作流程：更新 `docs/development.md`
@@ -29,6 +31,7 @@
 
 ## 当前目录说明
 - `docs/screenshots/`：文档插图资源
+- `docs/skill-detail-files.md`：Skill Detail 内多文件浏览的设计与实现规格
 - `docs/clawhub.md`：ClawHub 浏览、详情与安装链路专题
 - `docs/skillhub.md`：SkillsHub 浏览、archive 详情、安装与更新链路专题
 - 其余 Markdown 文件按主题平铺，避免深层目录导致检索成本升高

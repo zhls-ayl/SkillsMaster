@@ -24,6 +24,7 @@ SkillsMaster turns those workflows into one native macOS experience.
 
 - Scan and display local Skills, including direct installs and inherited installs
 - Search, sort, edit, delete, reassign Agents, and check updates in `Installed > All Skills`
+- Keep `SKILL.md` as the primary detail page while browsing related files inside the same Skill folder with contextual preview and editing
 - Browse Agent root directories in `Agent Files` with text preview, built-in editing, Finder/Terminal/external-editor actions
 - Configure each Agent's default install mode: `symbolic link` or `physical copy`
 - Install Skills from `Skills.sh`, ClawHub, SkillsHub, and custom repositories

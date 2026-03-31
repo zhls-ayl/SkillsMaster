@@ -6,10 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.2.11] - 2026-03-31
+### Added
+- 新增 `Skill Detail > Related Files` 抽屉：在保持 `SKILL.md` 作为主页的前提下，支持浏览当前 Skill 文件夹内的同级/下级文件、子目录、局部搜索、返回 `SKILL.md`，以及上下文内的文本预览与有限编辑。
+- 新增 Skill-scoped 多文件浏览实现层，包括 `SkillFileBrowserService`、`SkillRelatedFilesViewModel`、文件树节点模型与对应测试，覆盖根 `SKILL.md` 排除、系统噪音过滤、嵌套目录树构建与 watch path 生成。
+
 ### Changed
+- 对未知扩展名但可判定为纯文本的文件，`Agent Files` 与 `Skill Detail` 现在会回退到通用 plain-text 预览/编辑，便于直接查看脚本、dotfile、无扩展 README 等 Skill 附属文件。
+- Skill 详情页工具栏中的 `Related Files` 入口图标已从文件夹图标调整为更偏“上下文抽屉”的图标语义，避免与“在 Finder 中定位 Skill 目录”的文件夹按钮混淆。
 - 统一主界面 sidebar toolbar 中两个“刷新类”按钮的中英文文案与 tooltip：将远端更新检查明确为 `检查更新 / Check for Updates`，将本地状态重扫明确为 `重新扫描 / Rescan`，避免与搜索栏旁的系统 toolbar overflow 菜单混淆。
 
 ### Fixed
+- 修复 Skill 详情页对纯文本脚本、配置和无扩展文本文件的“可感知但不可直接查看”问题；现在在可判定为 text 的前提下，会优先进入内置预览而不是直接落到“不支持预览”占位态。
 - 修复发布自动化在当前仓库未开启 GitHub auto-merge 且 `set -u` 打开时，cask 同步尾段可能因为临时文件清理逻辑出错而提前退出的问题。
 
 ## [0.2.10] - 2026-03-31
