@@ -404,7 +404,10 @@ final class SkillRelatedFilesViewModel {
             return
         }
 
-        previewViewModel = TextFilePreviewViewModel(fileURL: selectedItem.url)
+        previewViewModel = TextFilePreviewViewModel.reusingIfPossible(
+            previewViewModel,
+            for: selectedItem.url
+        )
     }
 
     private func terminalTargetURL(for url: URL) -> URL {

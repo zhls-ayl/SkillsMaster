@@ -552,7 +552,10 @@ final class AgentFilesViewModel {
             return
         }
 
-        previewViewModel = TextFilePreviewViewModel(fileURL: selectedItem.url)
+        previewViewModel = TextFilePreviewViewModel.reusingIfPossible(
+            previewViewModel,
+            for: selectedItem.url
+        )
     }
 
     private func findItem(withID id: String, in items: [AgentFileItem]) -> AgentFileItem? {

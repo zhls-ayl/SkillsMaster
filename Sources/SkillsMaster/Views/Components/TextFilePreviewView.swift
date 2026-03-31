@@ -33,7 +33,7 @@ struct TextFilePreviewView: View {
                 }
             }
         }
-        .task(id: viewModel.fileURL) {
+        .task(id: ObjectIdentifier(viewModel)) {
             await viewModel.loadIfNeeded()
         }
     }

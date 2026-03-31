@@ -14,8 +14,22 @@ final class TextFilePreviewViewModel {
     @ObservationIgnored private var hasLoadedOnce = false
 
     init(fileURL: URL) {
-        self.fileURL = fileURL
-        self.fileKind = TextEditableFileKind.from(url: fileURL) ?? .plainText
+        let standardizedFileURL = fileURL.standardizedFileURL
+        self.fileURL = standardizedFileURL
+        self.fileKind = TextEditableFileKind.from(url: standardizedFileURL) ?? .plainText
+    }
+
+    static func reusingIfPossible(
+        _ existing: TextFilePreviewViewModel?,
+        for fileURL: URL
+    ) -> TextFilePreviewViewModel {
+        let standardizedFileURL = fileURL.standardizedFileURL
+
+        if let existing, existing.fileURL.standardizedFileURL == standardizedFileURL {
+            return existing
+        }
+
+        return TextFilePreviewViewModel(fileURL: standardizedFileURL)
     }
 
     func loadIfNeeded() async {
