@@ -50,6 +50,9 @@ final class RepositoryBrowserViewModel {
 
     /// Human-readable loading message shown when the repository view is waiting.
     var loadingMessage: String {
+        if repository.isLocalCollection {
+            return AppLocalization.string("Indexing local imported skills…")
+        }
         if isSyncing && !repository.isCloned {
             return AppLocalization.string("Synchronizing repository…")
         }
@@ -117,11 +120,13 @@ final class RepositoryBrowserViewModel {
     /// Whether local installation is allowed now.
     /// Requires: local clone exists + not currently syncing.
     var canInstallFromLocal: Bool {
-        repository.isCloned && !isSyncing
+        if repository.isLocalCollection { return true }
+        return repository.isCloned && !isSyncing
     }
 
     /// Human-readable reason when install is disabled.
     var installDisabledReason: String? {
+        if repository.isLocalCollection { return nil }
         if isSyncing { return "Repository 正在同步，请稍候。" }
         if !repository.isCloned {
             return AppLocalization.string("Sync the repository before installing.")
@@ -177,6 +182,26 @@ final class RepositoryBrowserViewModel {
         isLoading = true
         if overrideError == nil { errorMessage = nil }
 
+        if repository.isLocalCollection {
+            contentCache.removeAll()
+            allSkills = localDiscoveredSkills()
+            scanNoticeMessage = nil
+            isLoading = false
+            if let overrideError {
+                errorMessage = overrideError
+            } else {
+                errorMessage = nil
+            }
+
+            if let selectedSkillID,
+               let refreshedSelectedSkill = allSkills.first(where: { $0.id == selectedSkillID }) {
+                await loadContent(for: refreshedSelectedSkill, force: true)
+            } else if selectedSkillID != nil {
+                resetSelectedSkillContent()
+            }
+            return
+        }
+
         let scanResult = await skillManager.repositoryManager.scanSkillsResult(in: repository)
         await applyScanResult(scanResult, overrideError: overrideError)
     }
@@ -221,10 +246,18 @@ final class RepositoryBrowserViewModel {
         let targetSkillID = skill.id
 
         do {
-            let content = try await skillManager.repositoryManager.loadSkillContent(
-                in: repository,
-                skillMDPath: skill.skillMDPath
-            )
+            let content: SkillMDParser.ParseResult
+            if repository.isLocalCollection {
+                guard let installedSkill = skillManager.skills.first(where: { $0.id == skill.id && $0.lockEntry?.sourceType == "local" }) else {
+                    throw SkillManager.ImportError.directoryNotFound(skill.id)
+                }
+                content = try SkillMDParser.parse(fileURL: installedSkill.skillMDURL)
+            } else {
+                content = try await skillManager.repositoryManager.loadSkillContent(
+                    in: repository,
+                    skillMDPath: skill.skillMDPath
+                )
+            }
 
             guard selectedSkillID == targetSkillID else { return }
             contentCache[targetSkillID] = content
@@ -330,6 +363,7 @@ final class RepositoryBrowserViewModel {
     /// which is driven by SkillManager's repoSyncStatuses state changes.
     /// This avoids duplicate reload paths (manual sync completion + status observer).
     func sync() async {
+        guard !repository.isLocalCollection else { return }
         errorMessage = nil
         await skillManager.syncRepository(id: repository.id)
     }
@@ -345,6 +379,7 @@ final class RepositoryBrowserViewModel {
     ///
     /// - Parameter newStatus: Latest status from SkillManager.repoSyncStatuses[repository.id]
     func handleSyncStatusChange(_ newStatus: SkillRepository.SyncStatus?) async {
+        guard !repository.isLocalCollection else { return }
         guard let newStatus else { return }
 
         switch newStatus {
@@ -371,14 +406,23 @@ final class RepositoryBrowserViewModel {
         }
 
         do {
-            try await skillManager.installSkill(
-                from: URL(fileURLWithPath: repository.localPath),
-                skill: skill,
-                repoSource: sourceIdentifier(),
-                repoURL: repository.repoURL,
-                sourceType: "custom",
-                targetAgents: targetAgents
-            )
+            if repository.isLocalCollection {
+                guard let importedSkill = skillManager.skills.first(where: {
+                    $0.id == skill.id && $0.lockEntry?.sourceType == "local"
+                }) else {
+                    throw SkillManager.ImportError.directoryNotFound(skill.id)
+                }
+                try await skillManager.installImportedLocalSkill(importedSkill, targetAgents: targetAgents)
+            } else {
+                try await skillManager.installSkill(
+                    from: URL(fileURLWithPath: repository.localPath),
+                    skill: skill,
+                    repoSource: sourceIdentifier(),
+                    repoURL: repository.repoURL,
+                    sourceType: "custom",
+                    targetAgents: targetAgents
+                )
+            }
 
             notice = Notice(
                 title: action.completionTitle,
@@ -444,6 +488,9 @@ final class RepositoryBrowserViewModel {
     }
 
     private func sourceIdentifier() -> String {
+        if repository.isLocalCollection {
+            return SkillRepository.localSkillRepositorySource
+        }
         let trimmed = repository.repoURL.trimmingCharacters(in: .whitespacesAndNewlines)
 
         if trimmed.lowercased().hasPrefix("git@"),
@@ -470,5 +517,22 @@ final class RepositoryBrowserViewModel {
 
     private func manualTranslationKey(for skillID: String) -> String {
         "repository:\(repository.id.uuidString):\(skillID)"
+    }
+
+    private func localDiscoveredSkills() -> [GitService.DiscoveredSkill] {
+        skillManager.skills
+            .filter { $0.lockEntry?.sourceType == "local" }
+            .map { skill in
+                GitService.DiscoveredSkill(
+                    id: skill.id,
+                    folderPath: skill.id,
+                    skillMDPath: "\(skill.id)/SKILL.md",
+                    metadata: skill.metadata,
+                    markdownBody: ""
+                )
+            }
+            .sorted { lhs, rhs in
+                lhs.metadata.name.localizedCaseInsensitiveCompare(rhs.metadata.name) == .orderedAscending
+            }
     }
 }

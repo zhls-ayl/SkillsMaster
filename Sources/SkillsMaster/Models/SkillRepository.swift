@@ -15,6 +15,12 @@ import Foundation
 /// Conforms to Identifiable so SwiftUI's ForEach can use it directly.
 struct SkillRepository: Codable, Identifiable, Hashable {
 
+    static let localSkillRepositoryID = UUID(uuidString: "00000000-0000-0000-0000-00000000C0DE")!
+    static let localSkillRepositoryName = "LocalSkill"
+    static let localSkillRepositorySource = "LocalSkill"
+    static let localSkillRepositoryURL = "local://skillsmaster/LocalSkill"
+    static let localSkillRepositoryLocalSlug = "__local_skill__"
+
     // MARK: - Nested Types
 
     /// Git hosting platform — determines default SSH hostname and icon
@@ -182,6 +188,7 @@ struct SkillRepository: Codable, Identifiable, Hashable {
     /// Fallback source is local git metadata for already-cloned repositories that were
     /// imported from existing disk state and don't have persisted sync history yet.
     var effectiveLastSyncedAt: Date? {
+        if isLocalCollection { return nil }
         if let lastSyncedAt {
             return lastSyncedAt
         }
@@ -206,6 +213,27 @@ struct SkillRepository: Codable, Identifiable, Hashable {
         }
 
         return nil
+    }
+
+    var isLocalCollection: Bool {
+        id == Self.localSkillRepositoryID
+    }
+
+    static func localSkillRepository() -> SkillRepository {
+        SkillRepository(
+            id: localSkillRepositoryID,
+            name: localSkillRepositoryName,
+            repoURL: localSkillRepositoryURL,
+            authType: .ssh,
+            platform: .github,
+            isEnabled: true,
+            lastSyncedAt: nil,
+            localSlug: localSkillRepositoryLocalSlug,
+            httpUsername: nil,
+            credentialKey: nil,
+            scanHiddenPaths: false,
+            syncOnLaunch: false
+        )
     }
 }
 

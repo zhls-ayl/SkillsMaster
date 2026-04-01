@@ -330,7 +330,7 @@ View 层对错误的呈现分为三类：
 无论是 archive 还是 markdown-only，最终都走 `persistInstalledSkillDirectory(...)`：
 1. 将 skill 目录复制到 `~/.skillsmaster/skills/<slug>`
 2. 按目标 Agent 的默认安装方式把 skill 落到 Agent 目录
-3. 确保 `~/.agents/.skill-lock.json` 存在
+3. 确保 `~/.skillsmaster/.skill-lock.json` 存在
 4. 写入或更新 lock entry
 5. 调用 `refresh()` 让扫描结果返回 UI
 
@@ -369,7 +369,7 @@ ClawHub 虽然是独立功能，但它仍然复用项目的底层公共机制：
 - `SkillManager`：统一安装与 refresh
 - `SkillScanner`：扫描 canonical 目录和 Agent 目录，生成本地 Skill 列表
 - `SymlinkManager`：识别各 Agent 目录中的 symbolic link / physical copy 以及继承关系
-- `LockFileManager`：写入 `~/.agents/.skill-lock.json`
+- `LockFileManager`：写入 `~/.skillsmaster/.skill-lock.json`
 
 这意味着 ClawHub 在产品层面是单独链路，但在本地生命周期管理层面仍遵守 SkillsMaster 的主架构。
 

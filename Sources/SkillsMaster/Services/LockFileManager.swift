@@ -3,14 +3,20 @@ import Foundation
 /// LockFileManager is responsible for reading/writing .skill-lock.json file (F07)
 ///
 /// lock file is the central registry for the skills ecosystem, recording all skills installed via package managers.
-/// File location: ~/.agents/.skill-lock.json
+/// Default file location: ~/.skillsmaster/.skill-lock.json
 ///
 /// Uses actor to ensure thread safety as multiple operations might read/write lock file simultaneously
 actor LockFileManager {
 
     /// Default path for lock file
     static let defaultPath: URL = {
-        let home = NSString(string: "~/.agents/.skill-lock.json").expandingTildeInPath
+        let home = NSString(string: Constants.lockFilePath).expandingTildeInPath
+        return URL(fileURLWithPath: home)
+    }()
+
+    /// Legacy Skills CLI lock file path, used only for compatibility import / migration.
+    static let legacyPath: URL = {
+        let home = NSString(string: Constants.legacyLockFilePath).expandingTildeInPath
         return URL(fileURLWithPath: home)
     }()
 

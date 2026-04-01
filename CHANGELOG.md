@@ -6,6 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+## [0.2.14] - 2026-04-01
+### Added
+- `Settings > General` 新增 `Compatibility` 兼容导入区块：当检测到旧版 Skills CLI lock file 时，支持手动从 `~/.agents/.skill-lock.json` 合并导入本地可定位到的 skill 与 lock entry，并在导入后返回新增 / 跳过 / 缺失文件统计。
+- 新增 `LegacySkillsCLIImportService` 与相应测试，覆盖从旧共享目录和各 Agent `skills/` 目录回收本地 skill 文件、私有 lock 合并优先级，以及缺失文件时的跳过策略。
+
+### Changed
+- SkillsMaster 的 canonical lock file 已私有化到 `~/.skillsmaster/.skill-lock.json`；`~/.agents/.skill-lock.json` 降级为 legacy external source，仅用于手动兼容导入，不再作为运行时主事实源。
+- 启动迁移流程现在会在发现旧 lock file 且新私有 lock 不存在时，一次性把旧文件复制到新的私有路径，同时继续保留旧文件供外部 CLI 或后续手动导入使用。
+- `Settings > General > Paths` 现在只显示 SkillsMaster 自己持续使用的 canonical 路径；旧版 Skills CLI lock path 已移动到按需显示的 `Compatibility` 区块，避免和私有路径混淆。
+
+## [0.2.13] - 2026-03-31
+### Added
+- `Settings > Repositories > Add Custom Repository` 新增 `Local Skill` 导入模式，支持导入单个 `SKILL.md`、单个 skill 目录，以及父目录下递归扫描到的多个 skill。
+- 新增本地导入扫描与结果汇总链路：对单文件导入要求显式命名，对批量导入提供逐个重名确认、`Skip`、`Replace` 与 `Cancel All` 控制，并在完成后展示细粒度导入结果。
+
+### Changed
+- 所有通过本地导入入口写入的 skill 现在统一归类到固定的 `LocalSkill` source，并在 `Repositories` 与 sidebar 中以独立非 Git source 呈现。
+- `LocalSkill` 浏览页移除了 Git 专属的 `Authentication`、`Repository URL`、`Sync` 等交互语义，改为仅展示已导入的本地 skill，并复用现有 canonical 安装链路将其安装到选定 Agent。
+
 ## [0.2.12] - 2026-03-31
 ### Changed
 - 统一主界面 toolbar 中刷新类按钮的 icon-only 语义：`Marketplace` 与 `Repository` 等入口现在统一使用带标题语义的 `Label`，并补齐 accessibility label，减少仅用图标时 tooltip / hover 提示不稳定的问题。

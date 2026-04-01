@@ -135,6 +135,40 @@ final class RepositoryBrowserViewModelTests: XCTestCase {
         XCTAssertFalse(secondVM.isShowingManualTranslation(for: "shared-skill"))
     }
 
+    func testLocalRepositoryLoadSkillsOnlyShowsLocalImportedSkills() async {
+        let skillManager = SkillManager()
+        skillManager.skills = [
+            makeInstalledSkill(id: "local-skill", source: SkillRepository.localSkillRepositorySource, sourceType: "local"),
+            makeInstalledSkill(id: "custom-skill", source: "org/repo", sourceType: "custom")
+        ]
+        let vm = RepositoryBrowserViewModel(
+            repository: .localSkillRepository(),
+            skillManager: skillManager
+        )
+
+        await vm.loadSkills()
+
+        XCTAssertEqual(vm.allSkills.map(\.id), ["local-skill"])
+        XCTAssertNil(vm.errorMessage)
+    }
+
+    func testLocalRepositoryInstallationMatchesLocalSourceIdentifier() {
+        let skillManager = SkillManager()
+        skillManager.skills = [
+            makeInstalledSkill(
+                id: "local-skill",
+                source: SkillRepository.localSkillRepositorySource,
+                sourceType: "local"
+            )
+        ]
+        let vm = RepositoryBrowserViewModel(
+            repository: .localSkillRepository(),
+            skillManager: skillManager
+        )
+
+        XCTAssertTrue(vm.isInstalled(makeDiscoveredSkill(id: "local-skill")))
+    }
+
     private func makeRepository() -> SkillRepository {
         SkillRepository(
             id: UUID(),
@@ -162,11 +196,11 @@ final class RepositoryBrowserViewModelTests: XCTestCase {
         )
     }
 
-    private func makeInstalledSkill(id: String, source: String? = nil) -> Skill {
+    private func makeInstalledSkill(id: String, source: String? = nil, sourceType: String = "custom") -> Skill {
         let lockEntry: LockEntry? = source.map { src in
             LockEntry(
                 source: src,
-                sourceType: "custom",
+                sourceType: sourceType,
                 sourceUrl: "https://github.com/\(src).git",
                 skillPath: "skills/\(id)/SKILL.md",
                 skillFolderHash: "abc123",

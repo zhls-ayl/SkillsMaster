@@ -48,7 +48,8 @@ SkillsMaster 是一个基于 SwiftUI 的 macOS 应用，用于管理多代理 Sk
 ## 数据与存储约定
 当前实现使用以下本地路径：
 - canonical 存储目录：`~/.skillsmaster/skills`
-- lock file：`~/.agents/.skill-lock.json`
+- private lock file：`~/.skillsmaster/.skill-lock.json`
+- legacy Skills CLI lock file：`~/.agents/.skill-lock.json`
 - 自定义仓库克隆目录：`~/.skillsmaster/repos`
 - 自定义仓库配置：`~/.skillsmaster/.skillsmaster-repos.json`
 - 提交哈希缓存：`~/.skillsmaster/.skillsmaster-cache.json`（迁移后私有缓存）
@@ -56,7 +57,8 @@ SkillsMaster 是一个基于 SwiftUI 的 macOS 应用，用于管理多代理 Sk
 
 其中需要特别注意：
 - `~/.skillsmaster/skills` 是 SkillsMaster 自己维护的 canonical 目录，也是 managed skill 的事实源
-- `~/.agents/.skill-lock.json` 仍保留在旧位置，以兼容外部工具
+- `~/.skillsmaster/.skill-lock.json` 是 SkillsMaster 自己维护的 canonical lock file
+- `~/.agents/.skill-lock.json` 降级为 legacy external source，仅在 Settings 中手动导入时读取
 - 扫描阶段仍会兼容读取 `~/.agents/skills`，用于兼容旧数据以及部分 Agent 的附加读取规则
 - 每个 Agent 可以单独配置默认 direct install 方式：`symbolic link` 或 `physical copy`
 
@@ -85,6 +87,7 @@ SkillsMaster 是一个基于 SwiftUI 的 macOS 应用，用于管理多代理 Sk
 - ClawHub：通过 `ClawHubService` 拉取 marketplace 列表、详情、`SKILL.md` 与 archive，由 `ClawHubBrowserViewModel` 编排浏览/安装，并通过 `SkillManager.installClawHubSkill(...)` 安装到 canonical 目录后按目标 Agent 集合落盘；详细链路见 `docs/clawhub.md`
 - SkillsHub：通过 `SkillsHubService` 拉取 SkillsHub 列表、精选、轻量搜索与 archive，由 `SkillsHubBrowserViewModel` 编排浏览/安装，并通过 `SkillManager.installSkillsHubSkill(...)` 安装到 canonical 目录后按目标 Agent 集合落盘；详细链路见 `docs/skillhub.md`
 - 自定义仓库：由 `RepositoryManager` 管理配置、同步与轻量索引缓存，由 `RepositoryBrowserViewModel` 驱动浏览与安装；支持 `SSH`、匿名 `HTTPS (Public)` 与 `HTTPS + Token` 三种认证模式。列表使用缓存索引，详情页按需加载完整 `SKILL.md`，并在详情页内联勾选 Agent 后执行安装。`~/.skillsmaster/repos` 下的 clone 目录视为 SkillsMaster 内部缓存，不作为用户手动编辑的工作目录；若检测到本地未提交改动，会跳过扫描缓存以避免展示过期索引。
+- LocalSkill：通过 `LocalSkillImportService` 扫描用户选择的单个 `SKILL.md`、单个 skill 目录或父目录下的递归候选项；由 `SkillManager.importLocalSkill(...)` 一次性复制到 canonical 目录，并写入 `sourceType = "local"` 的 lock entry。该来源不保留与原始本地路径的同步关系，也不参与 Git sync / update check；UI 上以固定 `LocalSkill` source 呈现，只展示通过该导入入口写入的 skills。
 
 统一安装后都会落到 canonical 目录，再按各 Agent 的默认安装方式把 direct install 落到代理目录，并由 `LockFileManager` 更新 lock file。Marketplace 与 Custom Repository 详情页默认不预选 Agent；空选择点击按钮会弹 alert；若已选 Agent 中同时包含“已直接安装”和“未直接安装”的目标，主按钮显示 `Install / Reinstall`。对于 physical copy，后续更新、重新安装和应用内编辑也会同步覆盖 Agent 目录副本。
 

@@ -118,7 +118,7 @@
 ## 高风险改动清单
 以下改动默认视为高风险，设计与执行前都应先确认：
 - `~/.skillsmaster/` 与 `~/.agents/` 相关路径、兼容与迁移逻辑
-- `~/.agents/.skill-lock.json`、缓存文件、仓库配置文件的读写格式
+- `~/.skillsmaster/.skill-lock.json`、`~/.agents/.skill-lock.json`、缓存文件、仓库配置文件的读写格式与导入合并语义
 - symbolic link 创建、删除、去重、继承安装判断与冲突处理
 - 自定义仓库同步、凭据存储、Git 操作与远端状态判断
 - `scripts/package-app.sh`、`scripts/release.sh`、`.github/workflows/`、`homebrew/skillsmaster.rb`

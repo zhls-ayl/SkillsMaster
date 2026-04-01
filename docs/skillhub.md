@@ -174,7 +174,7 @@ SkillsHub 当前没有独立的 `getReadme` 或 detail metadata API；因此详�
 这保证了详情页看到的内容与实际可安装内容一致，而不是网页展示层的近似摘要。
 
 ## 安装落盘与来源记录
-安装 SkillsHub skill 时，SkillsMaster 会写入 `~/.agents/.skill-lock.json`，并使用以下语义：
+安装 SkillsHub skill 时，SkillsMaster 会写入 `~/.skillsmaster/.skill-lock.json`，并使用以下语义：
 
 - `source = <slug>`
 - `sourceType = "skillhub"`

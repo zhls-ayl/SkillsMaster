@@ -42,8 +42,11 @@ enum Constants {
     /// 之所以放在 `~/.skillsmaster/skills/`，是为了避免与部分 Agent 会直接读取的目录重叠。
     static let sharedSkillsPath = "~/.skillsmaster/skills"
 
-    /// Lock file path — stays in ~/.agents/ because it is shared with npx skills CLI
-    static let lockFilePath = "~/.agents/.skill-lock.json"
+    /// Private canonical lock file path managed by SkillsMaster itself.
+    static let lockFilePath = "~/.skillsmaster/.skill-lock.json"
+
+    /// Legacy Skills CLI lock file path kept only as an external import source.
+    static let legacyLockFilePath = "~/.agents/.skill-lock.json"
 
     /// Directory where custom repositories are cloned: ~/.skillsmaster/repos/
     static let reposBasePath = "~/.skillsmaster/repos"
@@ -53,6 +56,9 @@ enum Constants {
 
     /// Cache file for custom repository lightweight scan indexes
     static let repositoryScanCachePath = "~/.skillsmaster/.repository-scan-cache.json"
+
+    /// Whether the fixed LocalSkill source should be shown in Settings / Sidebar.
+    static let localSkillRepositoryEnabledKey = "localSkillRepositoryEnabled"
 
     /// UserDefaults key for app appearance preference.
     /// Stored as `AppThemeMode.rawValue` (`system` / `light` / `dark`).

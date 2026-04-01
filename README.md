@@ -94,13 +94,14 @@ For inline English-to-Chinese translation in detail pages:
 
 - `Installed`: inspect, edit, assign, delete, and update local Skills
 - `Marketplace`: browse and install from `Skills.sh`, ClawHub, and SkillsHub
-- `Repositories`: add SSH, public HTTPS, or token-authenticated HTTPS repositories; then sync, browse, and install from them
+- `Repositories`: add SSH, public HTTPS, or token-authenticated HTTPS repositories, or import local `SKILL.md` / skill folders into the fixed `LocalSkill` source; then browse and install from them
 - `Agents`: inspect Agent Skills and Agent root files
 
 ## Important Paths
 
 - Canonical managed Skills directory: `~/.skillsmaster/skills`
-- Compatibility lock file: `~/.agents/.skill-lock.json`
+- Private canonical lock file: `~/.skillsmaster/.skill-lock.json`
+- Legacy Skills CLI lock file: `~/.agents/.skill-lock.json` (manual import source in Settings)
 - `Agent Files > skills/` is protected and read-only inside the app
 - In-app update requires running from a real `.app` bundle; `swift run`, DMG-mounted apps, and temporary unzip locations are not guaranteed to update in place
 

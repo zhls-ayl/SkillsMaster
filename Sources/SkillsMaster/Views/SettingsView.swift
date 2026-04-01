@@ -43,6 +43,9 @@ struct 通用SettingsView: View {
 
     @State private var installModeError: String?
     @State private var toolPreferenceError: String?
+    @State private var compatibilityImportMessage: String?
+    @State private var compatibilityImportError: String?
+    @State private var isImportingCompatibilityData = false
 
     /// Persisted appearance mode in UserDefaults.
     ///
@@ -88,6 +91,12 @@ struct 通用SettingsView: View {
             set: { newMode in
                 appLanguageModeRawValue = newMode.rawValue
             }
+        )
+    }
+
+    private var shouldShowCompatibilitySection: Bool {
+        FileManager.default.fileExists(
+            atPath: NSString(string: Constants.legacyLockFilePath).expandingTildeInPath
         )
     }
 
@@ -257,10 +266,65 @@ struct 通用SettingsView: View {
                         .textSelection(.enabled)  // Allow users to select and copy
                         .foregroundStyle(.secondary)
                 }
-                LabeledContent(appLocalized("Lock File")) {
+                LabeledContent(appLocalized("Private Lock File")) {
                     Text(Constants.lockFilePath)
                         .textSelection(.enabled)
                         .foregroundStyle(.secondary)
+                }
+            }
+
+            if shouldShowCompatibilitySection {
+                Section(appLocalized("Compatibility")) {
+                    Text(appLocalized("SkillsMaster now uses a private lock file. Use this action to merge local Skills CLI state into the private canonical storage when needed."))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    LabeledContent(appLocalized("Skills CLI Lock File")) {
+                        Text(Constants.legacyLockFilePath)
+                            .textSelection(.enabled)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Button(appLocalized("Import from Skills CLI")) {
+                        compatibilityImportError = nil
+                        compatibilityImportMessage = nil
+                        isImportingCompatibilityData = true
+
+                        Task {
+                            defer { isImportingCompatibilityData = false }
+                            do {
+                                let result = try await skillManager.importFromSkillsCLI()
+                                compatibilityImportMessage = formatCompatibilityImportResult(result)
+                            } catch {
+                                compatibilityImportError = error.localizedDescription
+                            }
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(isImportingCompatibilityData)
+
+                    if isImportingCompatibilityData {
+                        HStack(spacing: 8) {
+                            ProgressView()
+                                .controlSize(.small)
+                            Text(appLocalized("Importing Skills CLI data..."))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    if let compatibilityImportMessage {
+                        Text(compatibilityImportMessage)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                    }
+
+                    if let compatibilityImportError {
+                        Label(compatibilityImportError, systemImage: "exclamationmark.triangle")
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                    }
                 }
             }
         }
@@ -297,6 +361,16 @@ struct 通用SettingsView: View {
         } catch {
             toolPreferenceError = error.localizedDescription
         }
+    }
+
+    private func formatCompatibilityImportResult(_ result: LegacySkillsCLIImportService.Result) -> String {
+        AppLocalization.format(
+            "Scanned %d legacy entries. Imported %d. Skipped %d existing private entries. Missing local files for %d.",
+            result.scannedSkillCount,
+            result.importedSkillNames.count,
+            result.skippedExistingSkillNames.count,
+            result.missingLocalSkillNames.count
+        )
     }
 }
 

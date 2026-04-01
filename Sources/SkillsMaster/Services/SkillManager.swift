@@ -154,6 +154,8 @@ final class SkillManager {
     private let installModeStore: AgentInstallModeStore
     private let translationService = TranslationService()
     private let translationPackAvailabilityChecker = TranslationPackAvailabilityChecker()
+    private let localSkillImportService = LocalSkillImportService()
+    private let legacySkillsCLIImportService = LegacySkillsCLIImportService()
     private static let dontShowTranslationPackPromptKey = "translationPackPromptDontShowAgain"
     private var hasShownTranslationPackPromptThisLaunch = false
     private var cancellables = Set<AnyCancellable>()
@@ -264,8 +266,8 @@ final class SkillManager {
             }
         )
 
-        // Load custom repositories config from disk (fast — JSON read only)
-        repositories = await repositoryManager.loadAll()
+        // Load repositories config from disk and append the fixed LocalSkill source when enabled.
+        await reloadRepositories()
 
         // 为启用了“启动时同步”的 repositories 触发后台同步（clone / pull）。
         // `Task { }` creates a detached child task that runs concurrently,
@@ -281,9 +283,9 @@ final class SkillManager {
             agents = await detectedAgents
             var allSkills = try await scannedSkills
 
-            // 读取并填充 lock file 信息。
+            // 读取并填充私有 lock file 信息。
             // 这里会先使 cache 失效，确保读到磁盘上的最新数据。
-            // 外部工具（例如 `npx skills`）可能已经修改了 lock file。
+            // 手动兼容导入等操作可能已经修改了 lock file。
             await lockFileManager.invalidateCache()
             if await lockFileManager.exists {
                 if let lockFile = try? await lockFileManager.read() {
@@ -340,6 +342,25 @@ final class SkillManager {
         isLoading = false
     }
 
+    private func reloadRepositories() async {
+        var loadedRepositories = await repositoryManager.loadAll()
+        loadedRepositories.removeAll { $0.isLocalCollection }
+
+        if isLocalSkillRepositoryEnabled {
+            loadedRepositories.insert(.localSkillRepository(), at: 0)
+        }
+
+        repositories = loadedRepositories
+    }
+
+    private var isLocalSkillRepositoryEnabled: Bool {
+        UserDefaults.standard.bool(forKey: Constants.localSkillRepositoryEnabledKey)
+    }
+
+    private func setLocalSkillRepositoryEnabled(_ isEnabled: Bool) {
+        UserDefaults.standard.set(isEnabled, forKey: Constants.localSkillRepositoryEnabledKey)
+    }
+
     /// Start watching file system, monitor all relevant directories
     private func startWatching() {
         var paths: [URL] = [SkillScanner.sharedSkillsURL]
@@ -353,6 +374,13 @@ final class SkillManager {
             paths.append(agent.skillsDirectoryURL)
         }
         watcher.startWatching(paths: paths)
+    }
+
+    /// Import legacy Skills CLI lock data and local skill files into SkillsMaster's private storage.
+    func importFromSkillsCLI() async throws -> LegacySkillsCLIImportService.Result {
+        let result = try await legacySkillsCLIImportService.importAndMerge()
+        await refresh()
+        return result
     }
 
     // MARK: - Agent Install Mode
@@ -529,6 +557,129 @@ final class SkillManager {
             targetAgents: targetAgents,
             lockEntry: entry
         )
+    }
+
+    func scanLocalImportCandidates(
+        at selectionURL: URL,
+        includeHiddenPaths: Bool
+    ) async throws -> [LocalSkillImportService.Candidate] {
+        try await localSkillImportService.scanCandidates(
+            at: selectionURL,
+            includeHiddenPaths: includeHiddenPaths
+        )
+    }
+
+    /// 把本地 skill 导入到 SkillsMaster canonical 目录，并标记为 LocalSkill 来源。
+    func importLocalSkill(
+        from sourceURL: URL,
+        skillName: String
+    ) async throws {
+        let trimmedName = skillName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else {
+            throw ImportError.parseFailed("Skill name cannot be empty.")
+        }
+
+        let fm = FileManager.default
+        let standardizedSourceURL = sourceURL.standardizedFileURL
+        let values = try standardizedSourceURL.resourceValues(forKeys: [.isDirectoryKey])
+
+        let importDirectoryURL: URL
+        let cleanupRootURL: URL?
+
+        if values.isDirectory == true {
+            let skillMDURL = standardizedSourceURL.appendingPathComponent("SKILL.md")
+            guard fm.fileExists(atPath: skillMDURL.path) else {
+                throw ImportError.skillMDNotFound(standardizedSourceURL.path)
+            }
+            importDirectoryURL = standardizedSourceURL
+            cleanupRootURL = nil
+        } else {
+            guard standardizedSourceURL.lastPathComponent == "SKILL.md" else {
+                throw ImportError.skillMDNotFound(standardizedSourceURL.path)
+            }
+            let tempRoot = fm.temporaryDirectory.appendingPathComponent("SkillsMaster-LocalImport-\(UUID().uuidString)")
+            let tempSkillDirectory = tempRoot.appendingPathComponent(trimmedName)
+            try fm.createDirectory(at: tempSkillDirectory, withIntermediateDirectories: true)
+            try fm.copyItem(
+                at: standardizedSourceURL,
+                to: tempSkillDirectory.appendingPathComponent("SKILL.md")
+            )
+            importDirectoryURL = tempSkillDirectory
+            cleanupRootURL = tempRoot
+        }
+
+        defer {
+            if let cleanupRootURL {
+                try? fm.removeItem(at: cleanupRootURL)
+            }
+        }
+
+        _ = try SkillMDParser.parse(fileURL: importDirectoryURL.appendingPathComponent("SKILL.md"))
+
+        let canonicalDir = SkillScanner.sharedSkillsURL.appendingPathComponent(trimmedName)
+        let existingSkill = skills.first { $0.id == trimmedName }
+        let now = ISO8601DateFormatter().string(from: Date())
+        let installedAt = existingSkill?.lockEntry?.installedAt ?? now
+        let entry = LockEntry(
+            source: SkillRepository.localSkillRepositorySource,
+            sourceType: "local",
+            sourceUrl: standardizedSourceURL.path,
+            skillPath: "\(trimmedName)/SKILL.md",
+            skillFolderHash: "",
+            installedAt: installedAt,
+            updatedAt: now
+        )
+
+        if fm.fileExists(atPath: canonicalDir.path) {
+            try fm.removeItem(at: canonicalDir)
+        }
+        if !fm.fileExists(atPath: SkillScanner.sharedSkillsURL.path) {
+            try fm.createDirectory(at: SkillScanner.sharedSkillsURL, withIntermediateDirectories: true)
+        }
+        try fm.copyItem(at: importDirectoryURL, to: canonicalDir)
+
+        if let existingSkill {
+            let refreshedSkill = Skill(
+                id: existingSkill.id,
+                canonicalURL: canonicalDir,
+                metadata: existingSkill.metadata,
+                frontmatterText: existingSkill.frontmatterText,
+                markdownBody: existingSkill.markdownBody,
+                scope: existingSkill.scope,
+                installations: existingSkill.installations,
+                lockEntry: existingSkill.lockEntry,
+                hasUpdate: existingSkill.hasUpdate,
+                remoteTreeHash: existingSkill.remoteTreeHash,
+                remoteCommitHash: existingSkill.remoteCommitHash,
+                remoteVersion: existingSkill.remoteVersion,
+                localCommitHash: existingSkill.localCommitHash
+            )
+            try syncCopiedDirectInstallations(for: refreshedSkill)
+        }
+
+        await commitHashCache.removeHash(for: trimmedName)
+        await commitHashCache.removeLinkedInfo(for: trimmedName)
+        try? await commitHashCache.save()
+
+        try await lockFileManager.createIfNotExists()
+        try await lockFileManager.updateEntry(skillName: trimmedName, entry: entry)
+
+        setLocalSkillRepositoryEnabled(true)
+        await refresh()
+    }
+
+    /// 重新把 canonical 中的本地导入 skill 落到指定 Agent 目录。
+    func installImportedLocalSkill(_ skill: Skill, targetAgents: Set<AgentType>) async throws {
+        for agent in targetAgents {
+            try materializeSkill(
+                skill.id,
+                from: skill.canonicalURL,
+                to: agent,
+                mode: installMode(for: agent),
+                replaceExisting: true
+            )
+        }
+        await refresh()
     }
 
     /// 安装 ClawHub skill 到 canonical 目录，并按目标 Agent 的默认方式完成 direct install。
@@ -1265,6 +1416,11 @@ final class SkillManager {
     ///
     /// Token is persisted in Keychain only; never written to JSON config.
     func addRepository(_ repo: SkillRepository, token: String?) async throws {
+        if repo.isLocalCollection {
+            setLocalSkillRepositoryEnabled(true)
+            await reloadRepositories()
+            return
+        }
         try await repositoryManager.add(repo)
         do {
             if repo.authType.requiresToken,
@@ -1278,15 +1434,21 @@ final class SkillManager {
             await repositoryManager.remove(id: repo.id)
             throw error
         }
-        repositories = await repositoryManager.loadAll()
+        await reloadRepositories()
     }
 
     /// Remove a custom repository by ID from the config file.
     ///
     /// Does NOT delete the local clone from disk — leaves that to the user.
     func removeRepository(id: UUID) async {
+        if id == SkillRepository.localSkillRepositoryID {
+            setLocalSkillRepositoryEnabled(false)
+            await reloadRepositories()
+            repoSyncStatuses.removeValue(forKey: id)
+            return
+        }
         await repositoryManager.remove(id: id)
-        repositories = await repositoryManager.loadAll()
+        await reloadRepositories()
         repoSyncStatuses.removeValue(forKey: id)
     }
 
@@ -1294,8 +1456,9 @@ final class SkillManager {
     ///
     /// Used for editable per-repository settings (for example: startup sync toggle).
     func updateRepository(_ repo: SkillRepository) async {
+        guard !repo.isLocalCollection else { return }
         await repositoryManager.update(repo)
-        repositories = await repositoryManager.loadAll()
+        await reloadRepositories()
     }
 
     /// Sync (clone or pull) a single repository and update its status in the UI.
@@ -1303,13 +1466,14 @@ final class SkillManager {
     /// Updates `repoSyncStatuses[id]` to `.syncing` while in progress,
     /// then to `.success(date)` or `.error(message)` when done.
     func syncRepository(id: UUID) async {
+        if id == SkillRepository.localSkillRepositoryID { return }
         guard let repo = repositories.first(where: { $0.id == id }) else { return }
         repoSyncStatuses[id] = .syncing
 
         do {
             try await repositoryManager.sync(repo: repo)
             // Reload so lastSyncedAt is updated
-            repositories = await repositoryManager.loadAll()
+            await reloadRepositories()
             repoSyncStatuses[id] = .success(Date())
         } catch {
             repoSyncStatuses[id] = .error(error.localizedDescription)

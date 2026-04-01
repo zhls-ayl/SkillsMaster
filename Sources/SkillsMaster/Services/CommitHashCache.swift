@@ -3,10 +3,10 @@ import Foundation
 /// `CommitHashCache` 是 SkillsMaster 私有的 commit hash cache service。
 ///
 /// 这里有一个明确的设计决策：**不修改** `\.skill-lock.json` 的格式，
-/// 避免污染需要与 `npx skills` 共享的 `lock file`。
+/// 避免把 SkillsMaster 私有状态混进 canonical lock file。
 ///
 /// 因此，SkillsMaster 会把 commit hash 单独存到自己的 cache 文件中，
-/// 让 `npx skills add/remove` 与 SkillsMaster 的私有状态彼此解耦。
+/// 让 lock file 继续只承载安装来源语义，而不承载额外的应用私有状态。
 ///
 /// 由于多个流程可能同时读写 cache 文件，这里使用 `actor` 保证 thread safety。
 actor CommitHashCache {
