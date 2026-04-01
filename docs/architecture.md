@@ -48,7 +48,8 @@ SkillsMaster 是一个基于 SwiftUI 的 macOS 应用，用于管理多代理 Sk
 ## 数据与存储约定
 当前实现使用以下本地路径：
 - canonical 存储目录：`~/.skillsmaster/skills`
-- lock file：`~/.agents/.skill-lock.json`
+- private lock file：`~/.skillsmaster/.skill-lock.json`
+- legacy Skills CLI lock file：`~/.agents/.skill-lock.json`
 - 自定义仓库克隆目录：`~/.skillsmaster/repos`
 - 自定义仓库配置：`~/.skillsmaster/.skillsmaster-repos.json`
 - 提交哈希缓存：`~/.skillsmaster/.skillsmaster-cache.json`（迁移后私有缓存）
@@ -56,7 +57,8 @@ SkillsMaster 是一个基于 SwiftUI 的 macOS 应用，用于管理多代理 Sk
 
 其中需要特别注意：
 - `~/.skillsmaster/skills` 是 SkillsMaster 自己维护的 canonical 目录，也是 managed skill 的事实源
-- `~/.agents/.skill-lock.json` 仍保留在旧位置，以兼容外部工具
+- `~/.skillsmaster/.skill-lock.json` 是 SkillsMaster 自己维护的 canonical lock file
+- `~/.agents/.skill-lock.json` 降级为 legacy external source，仅在 Settings 中手动导入时读取
 - 扫描阶段仍会兼容读取 `~/.agents/skills`，用于兼容旧数据以及部分 Agent 的附加读取规则
 - 每个 Agent 可以单独配置默认 direct install 方式：`symbolic link` 或 `physical copy`
 

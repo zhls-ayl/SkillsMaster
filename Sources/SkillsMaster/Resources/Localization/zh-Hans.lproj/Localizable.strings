@@ -24,6 +24,13 @@
 "Paths" = "路径";
 "Shared Skills" = "共享 Skills";
 "Lock File" = "锁文件";
+"Private Lock File" = "私有锁文件";
+"Skills CLI Lock File" = "Skills CLI 锁文件";
+"Compatibility" = "兼容";
+"SkillsMaster now uses a private lock file. Use this action to merge local Skills CLI state into the private canonical storage when needed." = "SkillsMaster 现在使用私有锁文件。需要时可通过这个操作把本地 Skills CLI 状态合并导入到私有 canonical 存储。";
+"Import from Skills CLI" = "从 Skills CLI 导入";
+"Importing Skills CLI data..." = "正在导入 Skills CLI 数据...";
+"Scanned %d legacy entries. Imported %d. Skipped %d existing private entries. Missing local files for %d." = "已扫描 %d 条旧记录。成功导入 %d 条，跳过 %d 条已有私有记录，另有 %d 条缺少本地文件。";
 "Supports .json / .md / .toml / SKILL.md" = "支持 .json / .md / .toml / SKILL.md";
 "Falls back to the system default app when not configured." = "未配置时回退到系统默认应用。";
 "Select" = "选择";

@@ -155,6 +155,7 @@ final class SkillManager {
     private let translationService = TranslationService()
     private let translationPackAvailabilityChecker = TranslationPackAvailabilityChecker()
     private let localSkillImportService = LocalSkillImportService()
+    private let legacySkillsCLIImportService = LegacySkillsCLIImportService()
     private static let dontShowTranslationPackPromptKey = "translationPackPromptDontShowAgain"
     private var hasShownTranslationPackPromptThisLaunch = false
     private var cancellables = Set<AnyCancellable>()
@@ -282,9 +283,9 @@ final class SkillManager {
             agents = await detectedAgents
             var allSkills = try await scannedSkills
 
-            // 读取并填充 lock file 信息。
+            // 读取并填充私有 lock file 信息。
             // 这里会先使 cache 失效，确保读到磁盘上的最新数据。
-            // 外部工具（例如 `npx skills`）可能已经修改了 lock file。
+            // 手动兼容导入等操作可能已经修改了 lock file。
             await lockFileManager.invalidateCache()
             if await lockFileManager.exists {
                 if let lockFile = try? await lockFileManager.read() {
@@ -373,6 +374,13 @@ final class SkillManager {
             paths.append(agent.skillsDirectoryURL)
         }
         watcher.startWatching(paths: paths)
+    }
+
+    /// Import legacy Skills CLI lock data and local skill files into SkillsMaster's private storage.
+    func importFromSkillsCLI() async throws -> LegacySkillsCLIImportService.Result {
+        let result = try await legacySkillsCLIImportService.importAndMerge()
+        await refresh()
+        return result
     }
 
     // MARK: - Agent Install Mode

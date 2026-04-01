@@ -66,6 +66,17 @@ final class LockFileManagerTests: XCTestCase {
 
     // MARK: - Read Tests
 
+    func testDefaultPathUsesPrivateSkillsMasterLocation() {
+        XCTAssertTrue(
+            LockFileManager.defaultPath.path.hasSuffix(".skillsmaster/.skill-lock.json"),
+            "defaultPath should point to ~/.skillsmaster/.skill-lock.json, got: \(LockFileManager.defaultPath.path)"
+        )
+        XCTAssertTrue(
+            LockFileManager.legacyPath.path.hasSuffix(".agents/.skill-lock.json"),
+            "legacyPath should point to ~/.agents/.skill-lock.json, got: \(LockFileManager.legacyPath.path)"
+        )
+    }
+
     /// 测试读取 lock file
     func testRead() async throws {
         let lockFile = try await manager.read()

@@ -24,6 +24,13 @@
 "Paths" = "Paths";
 "Shared Skills" = "Shared Skills";
 "Lock File" = "Lock File";
+"Private Lock File" = "Private Lock File";
+"Skills CLI Lock File" = "Skills CLI Lock File";
+"Compatibility" = "Compatibility";
+"SkillsMaster now uses a private lock file. Use this action to merge local Skills CLI state into the private canonical storage when needed." = "SkillsMaster now uses a private lock file. Use this action to merge local Skills CLI state into the private canonical storage when needed.";
+"Import from Skills CLI" = "Import from Skills CLI";
+"Importing Skills CLI data..." = "Importing Skills CLI data...";
+"Scanned %d legacy entries. Imported %d. Skipped %d existing private entries. Missing local files for %d." = "Scanned %d legacy entries. Imported %d. Skipped %d existing private entries. Missing local files for %d.";
 "Supports .json / .md / .toml / SKILL.md" = "Supports .json / .md / .toml / SKILL.md";
 "Falls back to the system default app when not configured." = "Falls back to the system default app when not configured.";
 "Select" = "Select";
