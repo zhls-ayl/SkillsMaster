@@ -3,6 +3,10 @@ import XCTest
 
 final class TranslationServiceTests: XCTestCase {
 
+    private struct NoopPreparationClient: LocalTranslationPreparationClient {
+        func prepareEnglishToChineseIfNeeded() async throws {}
+    }
+
     private actor FakeClient: LocalTranslationClient {
         private(set) var calls: [String] = []
         let result: String
@@ -56,7 +60,10 @@ final class TranslationServiceTests: XCTestCase {
 
     func testTranslateEnglishToChinese_cachesByExactText() async throws {
         let client = FakeClient(result: "你好")
-        let service = TranslationService(client: client)
+        let service = TranslationService(
+            client: client,
+            preparationClient: NoopPreparationClient()
+        )
 
         let first = try await service.translateEnglishToChinese("Hello")
         let second = try await service.translateEnglishToChinese("Hello")
@@ -85,7 +92,10 @@ final class TranslationServiceTests: XCTestCase {
 
     func testTranslateEnglishToChinese_deduplicatesConcurrentRequestsForSameText() async throws {
         let client = SlowFakeClient()
-        let service = TranslationService(client: client)
+        let service = TranslationService(
+            client: client,
+            preparationClient: NoopPreparationClient()
+        )
 
         async let first = service.translateEnglishToChinese("Hello")
         async let second = service.translateEnglishToChinese("Hello")
@@ -117,7 +127,10 @@ final class TranslationServiceTests: XCTestCase {
 
     func testTranslateEnglishToChinese_serializesDifferentTexts() async throws {
         let client = SlowFakeClient()
-        let service = TranslationService(client: client)
+        let service = TranslationService(
+            client: client,
+            preparationClient: NoopPreparationClient()
+        )
 
         async let first = service.translateEnglishToChinese("One")
         async let second = service.translateEnglishToChinese("Two")
@@ -144,7 +157,10 @@ final class TranslationServiceTests: XCTestCase {
             }
         }
 
-        let service = TranslationService(client: OfflineModelsUnavailableClient())
+        let service = TranslationService(
+            client: OfflineModelsUnavailableClient(),
+            preparationClient: NoopPreparationClient()
+        )
 
         do {
             _ = try await service.translateEnglishToChinese("Hello")
@@ -169,7 +185,10 @@ final class TranslationServiceTests: XCTestCase {
             }
         }
 
-        let service = TranslationService(client: OfflineModelsUnavailableClient())
+        let service = TranslationService(
+            client: OfflineModelsUnavailableClient(),
+            preparationClient: NoopPreparationClient()
+        )
 
         do {
             _ = try await service.translateEnglishToChinese("Hello")
@@ -195,7 +214,10 @@ final class TranslationServiceTests: XCTestCase {
             }
         }
 
-        let service = TranslationService(client: OfflineModelsUnavailableClient())
+        let service = TranslationService(
+            client: OfflineModelsUnavailableClient(),
+            preparationClient: NoopPreparationClient()
+        )
 
         async let first = captureResult {
             try await service.translateEnglishToChinese("Hello")
