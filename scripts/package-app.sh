@@ -214,6 +214,16 @@ verify_binary_arch() {
     esac
 }
 
+verify_translation_linkage() {
+    local binary_path="$1"
+    if ! otool -L "$binary_path" | grep -q "/System/Library/Frameworks/Translation.framework"; then
+        echo "Error: Translation.framework is not linked into the built binary."
+        echo "This usually means the release artifact was built with an older Xcode / Swift toolchain."
+        echo "Build release artifacts with Swift 6.2+ (for example on a macOS 26 runner) so inline translation support is compiled in."
+        exit 1
+    fi
+}
+
 find_build_binary() {
     local scratch_path="$1"
     local binary_path
@@ -299,6 +309,7 @@ build_bundle_for_arch() {
     local binary_path
     binary_path="$(find_build_binary "$scratch_path")"
     verify_binary_arch "$binary_path" "$arch"
+    verify_translation_linkage "$binary_path"
 
     local resource_bundle
     resource_bundle="$(find_resource_bundle "$scratch_path")"
@@ -514,6 +525,7 @@ mkdir -p "$OUTPUT_DIR"
 
 require_cmd swift
 require_cmd file
+require_cmd otool
 require_cmd xcode-select
 check_xcode_tools
 

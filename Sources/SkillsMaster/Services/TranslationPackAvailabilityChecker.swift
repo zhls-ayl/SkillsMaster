@@ -4,7 +4,11 @@ import Foundation
 import Translation
 #endif
 
-struct TranslationPackAvailabilityChecker {
+protocol TranslationPackAvailabilityChecking: Sendable {
+    func englishToSimplifiedChinese() async -> TranslationPackAvailabilityChecker.Availability
+}
+
+struct TranslationPackAvailabilityChecker: TranslationPackAvailabilityChecking {
     enum Availability: Equatable {
         case installed
         case supportedButNotInstalled

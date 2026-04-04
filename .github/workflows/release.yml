@@ -22,12 +22,21 @@ permissions:
 
 jobs:
   release:
-    runs-on: macos-latest
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v6
 
       - name: Print Swift version
         run: swift --version
+
+      - name: Verify translation-capable toolchain
+        run: |
+          swift_version="$(swift --version | awk '/Apple Swift version/ {print $4}')"
+          IFS='.' read -r major minor _ <<< "${swift_version}"
+          if (( major < 6 || (major == 6 && minor < 2) )); then
+            echo "SkillsMaster release builds require Swift 6.2+ so Translation.framework support is compiled in."
+            exit 1
+          fi
 
       # 先运行测试，确保发布版本质量
       - name: Run tests

@@ -152,8 +152,8 @@ final class SkillManager {
     /// 管理用户配置的 custom repositories。
     let repositoryManager = RepositoryManager()
     private let installModeStore: AgentInstallModeStore
-    private let translationService = TranslationService()
-    private let translationPackAvailabilityChecker = TranslationPackAvailabilityChecker()
+    private let translationService: any EnglishToChineseTranslating
+    private let translationPackAvailabilityChecker: any TranslationPackAvailabilityChecking
     private let localSkillImportService = LocalSkillImportService()
     private let legacySkillsCLIImportService = LegacySkillsCLIImportService()
     private static let dontShowTranslationPackPromptKey = "translationPackPromptDontShowAgain"
@@ -162,8 +162,14 @@ final class SkillManager {
 
     // MARK: - Initialization
 
-    init(installModeStore: AgentInstallModeStore = AgentInstallModeStore()) {
+    init(
+        installModeStore: AgentInstallModeStore = AgentInstallModeStore(),
+        translationService: any EnglishToChineseTranslating = TranslationService(),
+        translationPackAvailabilityChecker: any TranslationPackAvailabilityChecking = TranslationPackAvailabilityChecker()
+    ) {
         self.installModeStore = installModeStore
+        self.translationService = translationService
+        self.translationPackAvailabilityChecker = translationPackAvailabilityChecker
         self.defaultInstallModes = installModeStore.loadAll()
         setupFileWatcher()
     }
@@ -184,8 +190,10 @@ final class SkillManager {
         do {
             return try await translationService.translateEnglishToChinese(text)
         } catch TranslationService.TranslationError.unavailable {
-            translationAvailability = .supportedButNotInstalled
-            presentTranslationPackPromptIfNeeded()
+            if translationAvailability != .installed {
+                translationAvailability = .supportedButNotInstalled
+                presentTranslationPackPromptIfNeeded()
+            }
             throw TranslationService.TranslationError.unavailable
         }
     }

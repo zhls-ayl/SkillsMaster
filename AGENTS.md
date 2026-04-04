@@ -129,6 +129,7 @@
 - 目标 GitHub remote 与默认跟踪分支是否正确；若仓库存在非 GitHub `origin`、镜像 remote 或 `main` 受分支保护，不要默认直接推送当前上游
 - `VERSION` 与 `CHANGELOG.md` 必须同步；自动化发布默认以 `VERSION` 为版本真源，不允许只改其中一处
 - 标准自动化入口优先使用 `./run ship X.Y.Z`；`./run package` / `./run release` 作为底层 fallback 与排障入口保留
+- 不要把 GitHub Actions 的 `macos-latest` 当作“自带最新 Xcode / Swift”的保证；若 release 依赖详情页系统翻译能力，构建工具链必须至少是 Xcode 26 / Swift 6.2，并且最终产物需要实际链接 `Translation.framework`
 - 自动化如果需要“推 tag 触发另一个 workflow”，不要默认使用 `github.token` 作为发布凭据；应明确使用可触发 downstream workflow 的 token / GitHub App 凭据
 - `homebrew/skillsmaster.rb` 与独立 tap cask 只能在 GitHub Release 成功、`universal.zip` 的真实 `sha256` 已确认后再更新；不得预填尚未生成的 digest
 - 对单架构发布包（尤其 `arm64.zip` / `x86_64.zip`），至少做一次解压后的启动级 smoke test，确认 SwiftPM resource bundle 没有因打包路径差异导致 `Bundle.module` 在启动阶段直接崩溃

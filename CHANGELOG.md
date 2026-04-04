@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+## [0.2.15] - 2026-04-04
+### Changed
+- 详情页内联翻译链路现在会在首次真正翻译前先预热 `TranslationSession`，并对该预热过程做单飞收敛，降低应用刚启动后首次点击 `翻译` 时因运行时尚未就绪而直接失败的问题。
+- `SkillManager` 的翻译状态判断已收紧：当系统翻译能力已确认可用时，单次段落翻译失败不再把页面状态错误降级为“缺少离线语言包”，避免手动翻译按钮出现“点了没反应 / 被误提示未安装”的状态漂移。
+- 发布与 CI workflow 现在固定使用 `macos-26` runner，并在开始阶段校验 `Swift 6.2+`，防止 GitHub Actions runner 漂移到旧工具链后把 `Translation.framework` 支持静默编译掉。
+
+### Fixed
+- 修复 `v0.2.14` 已安装应用在 Skill 详情页点击 `翻译` 没有任何效果的问题；根因是 release 产物由 `Swift 6.1.2 / Xcode 16.4` 构建，翻译相关代码被编译条件裁掉，导致安装版二进制实际不含 `Translation.framework` 依赖。
+- 修复支持翻译能力的本地构建在应用首次启动后第一次点击 `翻译` 容易失败、取消后再次点击才恢复正常的问题。
+- 为 `scripts/package-app.sh` 增加 release 二进制链接校验；若构建产物未实际链接 `Translation.framework`，打包现在会直接失败，避免再次发布出“功能缺失但表面可运行”的安装包。
+
 ## [0.2.14] - 2026-04-01
 ### Added
 - `Settings > General` 新增 `Compatibility` 兼容导入区块：当检测到旧版 Skills CLI lock file 时，支持手动从 `~/.agents/.skill-lock.json` 合并导入本地可定位到的 skill 与 lock entry，并在导入后返回新增 / 跳过 / 缺失文件统计。
