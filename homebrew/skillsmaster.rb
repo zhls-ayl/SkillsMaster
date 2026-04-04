@@ -32,6 +32,7 @@ cask "skillsmaster" do
   # zap 定义完全卸载时需要清理的文件
   # 只在 brew zap（非 brew uninstall）时执行
   zap trash: [
+    "~/.skillsmaster/.skill-lock.json",
     "~/.agents/.skill-lock.json",
   ]
 end
