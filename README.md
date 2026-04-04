@@ -68,13 +68,14 @@ cd SkillsMaster
 ## Requirements
 
 - macOS 14+
-- Xcode 15+
-- Swift 5.9+
+- Xcode 26+
+- Swift 6.2+
 
 For inline English-to-Chinese translation in detail pages:
 
 - macOS 26+
 - English -> Simplified Chinese offline translation pack installed in the system
+- Release artifacts and local source builds must use Swift 6.2+; older toolchains silently compile out `Translation.framework` support
 
 ## Supported Agents
 

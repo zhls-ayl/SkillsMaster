@@ -2,8 +2,12 @@
 
 ## 本地环境
 - macOS 14+
-- Xcode 15+
-- Swift 5.9+
+- Xcode 26+
+- Swift 6.2+
+
+补充说明：
+- 详情页内联翻译依赖 `Translation.framework`；若使用更旧的 Xcode / Swift，应用主体也许还能编过，但翻译相关代码会被编译条件静默裁掉，导致“源码能跑 / release 无翻译能力”这类二进制漂移
+- 需要验证翻译功能、打 release 包或对齐 GitHub Actions 结果时，不要使用低于 Swift 6.2 的本地工具链
 
 推荐优先使用：
 - `./run`：统一入口；无参数默认本地运行，也可转发 `test` / `build` / `package` / `release` / `ship` / `clean`

@@ -38,6 +38,22 @@ final class TranslationServiceTests: XCTestCase {
         }
     }
 
+    private actor FakePreparationClient: LocalTranslationPreparationClient {
+        private(set) var callCount = 0
+        let delayNanoseconds: UInt64
+
+        init(delayNanoseconds: UInt64 = 0) {
+            self.delayNanoseconds = delayNanoseconds
+        }
+
+        func prepareEnglishToChineseIfNeeded() async throws {
+            callCount += 1
+            if delayNanoseconds > 0 {
+                try await Task.sleep(nanoseconds: delayNanoseconds)
+            }
+        }
+    }
+
     func testTranslateEnglishToChinese_cachesByExactText() async throws {
         let client = FakeClient(result: "你好")
         let service = TranslationService(client: client)
@@ -52,6 +68,21 @@ final class TranslationServiceTests: XCTestCase {
         XCTAssertEqual(calls, ["Hello"])
     }
 
+    func testTranslateEnglishToChinese_preparesRuntimeOnlyForFirstCacheMiss() async throws {
+        let client = FakeClient(result: "你好")
+        let preparationClient = FakePreparationClient()
+        let service = TranslationService(
+            client: client,
+            preparationClient: preparationClient
+        )
+
+        _ = try await service.translateEnglishToChinese("Hello")
+        _ = try await service.translateEnglishToChinese("Hello")
+
+        let preparationCallCount = await preparationClient.callCount
+        XCTAssertEqual(preparationCallCount, 1)
+    }
+
     func testTranslateEnglishToChinese_deduplicatesConcurrentRequestsForSameText() async throws {
         let client = SlowFakeClient()
         let service = TranslationService(client: client)
@@ -64,6 +95,24 @@ final class TranslationServiceTests: XCTestCase {
 
         let calls = await client.calls
         XCTAssertEqual(calls, ["Hello"])
+    }
+
+    func testTranslateEnglishToChinese_deduplicatesConcurrentPreparationForSameText() async throws {
+        let client = SlowFakeClient()
+        let preparationClient = FakePreparationClient(delayNanoseconds: 20_000_000)
+        let service = TranslationService(
+            client: client,
+            preparationClient: preparationClient
+        )
+
+        async let first = service.translateEnglishToChinese("Hello")
+        async let second = service.translateEnglishToChinese("Hello")
+
+        let results = try await [first, second]
+        XCTAssertEqual(results, ["ZH:Hello", "ZH:Hello"])
+
+        let preparationCallCount = await preparationClient.callCount
+        XCTAssertEqual(preparationCallCount, 1)
     }
 
     func testTranslateEnglishToChinese_serializesDifferentTexts() async throws {

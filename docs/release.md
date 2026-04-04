@@ -41,7 +41,7 @@
 说明：
 - `run` 会先固定 Swift / clang module cache 到仓库内 `.build/`，再分发到对应子命令
 - `VERSION` 是版本号真源；`CHANGELOG.md` 必须同时包含对应版本节
-- `package-app.sh` 会检查 `xcode-select`、`actool`、二进制架构与资源包，并可一次性产出整个 release matrix
+- `package-app.sh` 会检查 `xcode-select`、`actool`、二进制架构、`Translation.framework` 链接状态与资源包，并可一次性产出整个 release matrix
 - `release.sh` 要求工作区干净、目标分支已同步到将要触发 GitHub Release 的 remote、目标 tag 在本地与该 remote 上都不存在；未显式传版本时会默认读取 `VERSION`
 - `CHANGELOG.md` 应至少包含该版本的 `Added` / `Changed` / `Fixed` 中实际发生的内容；若本次发布以修复缺陷为主，应优先记录缺陷现象与修复范围
 
@@ -88,16 +88,18 @@
 
 ## GitHub Actions
 - `.github/workflows/ci.yml`
-  - 在 `push main` 和 `pull_request` 时执行 `swift build` 与 `swift test`
+  - 固定在 `macos-26` runner 上执行 `swift build` 与 `swift test`
+  - 会先校验当前 toolchain 至少为 Swift 6.2，避免把 `Translation.framework` 相关代码静默编译掉
 - `.github/workflows/release-orchestrator.yml`
   - 由 `./run ship ...` 或手动 `workflow_dispatch` 触发
   - 负责等待发布准备 PR 合并、创建 tag、等待 `Release` workflow 成功，并在发布后自动同步当前仓库与 tap 仓库的 cask
   - 依赖 `RELEASE_SYNC_TOKEN`，因为默认 `github.token` 推 tag 不适合作为“再触发 downstream workflow”的发布凭据
 - `.github/workflows/release.yml`
-  - 在推送 `v*` tag 时执行测试、构建 release matrix、并通过 `gh` CLI 创建或更新 GitHub Release
+  - 固定在 `macos-26` runner 上执行测试、构建 release matrix、并通过 `gh` CLI 创建或更新 GitHub Release
   - 当前只负责 GitHub Release 产物；Homebrew cask 与 tap 同步交给 `release-orchestrator.yml`
   - workflow 文件内显式声明 `permissions: contents: write`，用于创建 Release；当前不需要把仓库默认 `Workflow permissions` 提升为全局 write
   - 为规避 GitHub Actions 上 Node 20 JavaScript action 弃用告警，workflow 已升级 `actions/checkout`，并移除了 `softprops/action-gh-release` 依赖
+  - 会先校验当前 toolchain 至少为 Swift 6.2；不要把 `macos-latest` 误当成“自动包含最新 Xcode”的保证
 
 ## 本次发布复盘（v0.2.6）
 这次 `v0.2.6` 发布实际经历了完整的失败恢复链路，暴露出几条值得固化的规则：
@@ -244,6 +246,7 @@ sha256:6e0974f53f007926542f2cb74a7e9fbc1a5f9826b1189ac5464f2464af45bdb9
 - `CHANGELOG.md` 已记录当前版本的关键变更与缺陷修复
 - 通用二进制同时包含 `arm64` 与 `x86_64`
 - 单架构 zip 中的二进制分别只包含目标架构
+- release 二进制实际弱链接了 `Translation.framework`；不要只看“编译通过”，要确认翻译能力真的编进了产物
 - 资源包、图标与 `Info.plist` 未丢失
 - Release 产物命名与 workflow、README 一致
 - 当前选择的发布 remote 确实指向 GitHub 仓库；多 remote 时必要时显式传 `--remote`

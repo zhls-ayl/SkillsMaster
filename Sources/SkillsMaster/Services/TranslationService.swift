@@ -4,23 +4,36 @@ import Foundation
 import Translation
 #endif
 
+protocol EnglishToChineseTranslating: Sendable {
+    func translateEnglishToChinese(_ text: String) async throws -> String
+}
+
+protocol LocalTranslationPreparationClient: Sendable {
+    func prepareEnglishToChineseIfNeeded() async throws
+}
+
 protocol LocalTranslationClient: Sendable {
     func translateEnglishToChinese(_ text: String) async throws -> String
 }
 
-actor TranslationService {
+actor TranslationService: EnglishToChineseTranslating {
 
     enum TranslationError: Error {
         case unavailable
     }
 
     private let client: any LocalTranslationClient
+    private let preparationClient: any LocalTranslationPreparationClient
     private var cache: [String: String] = [:]
     private var inFlight: [String: Task<String, Error>] = [:]
     private var serialTailTask: Task<Void, Never>?
 
-    init(client: any LocalTranslationClient = DefaultLocalTranslationClient()) {
+    init(
+        client: any LocalTranslationClient = DefaultLocalTranslationClient(),
+        preparationClient: any LocalTranslationPreparationClient = DefaultLocalTranslationPreparationClient()
+    ) {
         self.client = client
+        self.preparationClient = preparationClient
     }
 
     func translateEnglishToChinese(_ text: String) async throws -> String {
@@ -37,8 +50,9 @@ actor TranslationService {
         }
 
         let previousTask = serialTailTask
-        let task = Task<String, Error> { [client] in
+        let task = Task<String, Error> { [client, preparationClient] in
             _ = await previousTask?.result
+            try await preparationClient.prepareEnglishToChineseIfNeeded()
             return try await client.translateEnglishToChinese(text)
         }
         inFlight[text] = task
@@ -76,6 +90,16 @@ actor TranslationService {
     }
 }
 
+private struct DefaultLocalTranslationPreparationClient: LocalTranslationPreparationClient {
+    func prepareEnglishToChineseIfNeeded() async throws {
+        if #available(macOS 26.0, *), TranslationPlatformSupport.canPerformInlineTranslation {
+            #if canImport(Translation) && compiler(>=6.2)
+            try await TranslationSessionWarmup.shared.prepareEnglishToChineseIfNeeded()
+            #endif
+        }
+    }
+}
+
 private struct DefaultLocalTranslationClient: LocalTranslationClient {
     func translateEnglishToChinese(_ text: String) async throws -> String {
         if #available(macOS 26.0, *), TranslationPlatformSupport.canPerformInlineTranslation {
@@ -91,6 +115,45 @@ private struct DefaultLocalTranslationClient: LocalTranslationClient {
 }
 
 #if canImport(Translation) && compiler(>=6.2)
+@available(macOS 26.0, *)
+private actor TranslationSessionWarmup {
+    static let shared = TranslationSessionWarmup()
+
+    private var isPrepared = false
+    private var inFlight: Task<Void, Error>?
+
+    func prepareEnglishToChineseIfNeeded() async throws {
+        if isPrepared {
+            return
+        }
+
+        if let inFlight {
+            return try await inFlight.value
+        }
+
+        let task = Task<Void, Error> {
+            let session = TranslationSession(
+                installedSource: Locale.Language(identifier: "en"),
+                target: Locale.Language(identifier: "zh-Hans")
+            )
+
+            if !(await session.isReady) {
+                try await session.prepareTranslation()
+            }
+        }
+        inFlight = task
+
+        do {
+            try await task.value
+            isPrepared = true
+            inFlight = nil
+        } catch {
+            inFlight = nil
+            throw error
+        }
+    }
+}
+
 @available(macOS 26.0, *)
 private struct TranslationFrameworkClient: LocalTranslationClient {
     func translateEnglishToChinese(_ text: String) async throws -> String {

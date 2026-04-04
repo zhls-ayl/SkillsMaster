@@ -66,13 +66,14 @@ cd SkillsMaster
 ## 环境要求
 
 - macOS 14+
-- Xcode 15+
-- Swift 5.9+
+- Xcode 26+
+- Swift 6.2+
 
 如果你希望使用详情页内联中文翻译能力，还需要：
 
 - macOS 26+
 - 系统已安装 English -> Simplified Chinese 离线翻译语言包
+- 本地构建和 release 打包也必须使用 Swift 6.2+；更旧的工具链会把 `Translation.framework` 相关能力静默编译掉
 
 ## 支持的 Agents
 
