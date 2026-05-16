@@ -20,11 +20,6 @@ struct SettingsView: View {
                     Label(appLocalized("Repositories"), systemImage: "archivebox")
                 }
 
-            翻译SettingsView()
-                .tabItem {
-                    Label(appLocalized("Translation"), systemImage: "translate")
-                }
-
             关于SettingsView()
                 .tabItem {
                     Label(appLocalized("About"), systemImage: "info.circle")
@@ -371,57 +366,6 @@ struct 通用SettingsView: View {
             result.skippedExistingSkillNames.count,
             result.missingLocalSkillNames.count
         )
-    }
-}
-
-struct 翻译SettingsView: View {
-
-    @AppStorage(Constants.autoTranslationEnabledKey)
-    private var autoTranslationEnabled = false
-
-    @AppStorage(Constants.autoTranslationInstalledEnabledKey)
-    private var installedEnabled = false
-
-    @AppStorage(Constants.autoTranslationSkillsShEnabledKey)
-    private var skillsShEnabled = false
-
-    @AppStorage(Constants.autoTranslationClawHubEnabledKey)
-    private var clawHubEnabled = false
-
-    @AppStorage(Constants.autoTranslationSkillsHubEnabledKey)
-    private var skillsHubEnabled = false
-
-    @AppStorage(Constants.autoTranslationRepositoriesEnabledKey)
-    private var repositoriesEnabled = false
-
-    @AppStorage(Constants.autoTranslationAgentsEnabledKey)
-    private var agentsEnabled = false
-
-    var body: some View {
-        Form {
-            Section(appLocalized("Automatic Translation")) {
-                Toggle(appLocalized("Enable Automatic Translation"), isOn: $autoTranslationEnabled)
-
-                Text(appLocalized("Disabled by default. When off, every Skill detail view shows only the original content and stops requesting Chinese translations automatically."))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Section(appLocalized("Scopes")) {
-                Toggle(appLocalized("Installed"), isOn: $installedEnabled)
-                Toggle(appLocalized("Skills.sh"), isOn: $skillsShEnabled)
-                Toggle(appLocalized("ClawHub"), isOn: $clawHubEnabled)
-                Toggle(appLocalized("SkillsHub"), isOn: $skillsHubEnabled)
-                Toggle(appLocalized("Repositories"), isOn: $repositoriesEnabled)
-                Toggle(appLocalized("Agents Skills"), isOn: $agentsEnabled)
-
-                Text(appLocalized("These scope settings are preserved even when the global switch is off, but they do not take effect. Automatic translation is never enabled for previews in Agent Files."))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .formStyle(.grouped)
-        .padding()
     }
 }
 

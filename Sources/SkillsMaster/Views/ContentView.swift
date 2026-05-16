@@ -259,23 +259,6 @@ struct ContentView: View {
         } message: {
             Text(AppLocalization.string("The current editor has unsaved changes."))
         }
-        .alert(
-            item: Binding(
-                get: { skillManager.translationPackPrompt },
-                set: { skillManager.translationPackPrompt = $0 }
-            )
-        ) { prompt in
-            Alert(
-                title: Text(prompt.title),
-                message: Text(prompt.message),
-                primaryButton: .default(Text(AppLocalization.string("Got It"))) {
-                    skillManager.dismissTranslationPackPrompt()
-                },
-                secondaryButton: .default(Text(AppLocalization.string("Don't show again"))) {
-                    skillManager.dontShowTranslationPackPromptAgain()
-                }
-            )
-        }
     }
 
     // MARK: - Private Helpers

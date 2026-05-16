@@ -14,6 +14,8 @@ enum AgentType: String, CaseIterable, Identifiable, Codable {
     case codeBuddy = "codebuddy"           // CodeBuddy: Tencent Cloud AI coding assistant (https://www.codebuddy.ai)
     case openClaw = "openclaw"             // OpenClaw: AI coding assistant with ClawHub registry (https://openclaw.ai)
     case trae = "trae"                       // Trae: ByteDance's AI IDE (https://trae.ai)
+    case traeCN = "trae-cn"                  // Trae CN: ByteDance's AI IDE China version (https://trae.ai)
+    case workBuddy = "workbuddy"             // WorkBuddy: Tencent Cloud AI coding assistant (https://workbuddy.ai)
 
     // Identifiable protocol requirement (similar to Java's Comparable), needed for SwiftUI list rendering
     var id: String { rawValue }
@@ -31,6 +33,8 @@ enum AgentType: String, CaseIterable, Identifiable, Codable {
         case .codeBuddy: "CodeBuddy"
         case .openClaw: "OpenClaw"
         case .trae: "Trae"
+        case .traeCN: "Trae CN"
+        case .workBuddy: "WorkBuddy"
         }
     }
 
@@ -74,6 +78,8 @@ enum AgentType: String, CaseIterable, Identifiable, Codable {
         case .codeBuddy: "pink"
         case .openClaw: "red"
         case .trae: "brightGreen"
+        case .traeCN: "brightGreen"
+        case .workBuddy: "orange"
         }
     }
 
@@ -93,6 +99,8 @@ enum AgentType: String, CaseIterable, Identifiable, Codable {
         case .codeBuddy: "c.circle"               // Letter C icon for CodeBuddy
         case .openClaw: "o.circle"               // Letter O icon for OpenClaw
         case .trae: "t.circle"                     // Letter T icon for Trae
+        case .traeCN: "t.circle"                   // Letter T icon for Trae CN
+        case .workBuddy: "w.circle"               // Letter W icon for WorkBuddy
         }
     }
 
@@ -110,6 +118,8 @@ enum AgentType: String, CaseIterable, Identifiable, Codable {
         case .codeBuddy: "codebuddy"
         case .openClaw: "openclaw"
         case .trae: "trae"
+        case .traeCN: "trae"
+        case .workBuddy: "workbuddy"
         }
     }
 
@@ -128,6 +138,8 @@ enum AgentType: String, CaseIterable, Identifiable, Codable {
         case .codeBuddy: "~/.codebuddy/skills"             // CodeBuddy AI assistant skills directory
         case .openClaw: "~/.openclaw/skills"               // OpenClaw AI assistant skills directory
         case .trae: "~/.trae/skills"                         // Trae AI IDE skills directory
+        case .traeCN: "~/.trae-cn/skills"                  // Trae CN AI IDE skills directory
+        case .workBuddy: "~/.workbuddy/skills"             // WorkBuddy AI assistant skills directory
         }
     }
 
@@ -151,6 +163,8 @@ enum AgentType: String, CaseIterable, Identifiable, Codable {
         case .codeBuddy: "~/.codebuddy"
         case .openClaw: "~/.openclaw"
         case .trae: "~/.trae"
+        case .traeCN: "~/.trae-cn"
+        case .workBuddy: "~/.workbuddy"
         }
     }
 
@@ -175,6 +189,8 @@ enum AgentType: String, CaseIterable, Identifiable, Codable {
         case .codeBuddy: "codebuddy"
         case .openClaw: "openclaw"
         case .trae: "trae"
+        case .traeCN: "trae"
+        case .workBuddy: "workbuddy"
         }
     }
 

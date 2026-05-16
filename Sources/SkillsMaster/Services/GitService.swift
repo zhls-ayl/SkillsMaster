@@ -592,8 +592,13 @@ actor GitService {
             throw GitError.cloneFailed(error.localizedDescription)
         }
 
-        let stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
-        let stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
+        // Read pipes defensively. The legacy `readDataToEndOfFile` path on NSFileHandle
+        // can raise an Objective-C exception (NSFileHandleOperationException) when many
+        // git processes run concurrently and share pipe descriptors, crashing the app.
+        // Reading from `availableData` in a loop after `waitUntilExit()` is safer because
+        // the descriptor returns EOF when the child has fully exited.
+        let stdoutData = Self.readAllAvailableData(from: stdoutPipe.fileHandleForReading)
+        let stderrData = Self.readAllAvailableData(from: stderrPipe.fileHandleForReading)
         let stdout = String(data: stdoutData, encoding: .utf8) ?? ""
         let stderr = String(data: stderrData, encoding: .utf8) ?? ""
 
@@ -610,6 +615,20 @@ actor GitService {
         }
 
         return stdout
+    }
+
+    /// Defensively read all available data from a `FileHandle` after the producer
+    /// process has exited. Uses `availableData` in a loop, which returns an empty
+    /// `Data` at EOF and avoids the legacy `readDataOfLength` exception path that
+    /// can crash when many concurrent processes share pipe descriptors.
+    private static func readAllAvailableData(from handle: FileHandle) -> Data {
+        var result = Data()
+        while true {
+            let chunk = handle.availableData
+            if chunk.isEmpty { break }
+            result.append(chunk)
+        }
+        return result
     }
 
     /// 查找 git 可执行文件的完整路径。

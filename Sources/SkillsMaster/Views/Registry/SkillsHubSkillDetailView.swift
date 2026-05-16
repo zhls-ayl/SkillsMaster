@@ -34,15 +34,6 @@ struct SkillsHubSkillDetailView: View {
         .task(id: skill.id) {
             await viewModel.loadSelection(for: skill)
         }
-        .toolbar {
-            ToolbarItemGroup {
-                ManualTranslationToolbarButton(
-                    isActive: viewModel.isShowingManualTranslation(for: skill.id)
-                ) {
-                    viewModel.toggleManualTranslation(for: skill.id)
-                }
-            }
-        }
     }
 
     private var headerSection: some View {
@@ -259,9 +250,7 @@ struct SkillsHubSkillDetailView: View {
                 }
             } else if let detail = viewModel.selectedSkillDetail {
                 MarkdownContentView(
-                    markdownText: detail.content.markdownBody,
-                    translationScope: .skillsHub,
-                    manuallyShowsChineseTranslation: viewModel.isShowingManualTranslation(for: skill.id)
+                    markdownText: detail.content.markdownBody
                 )
                     .textSelection(.enabled)
             } else {

@@ -15,24 +15,38 @@ struct MarketplaceInstallTargetsView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            LazyVGrid(
-                columns: [GridItem(.adaptive(minimum: 120), alignment: .leading)],
-                alignment: .leading,
-                spacing: 8
-            ) {
-                ForEach(agentTypes) { agentType in
-                    Toggle(isOn: Binding(
-                        get: { selectedAgents.contains(agentType) },
-                        set: { _ in onToggle(agentType) }
-                    )) {
-                        HStack(spacing: 6) {
-                            AgentIconView(agentType: agentType, size: 13)
-                            Text(agentType.displayName)
+            VStack(alignment: .leading, spacing: 10) {
+                ForEach(AgentGroup.allCases) { group in
+                    let groupAgents = group.sortedAgents.filter { agentTypes.contains($0) }
+                    if !groupAgents.isEmpty {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(group.displayName)
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                                .fontWeight(.medium)
+
+                            LazyVGrid(
+                                columns: [GridItem(.adaptive(minimum: 120), alignment: .leading)],
+                                alignment: .leading,
+                                spacing: 6
+                            ) {
+                                ForEach(groupAgents) { agentType in
+                                    Toggle(isOn: Binding(
+                                        get: { selectedAgents.contains(agentType) },
+                                        set: { _ in onToggle(agentType) }
+                                    )) {
+                                        HStack(spacing: 6) {
+                                            AgentIconView(agentType: agentType, size: 13)
+                                            Text(agentType.displayName)
+                                        }
+                                        .font(.caption)
+                                    }
+                                    .toggleStyle(.checkbox)
+                                    .opacity(isAgentDetected(agentType) ? 1.0 : 0.5)
+                                }
+                            }
                         }
-                        .font(.caption)
                     }
-                    .toggleStyle(.checkbox)
-                    .opacity(isAgentDetected(agentType) ? 1.0 : 0.5)
                 }
             }
 

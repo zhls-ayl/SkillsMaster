@@ -173,6 +173,27 @@ final class AgentTypeTests: XCTestCase {
         XCTAssertTrue(agent.additionalReadableSkillsDirectories.isEmpty)
     }
 
+    // MARK: - Trae CN Agent Properties
+
+    /// Verify all computed properties of the Trae CN agent type
+    /// Trae CN is ByteDance's AI IDE China version, shares icon resource with Trae
+    func testTraeCNProperties() {
+        let agent = AgentType.traeCN
+
+        // rawValue is used as the Codable key in lock file JSON
+        XCTAssertEqual(agent.rawValue, "trae-cn")
+        XCTAssertEqual(agent.displayName, "Trae CN")
+        XCTAssertEqual(agent.detectCommand, "trae")
+        XCTAssertEqual(agent.skillsDirectoryPath, "~/.trae-cn/skills")
+        XCTAssertEqual(agent.configDirectoryPath, "~/.trae-cn")
+        XCTAssertEqual(agent.iconName, "t.circle")
+        XCTAssertEqual(agent.iconResourceName, "trae")
+        XCTAssertEqual(agent.brandColor, "brightGreen")
+
+        // Trae CN does not read other agents' directories (standalone agent)
+        XCTAssertTrue(agent.additionalReadableSkillsDirectories.isEmpty)
+    }
+
     // MARK: - Canonical Directory Paths
 
     /// Verify new canonical directory points to ~/.skillsmaster/skills/
@@ -196,8 +217,8 @@ final class AgentTypeTests: XCTestCase {
     /// Verify the total number of supported agents
     /// This test catches accidental removal of agent cases
     func testAllCasesCount() {
-        // 11 agents: claudeCode, codex, geminiCLI, githubCopilot, openCode, antigravity, cursor, kiroCLI, codeBuddy, openClaw, trae
-        XCTAssertEqual(AgentType.allCases.count, 11)
+        // 13 agents: claudeCode, codex, geminiCLI, githubCopilot, openCode, antigravity, cursor, kiroCLI, codeBuddy, openClaw, trae, traeCN, workBuddy
+        XCTAssertEqual(AgentType.allCases.count, 13)
     }
 
     func testDisplayNameLengthSortedCasesOrdersByNameLengthThenAlphabetically() {
@@ -242,7 +263,9 @@ final class AgentTypeTests: XCTestCase {
             .kiroCLI: "kiro",
             .codeBuddy: "codebuddy",
             .openClaw: "openclaw",
-            .trae: "trae"
+            .trae: "trae",
+            .traeCN: "trae",
+            .workBuddy: "workbuddy"
         ]
 
         for agent in AgentType.allCases {

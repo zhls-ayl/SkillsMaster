@@ -72,15 +72,6 @@ struct RegistrySkillDetailView: View {
         .task(id: skill.id) {
             await viewModel.loadSkillContent(for: skill)
         }
-        .toolbar {
-            ToolbarItemGroup {
-                ManualTranslationToolbarButton(
-                    isActive: viewModel.isShowingManualTranslation(for: skill.id)
-                ) {
-                    viewModel.toggleManualTranslation(for: skill.id)
-                }
-            }
-        }
     }
 
     // MARK: - Sections
@@ -359,9 +350,7 @@ struct RegistrySkillDetailView: View {
                 // as native SwiftUI views.
                 if !content.markdownBody.isEmpty {
                     MarkdownContentView(
-                        markdownText: content.markdownBody,
-                        translationScope: .skillsSh,
-                        manuallyShowsChineseTranslation: viewModel.isShowingManualTranslation(for: skill.id)
+                        markdownText: content.markdownBody
                     )
                 } else {
                     Text(appLocalized("No content available."))

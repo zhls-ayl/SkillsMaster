@@ -211,14 +211,6 @@ final class SkillsHubBrowserViewModel {
         return AppLocalization.format("%d Agents Selected", count)
     }
 
-    func isShowingManualTranslation(for skillID: String) -> Bool {
-        skillManager.isShowingManualTranslation(for: manualTranslationKey(for: skillID))
-    }
-
-    func toggleManualTranslation(for skillID: String) {
-        skillManager.toggleManualTranslation(for: manualTranslationKey(for: skillID))
-    }
-
     func loadSelection(for skill: SkillsHubSkill) async {
         selectedSkillDetail = nil
         detailError = nil
@@ -393,10 +385,6 @@ final class SkillsHubBrowserViewModel {
     private var normalizedSearchText: String? {
         let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
-    }
-
-    private func manualTranslationKey(for skillID: String) -> String {
-        "skillshub:\(skillID)"
     }
 
     private func updateSelection(afterLoading skills: [SkillsHubSkill]) {

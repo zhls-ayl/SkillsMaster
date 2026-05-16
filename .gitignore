@@ -14,6 +14,9 @@ Packages/
 # Claude Code local settings
 .claude/
 
+# Gemini local memory file
+GEMINI.md
+
 # macOS
 .DS_Store
 *.swp
@@ -25,6 +28,7 @@ Packages/
 *.xcodeproj
 .vscode/
 .idea/
+.kiro/
 
 # Build artifacts
 *.o

@@ -21,6 +21,8 @@ enum Constants {
             case .codeBuddy:   Color(red: 0.91, green: 0.30, blue: 0.60)  // Pink #E84D99
             case .openClaw:    Color(red: 0.85, green: 0.18, blue: 0.15)  // Red #D92E26 (lobster/crayfish theme)
             case .trae:        Color(red: 0.20, green: 0.94, blue: 0.55)  // Bright Green #32F08C
+            case .traeCN:      Color(red: 0.20, green: 0.94, blue: 0.55)  // Bright Green #32F08C (shares with Trae)
+            case .workBuddy:   Color(red: 0.96, green: 0.58, blue: 0.11)  // Orange #F5941C
             }
         }
     }
@@ -67,15 +69,6 @@ enum Constants {
     /// UserDefaults key for app language preference.
     /// Stored as `AppLanguageMode.rawValue` (`system` / `en` / `zh-Hans`).
     static let appLanguageModeKey = "appLanguageMode"
-
-    /// UserDefaults key for automatic inline translation in skill detail pages.
-    static let autoTranslationEnabledKey = "autoTranslationEnabled"
-    static let autoTranslationInstalledEnabledKey = "autoTranslationInstalledEnabled"
-    static let autoTranslationSkillsShEnabledKey = "autoTranslationSkillsShEnabled"
-    static let autoTranslationClawHubEnabledKey = "autoTranslationClawHubEnabled"
-    static let autoTranslationSkillsHubEnabledKey = "autoTranslationSkillsHubEnabled"
-    static let autoTranslationRepositoriesEnabledKey = "autoTranslationRepositoriesEnabled"
-    static let autoTranslationAgentsEnabledKey = "autoTranslationAgentsEnabled"
 
     /// UserDefaults key prefix for per-Agent install mode preferences.
     static let agentInstallModeKeyPrefix = "agentInstallMode"

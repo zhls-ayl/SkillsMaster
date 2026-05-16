@@ -47,6 +47,9 @@ struct SidebarView: View {
     @Binding var selection: SidebarItem?
     @Environment(SkillManager.self) private var skillManager
 
+    /// Controls visibility of the "Add Repository" sheet presented from the sidebar
+    @State private var showAddRepositorySheet = false
+
     /// macOS 14+ provides native SwiftUI action to open settings window
     /// @Environment(\.openSettings) gets the system-provided OpenSettingsAction from environment,
     /// calling openSettings() is equivalent to user pressing Cmd+, (more reliable than NSApp.sendAction)
@@ -99,37 +102,42 @@ struct SidebarView: View {
                 .tag(SidebarItem.skillsHub)
             }
 
-            // Repositories section: shown only when at least one repository is configured
-            // ForEach on an empty array renders nothing, so the section header would still appear.
-            // We wrap in an `if !isEmpty` guard to fully hide the section when no repos are configured.
-            if !skillManager.repositories.isEmpty {
-                Section(AppLocalization.string("Repositories")) {
-                    ForEach(skillManager.repositories) { repo in
-                        let item = SidebarItem.repository(repo.id)
-                        let syncStatus = skillManager.repoSyncStatuses[repo.id] ?? .idle
+            // Repositories section: always shown so the "Add Repository" button is accessible
+            Section(AppLocalization.string("Repositories")) {
+                ForEach(skillManager.repositories) { repo in
+                    let item = SidebarItem.repository(repo.id)
+                    let syncStatus = skillManager.repoSyncStatuses[repo.id] ?? .idle
 
-                        sidebarRow {
-                            Label {
-                                Text(repo.name)
-                            } icon: {
-                                // Show a spinner when syncing, otherwise the platform icon
-                                if case .syncing = syncStatus {
-                                    ProgressView()
-                                        .controlSize(.mini)
-                                        .frame(width: 16, height: 16)
-                                } else {
-                                    Image(systemName: repo.isLocalCollection ? "externaldrive.badge.plus" : repo.platform.iconName)
-                                        .foregroundStyle(
-                                            syncStatus == .idle
-                                                ? Color.secondary
-                                                : (syncErrorStatus(syncStatus) ? Color.red : Color.green)
-                                        )
-                                }
+                    sidebarRow {
+                        Label {
+                            Text(repo.name)
+                        } icon: {
+                            // Show a spinner when syncing, otherwise the platform icon
+                            if case .syncing = syncStatus {
+                                ProgressView()
+                                    .controlSize(.mini)
+                                    .frame(width: 16, height: 16)
+                            } else {
+                                Image(systemName: repo.isLocalCollection ? "externaldrive.badge.plus" : repo.platform.iconName)
+                                    .foregroundStyle(
+                                        syncStatus == .idle
+                                            ? Color.secondary
+                                            : (syncErrorStatus(syncStatus) ? Color.red : Color.green)
+                                    )
                             }
                         }
-                        .tag(item)
                     }
+                    .tag(item)
                 }
+
+                // "Add Repository" button — always visible regardless of how many repos exist
+                Button {
+                    showAddRepositorySheet = true
+                } label: {
+                    Label(AppLocalization.string("Add Repository"), systemImage: "plus.circle")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
             }
 
             Section(AppLocalization.string("Agents")) {
@@ -243,6 +251,9 @@ struct SidebarView: View {
                 .help(AppLocalization.string("Rescan local Skills, Agents, lock file, and repository configuration"))
                 .accessibilityLabel(AppLocalization.string("Rescan"))
             }
+        }
+        .sheet(isPresented: $showAddRepositorySheet) {
+            AddRepositorySheet(isPresented: $showAddRepositorySheet)
         }
     }
 

@@ -34,6 +34,17 @@ final class SkillDetailViewModel {
     /// Error message from link operation
     var linkError: String?
 
+    // MARK: - Batch Operation State
+
+    /// Groups currently executing a batch operation
+    var batchOperatingGroups: Set<AgentGroup> = []
+
+    /// Whether a global (all-groups) batch operation is in progress
+    var isGlobalBatchOperating: Bool = false
+
+    /// Agent display names that failed during the last batch operation
+    var batchErrors: [String] = []
+
     var editorViewModel: TextFileEditorViewModel?
     var pendingEditorAction: PendingEditorAction?
 
@@ -105,14 +116,6 @@ final class SkillDetailViewModel {
     func startEditing(skill: Skill) {
         feedbackMessage = nil
         editorViewModel = TextFileEditorViewModel(fileURL: skill.skillMDURL)
-    }
-
-    func isShowingManualTranslation(for skillID: String) -> Bool {
-        skillManager.isShowingManualTranslation(for: manualTranslationKey(for: skillID))
-    }
-
-    func toggleManualTranslation(for skillID: String) {
-        skillManager.toggleManualTranslation(for: manualTranslationKey(for: skillID))
     }
 
     func requestCloseEditor() {
@@ -247,7 +250,131 @@ final class SkillDetailViewModel {
         isLinking = false
     }
 
-    private func manualTranslationKey(for skillID: String) -> String {
-        "installed:\(skillID)"
+    // MARK: - Batch Operations
+
+    /// Whether a skill is directly installed (non-inherited) for a given agent
+    private func isDirectlyInstalled(skill: Skill, agent: AgentType) -> Bool {
+        skill.installations.contains { $0.agentType == agent && !$0.isInherited }
+    }
+
+    /// Whether an agent is available on the system (CLI installed or config directory exists)
+    private func isAgentAvailable(_ agentType: AgentType) -> Bool {
+        guard let agent = skillManager.agents.first(where: { $0.type == agentType }) else {
+            return false
+        }
+        return agent.isInstalled || agent.configDirectoryExists
+    }
+
+    /// Re-fetch the latest skill from SkillManager (the passed-in skill may be stale after refresh()).
+    private func latestSkill(_ skill: Skill) -> Skill? {
+        skillManager.skills.first { $0.id == skill.id }
+    }
+
+    /// Select (assign) all available, unassigned agents in a group for the given skill
+    func selectAllAgents(in group: AgentGroup, for skill: Skill) async {
+        let isStandalone = !isGlobalBatchOperating
+        if isStandalone {
+            batchErrors = []
+        }
+        batchOperatingGroups.insert(group)
+        defer { batchOperatingGroups.remove(group) }
+
+        // Read latest skill state once before the batch.
+        let currentSkill = latestSkill(skill) ?? skill
+        var didAnyWork = false
+
+        for agent in group.sortedAgents {
+            // Skip agents that are already directly installed.
+            // Note: We do NOT skip agents whose CLI is missing or config dir is absent.
+            // Batch select-all is intentionally permissive — it pre-creates the agent's
+            // skills directory so the skill is ready when the user installs the agent later.
+            guard !isDirectlyInstalled(skill: currentSkill, agent: agent) else { continue }
+            do {
+                try skillManager.toggleAssignmentWithoutRefresh(currentSkill, agent: agent)
+                didAnyWork = true
+            } catch {
+                batchErrors.append(agent.displayName)
+            }
+        }
+
+        // Single refresh at the end to avoid spawning multiple syncAllRepositories tasks.
+        if didAnyWork {
+            await skillManager.refresh()
+        }
+    }
+
+    /// Remove (unassign) all assigned agents in a group for the given skill
+    func removeAllAgents(in group: AgentGroup, for skill: Skill) async {
+        let isStandalone = !isGlobalBatchOperating
+        if isStandalone {
+            batchErrors = []
+        }
+        batchOperatingGroups.insert(group)
+        defer { batchOperatingGroups.remove(group) }
+
+        let currentSkill = latestSkill(skill) ?? skill
+        var didAnyWork = false
+
+        for agent in group.sortedAgents {
+            guard isDirectlyInstalled(skill: currentSkill, agent: agent) else { continue }
+            do {
+                try skillManager.toggleAssignmentWithoutRefresh(currentSkill, agent: agent)
+                didAnyWork = true
+            } catch {
+                batchErrors.append(agent.displayName)
+            }
+        }
+
+        if didAnyWork {
+            await skillManager.refresh()
+        }
+    }
+
+    /// Select (assign) all available, unassigned agents across all groups for the given skill
+    func selectAllAgents(for skill: Skill) async {
+        isGlobalBatchOperating = true
+        batchErrors = []
+        defer { isGlobalBatchOperating = false }
+
+        let currentSkill = latestSkill(skill) ?? skill
+        var didAnyWork = false
+
+        for agent in AgentType.allCases {
+            guard !isDirectlyInstalled(skill: currentSkill, agent: agent) else { continue }
+            do {
+                try skillManager.toggleAssignmentWithoutRefresh(currentSkill, agent: agent)
+                didAnyWork = true
+            } catch {
+                batchErrors.append(agent.displayName)
+            }
+        }
+
+        if didAnyWork {
+            await skillManager.refresh()
+        }
+    }
+
+    /// Remove (unassign) all assigned agents across all groups for the given skill
+    func removeAllAgents(for skill: Skill) async {
+        isGlobalBatchOperating = true
+        batchErrors = []
+        defer { isGlobalBatchOperating = false }
+
+        let currentSkill = latestSkill(skill) ?? skill
+        var didAnyWork = false
+
+        for agent in AgentType.allCases {
+            guard isDirectlyInstalled(skill: currentSkill, agent: agent) else { continue }
+            do {
+                try skillManager.toggleAssignmentWithoutRefresh(currentSkill, agent: agent)
+                didAnyWork = true
+            } catch {
+                batchErrors.append(agent.displayName)
+            }
+        }
+
+        if didAnyWork {
+            await skillManager.refresh()
+        }
     }
 }

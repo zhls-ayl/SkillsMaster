@@ -31,15 +31,6 @@ struct ClawHubSkillDetailView: View {
         .task(id: skill.id) {
             await viewModel.loadSelection(for: skill)
         }
-        .toolbar {
-            ToolbarItemGroup {
-                ManualTranslationToolbarButton(
-                    isActive: viewModel.isShowingManualTranslation(for: skill.id)
-                ) {
-                    viewModel.toggleManualTranslation(for: skill.id)
-                }
-            }
-        }
     }
 
     private var headerSection: some View {
@@ -269,9 +260,7 @@ struct ClawHubSkillDetailView: View {
             } else if let content = viewModel.fetchedContent {
                 if !content.markdownBody.isEmpty {
                     MarkdownContentView(
-                        markdownText: content.markdownBody,
-                        translationScope: .clawHub,
-                        manuallyShowsChineseTranslation: viewModel.isShowingManualTranslation(for: skill.id)
+                        markdownText: content.markdownBody
                     )
                 } else {
                     Text(appLocalized("No content available."))

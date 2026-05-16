@@ -7,6 +7,7 @@ import SwiftUI
 /// - Cross-directory reading is each Agent's own runtime mechanism — SkillsMaster does not interfere
 /// - Inheritance hints are always shown (regardless of toggle state) to inform users
 ///   that an Agent may still read the skill via another directory even after toggle OFF
+/// - Agents are grouped by vendor using AgentGroup, with select-all/remove-all per group
 struct AgentToggleView: View {
 
     let skill: Skill
@@ -14,37 +15,91 @@ struct AgentToggleView: View {
     @Environment(SkillManager.self) private var skillManager
 
     var body: some View {
-        VStack(spacing: 8) {
-            ForEach(AgentType.allCases) { agentType in
-                // Each row is a separate subview with its own @State for toggle binding.
-                // This avoids the SwiftUI issue where a `let` captured by a Binding closure
-                // doesn't reflect @State changes, causing the toggle to "bounce back".
-                AgentToggleRow(
-                    agentType: agentType,
-                    skill: skill,
-                    viewModel: viewModel,
-                    skillManager: skillManager,
-                    inheritancePaths: inheritanceDisplayPaths(for: agentType)
-                )
+        VStack(alignment: .leading, spacing: 14) {
+            ForEach(AgentGroup.allCases) { group in
+                groupSection(group)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func groupSection(_ group: AgentGroup) -> some View {
+        let isOperating = viewModel.batchOperatingGroups.contains(group) || viewModel.isGlobalBatchOperating
+
+        let hasSelectableAgent = group.sortedAgents.contains { agent in
+            // Available for batch select if not yet directly installed (regardless of CLI availability).
+            !skill.installations.contains { $0.agentType == agent && !$0.isInherited }
+        }
+
+        let hasRemovableAgent = group.sortedAgents.contains { agent in
+            skill.installations.contains { $0.agentType == agent && !$0.isInherited }
+        }
+
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Text(group.displayName)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .fontWeight(.medium)
+
+                if viewModel.batchOperatingGroups.contains(group) {
+                    ProgressView()
+                        .controlSize(.small)
+                }
+
+                Spacer()
+
+                Button {
+                    Task { await viewModel.selectAllAgents(in: group, for: skill) }
+                } label: {
+                    Label(appLocalized("Select All"), systemImage: "checkmark.circle.fill")
+                        .font(.caption)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .help(appLocalized("Assign skill to all agents in this group"))
+                .disabled(!hasSelectableAgent || isOperating)
+
+                Button {
+                    Task { await viewModel.removeAllAgents(in: group, for: skill) }
+                } label: {
+                    Label(appLocalized("Remove All"), systemImage: "xmark.circle.fill")
+                        .font(.caption)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .tint(.red)
+                .help(appLocalized("Remove skill from all agents in this group"))
+                .disabled(!hasRemovableAgent || isOperating)
+            }
+
+            LazyVGrid(
+                columns: [GridItem(.adaptive(minimum: 180), alignment: .leading)],
+                alignment: .leading,
+                spacing: 6
+            ) {
+                ForEach(group.sortedAgents) { agentType in
+                    AgentToggleRow(
+                        agentType: agentType,
+                        skill: skill,
+                        viewModel: viewModel,
+                        skillManager: skillManager,
+                        inheritancePaths: inheritanceDisplayPaths(for: agentType),
+                        isBatchDisabled: isOperating
+                    )
+                }
             }
         }
     }
 
     /// Get display paths where this Agent can additionally read the given skill.
-    ///
-    /// Checks each directory in the Agent's additionalReadableSkillsDirectories to see
-    /// if the skill exists there (either directly or via symbolic link pointing to the same canonical path).
-    /// Returns abbreviated paths like "~/.claude/skills" for UI display.
     private func inheritanceDisplayPaths(for agentType: AgentType) -> [String] {
         var paths: [String] = []
         for dir in agentType.additionalReadableSkillsDirectories {
             let skillURL = dir.url.appendingPathComponent(skill.id)
-            // Check if the skill exists in this additional directory
             guard FileManager.default.fileExists(atPath: skillURL.path) else { continue }
 
-            // Verify it resolves to the same canonical skill (or is a synced physical copy of it)
             if SymlinkManager.matchesCanonicalSkill(at: skillURL, canonicalURL: skill.canonicalURL) {
-                // NSString.abbreviatingWithTildeInPath replaces home directory prefix with ~
                 let displayPath = NSString(string: dir.url.path).abbreviatingWithTildeInPath as String
                 paths.append(displayPath)
             }
@@ -53,22 +108,11 @@ struct AgentToggleView: View {
     }
 }
 
-/// Individual toggle row for a single Agent.
+/// Card-style Agent selector row.
 ///
-/// Extracted as a separate view so each row has its own `@State isOn` property.
-/// Uses a **custom Binding** to distinguish user-initiated toggles from model syncs:
-///
-/// - Toggle's Binding `set`: Only called when the USER physically flips the toggle control.
-///   SwiftUI's Toggle only invokes the binding setter on user interaction, never on
-///   programmatic @State changes. This is the key insight that makes this pattern safe.
-/// - `.onChange(of: skill.installations)`: Syncs local @State from the model after
-///   refresh() completes, WITHOUT triggering any toggle action.
-///
-/// Previous approach used `.onChange(of: isOn)` + `isSyncingFromModel` guard flag,
-/// which was broken because SwiftUI's `.onChange` fires asynchronously (deferred to the
-/// next view update cycle), so the guard flag was already reset to false when the
-/// onChange closure ran. This caused FileSystemWatcher-triggered refreshes to create
-/// spurious toggle tasks that re-created symbolic links the user had just removed.
+/// Reads installation state directly from the model (no local @State) so the UI
+/// updates immediately when `skillManager.skills` changes during batch operations.
+/// Tapping the card triggers the per-agent toggle action.
 private struct AgentToggleRow: View {
 
     let agentType: AgentType
@@ -76,89 +120,91 @@ private struct AgentToggleRow: View {
     let viewModel: SkillDetailViewModel
     let skillManager: SkillManager
     let inheritancePaths: [String]
+    let isBatchDisabled: Bool
 
-    /// Local toggle state — source of truth for the Toggle control.
-    /// Initialized from model state, updated on user tap (immediate via custom Binding set),
-    /// and synced with model state via `.onChange(of: skill.installations)`.
-    @State private var isOn: Bool
-
-    init(agentType: AgentType, skill: Skill, viewModel: SkillDetailViewModel,
-         skillManager: SkillManager, inheritancePaths: [String]) {
-        self.agentType = agentType
-        self.skill = skill
-        self.viewModel = viewModel
-        self.skillManager = skillManager
-        self.inheritancePaths = inheritancePaths
-        // Initialize @State from model: true if this agent has a direct (non-inherited) installation
-        _isOn = State(initialValue: skill.installations.contains {
+    /// Derive `isOn` directly from the model on every render.
+    /// `skillManager` is `@Observable`, so when `skillManager.skills` updates,
+    /// SwiftUI re-renders this row and `isOn` reflects the latest state immediately.
+    private var isOn: Bool {
+        // Prefer the latest skill from the manager to avoid stale struct copies during batch loops.
+        let currentSkill = skillManager.skills.first { $0.id == skill.id } ?? skill
+        return currentSkill.installations.contains {
             $0.agentType == agentType && !$0.isInherited
-        })
+        }
+    }
+
+    private var agent: Agent? {
+        skillManager.agents.first { $0.type == agentType }
+    }
+
+    private var isAgentAvailable: Bool {
+        agent?.isInstalled == true || agent?.configDirectoryExists == true
+    }
+
+    private var isInteractive: Bool {
+        // Always allow toggle ON to pre-install for agents the user might install later;
+        // also allow toggle OFF for already-on rows.
+        !isBatchDisabled
     }
 
     var body: some View {
-        let agent = skillManager.agents.first { $0.type == agentType }
-        /// Agent is available if its CLI binary is installed or its config directory exists
-        let isAgentAvailable = agent?.isInstalled == true || agent?.configDirectoryExists == true
+        Button {
+            Task { await viewModel.toggleAgent(agentType, for: skill) }
+        } label: {
+            HStack(spacing: 8) {
+                AgentIconView(agentType: agentType, size: 18)
+                    .frame(width: 22, height: 22)
 
-        HStack {
-            AgentIconView(agentType: agentType, size: 16)
-                .frame(width: 20)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(agentType.displayName)
+                        .font(.callout)
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
 
-            // Agent name + optional inheritance hint below
-            VStack(alignment: .leading, spacing: 2) {
-                Text(agentType.displayName)
-
-                // Always show inheritance hint when applicable
-                // Informs user that this Agent can read the skill from other directories
-                if !inheritancePaths.isEmpty {
-                    Text(AppLocalization.format("Also reads %@", inheritancePaths.joined(separator: ", ")))
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            Spacer()
-
-            // Show "Not installed" for agents that are not available on the system
-            if !isAgentAvailable && !isOn {
-                Text(appLocalized("Not installed"))
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-            }
-
-            // Custom Binding: the `set` closure is ONLY called by user interaction with
-            // the Toggle control, NOT by programmatic @State changes. This eliminates the
-            // race condition where a model-sync @State change could trigger a spurious toggle.
-            //
-            // When we set `isOn = modelState` in `.onChange(of: skill.installations)`,
-            // the Toggle reads the new value via the `get` closure and updates its visual
-            // state, but the `set` closure is NOT invoked — only user gestures invoke it.
-            Toggle("", isOn: Binding(
-                get: { isOn },
-                set: { newValue in
-                    isOn = newValue
-                    Task {
-                        await viewModel.toggleAgent(agentType, for: skill)
+                    if !inheritancePaths.isEmpty {
+                        Text(AppLocalization.format("Also reads %@", inheritancePaths.joined(separator: ", ")))
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    } else if !isAgentAvailable && !isOn {
+                        Text(appLocalized("Not installed"))
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
                     }
                 }
-            ))
-                .toggleStyle(.switch)
-                .labelsHidden()
-                // Only disabled when Agent is not available AND toggle is OFF
-                .disabled(!isAgentAvailable && !isOn)
-        }
-        .padding(.vertical, 2)
-        // When model updates (after refresh()), sync local state back from model.
-        // This handles both success (state matches) and failure (state reverts).
-        // Because we use a custom Binding (not $isOn), changing isOn here does NOT
-        // trigger the toggle action — only user interaction with the Toggle control does.
-        .onChange(of: skill.installations) {
-            let modelState = skill.installations.contains {
-                $0.agentType == agentType && !$0.isInherited
+
+                Spacer(minLength: 4)
+
+                Image(systemName: isOn ? "checkmark.circle.fill" : "circle")
+                    .font(.body)
+                    .foregroundStyle(isOn ? Color.accentColor : Color.secondary.opacity(0.6))
+                    .symbolRenderingMode(.hierarchical)
             }
-            if isOn != modelState {
-                isOn = modelState
-            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(isOn ? Color.accentColor.opacity(0.12) : Color.secondary.opacity(0.06))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .strokeBorder(isOn ? Color.accentColor.opacity(0.5) : Color.secondary.opacity(0.18), lineWidth: 1)
+            )
+            .opacity(isAgentAvailable || isOn ? 1.0 : 0.55)
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
+        .disabled(!isInteractive)
+        .help(toolTipText)
+    }
+
+    private var toolTipText: String {
+        if !isAgentAvailable && !isOn {
+            return AppLocalization.format("%@ is not installed on this system", agentType.displayName)
+        }
+        return isOn
+            ? AppLocalization.format("Click to remove from %@", agentType.displayName)
+            : AppLocalization.format("Click to assign to %@", agentType.displayName)
     }
 }

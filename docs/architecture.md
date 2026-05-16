@@ -67,6 +67,7 @@ SkillsMaster 是一个基于 SwiftUI 的 macOS 应用，用于管理多代理 Sk
 - Codex、Gemini CLI 仍兼容读取 `~/.agents/skills`
 - OpenCode、Copilot、Cursor 等存在跨目录读取或继承关系
 - SkillsMaster 在 UI 中区分“直接安装”和“继承安装”，避免误删或误切换
+- `AgentGroup` 定义按厂家的预设分组：Anthropic、OpenAI、Google、GitHub、Cursor、AWS、Tencent、ByteDance、Independent。每个 `AgentType` 通过 exhaustive switch 严格归属到一个分组，新增 case 时编译期会强制要求补齐分组归属
 - Sidebar 的 `Agents` 分组先显示 `Agent Files`，再显示 `Agents Skills`
 - `Agent Files` 的根目录以 `configDirectoryPath` 为准；例如 Codex 为 `~/.codex`，Claude Code 为 `~/.claude`
 - 只有 CLI 已安装或配置目录已存在的 Agent，才会在 Sidebar 的 `Agents > Agent Files` 下显示
@@ -78,10 +79,23 @@ SkillsMaster 是一个基于 SwiftUI 的 macOS 应用，用于管理多代理 Sk
 
 处理代理相关问题时，应优先查看：
 - `Sources/SkillsMaster/Models/AgentType.swift`
+- `Sources/SkillsMaster/Models/AgentGroup.swift`
 - `Sources/SkillsMaster/Services/SkillScanner.swift`
 - `Sources/SkillsMaster/Services/SymlinkManager.swift`
 
-## 仓库与安装链路
+## Skill 详情页的 Agent 分配
+`Skill Detail` 在 `management` 模式下展示 `Agent Assignments` 区域，由 `Views/Components/AgentToggleView.swift` 渲染。当前实现要点：
+- Agent 按 `AgentGroup` 厂家分组展示，组内按 `displayName` 字符数升序排序
+- 每个分组标题旁提供 `Select All` 与 `Remove All` 按钮，区域顶部提供全局 `Select All` / `Remove All`
+- 单行 Agent 用卡片样式呈现：勾选用 `checkmark.circle.fill` / `circle` 表示；激活时用 accent color 高亮，与 Toggle 控件相比有更明确的视觉反馈
+- `isOn` 直接从 `skillManager.skills` 派生（不缓存到 `@State`），保证批量操作后 UI 立即反映最新状态
+- 批量操作的事实源是 `~/.skillsmaster/skills/`：当 skill 的 canonical 路径恰好位于某 Agent 自己的目录（例如最早安装在 `~/.workbuddy/skills/find-skills`），`unassignSkill` 会先把内容复制到 `~/.skillsmaster/skills/` 作为新 canonical，并把其他 Agent 的 symlink 重新指向新位置，再删除原 Agent 目录，避免事实源被误删
+- 批量循环使用 `toggleAssignmentWithoutRefresh`：每次操作不触发 refresh，循环结束后只调用一次 `SkillManager.refresh()`，避免短时间内多次 refresh 重复触发后台 `syncAllRepositories`，从而避免并发 git 子进程在共享 pipe 上引发的 `NSFileHandleOperationException` 崩溃
+- `syncAllRepositories` 增加重入保护（`isSyncingAllRepositories`），即使外部仍以高频触发 refresh，也只会有一个 sync 在跑
+- `GitService.runGitCommand` 改用 `availableData` 循环读取 stdout/stderr，避开 `readDataToEndOfFile` 在并发场景下的 `NSFileHandle` 异常路径
+- 批量 `Select All` 行为放宽：即使 Agent 的 CLI 未安装、配置目录未存在，也会创建其 skills 目录并落盘，方便用户提前为未来安装的 Agent 准备 skill
+
+
 当前安装来源分为四类：
 - 注册表技能：通过 `SkillRegistryService` 获取索引，并在详情页内联勾选 Agent 后执行安装
 - ClawHub：通过 `ClawHubService` 拉取 marketplace 列表、详情、`SKILL.md` 与 archive，由 `ClawHubBrowserViewModel` 编排浏览/安装，并通过 `SkillManager.installClawHubSkill(...)` 安装到 canonical 目录后按目标 Agent 集合落盘；详细链路见 `docs/clawhub.md`
@@ -102,6 +116,7 @@ SkillsMaster 是一个基于 SwiftUI 的 macOS 应用，用于管理多代理 Sk
 - `MigrationManager.swift`：历史路径迁移与兼容
 - `LockFileManager.swift`：lock file 格式与原子写入
 - `SymlinkManager.swift`：symbolic link 创建、解析、删除与 direct install / 继承识别
+- `SkillManager.swift` 中的 `unassignSkill` / `promoteCanonicalToPrivateDirectory`：当 canonical 路径恰好位于某 Agent 目录时的迁移流程，错误处理会直接影响事实源是否丢失
 - `RepositoryManager.swift` / `RepositoryCredentialStore.swift`：仓库配置与凭据存储
 - `UpdateChecker.swift`：应用下载、替换、重启流程
 - `scripts/` 与 `.github/workflows/`：打包与 GitHub Release 发布

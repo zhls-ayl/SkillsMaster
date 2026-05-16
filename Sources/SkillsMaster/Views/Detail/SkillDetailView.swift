@@ -18,15 +18,6 @@ struct SkillDetailView: View {
             self == .management
         }
 
-        var translationScope: SkillTranslationScope {
-            switch self {
-            case .management:
-                .installed
-            case .contentOnly:
-                .agents
-            }
-        }
-
         static func forSidebarSelection(_ selection: SidebarItem?) -> Self {
             if case .skillsByAgent = selection {
                 return .contentOnly
@@ -104,16 +95,7 @@ struct SkillDetailView: View {
             }
             .toolbar {
                 ToolbarItemGroup {
-                    // 1. 翻译按钮（独立，内容模式切换）。
-                    if isShowingHomeContent {
-                        ManualTranslationToolbarButton(
-                            isActive: viewModel.isShowingManualTranslation(for: skillID)
-                        ) {
-                            viewModel.toggleManualTranslation(for: skillID)
-                        }
-                    }
-
-                    // 2. 操作菜单（合并编辑 + 导航，减少工具栏拥挤）。
+                    // 1. 操作菜单（合并编辑 + 导航，减少工具栏拥挤）。
                     // 点击主按钮直接进入内置编辑（最高频操作），
                     // 展开菜单可访问外部编辑器、Finder、Terminal。
                     if displayMode.showsManagementUI && isShowingHomeContent {
@@ -316,10 +298,58 @@ struct SkillDetailView: View {
     @ViewBuilder
     private func agentAssignmentSection(_ skill: Skill) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(appLocalized("Agent Assignments"))
-                .font(.headline)
+            HStack(spacing: 8) {
+                Text(appLocalized("Agent Assignments"))
+                    .font(.headline)
+
+                if viewModel.isGlobalBatchOperating {
+                    ProgressView()
+                        .controlSize(.small)
+                }
+
+                Spacer()
+
+                // Global select-all button: enabled when at least one agent is not yet directly installed
+                let hasSelectableAgent = AgentGroup.allCases.flatMap(\.sortedAgents).contains { agent in
+                    !skill.installations.contains { $0.agentType == agent && !$0.isInherited }
+                }
+
+                Button {
+                    Task { await viewModel.selectAllAgents(for: skill) }
+                } label: {
+                    Label(appLocalized("Select All"), systemImage: "checkmark.circle.fill")
+                        .font(.callout)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .help(appLocalized("Assign skill to all available agents"))
+                .disabled(!hasSelectableAgent || viewModel.isGlobalBatchOperating)
+
+                // Global remove-all button: enabled when at least one directly-installed agent exists
+                let hasRemovableAgent = AgentGroup.allCases.flatMap(\.sortedAgents).contains { agent in
+                    skill.installations.contains { $0.agentType == agent && !$0.isInherited }
+                }
+
+                Button {
+                    Task { await viewModel.removeAllAgents(for: skill) }
+                } label: {
+                    Label(appLocalized("Remove All"), systemImage: "xmark.circle.fill")
+                        .font(.callout)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .tint(.red)
+                .help(appLocalized("Remove skill from all assigned agents"))
+                .disabled(!hasRemovableAgent || viewModel.isGlobalBatchOperating)
+            }
 
             AgentToggleView(skill: skill, viewModel: viewModel)
+
+            if !viewModel.batchErrors.isEmpty {
+                Text("Failed: \(viewModel.batchErrors.joined(separator: ", "))")
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
         }
     }
 
@@ -341,9 +371,7 @@ struct SkillDetailView: View {
                 // - 解析期间显示轻量的 “Rendering...” 占位文案
                 // 这样可以避免大段 Markdown 在主线程触发明显卡顿。
                 MarkdownContentView(
-                    markdownText: skill.markdownBody,
-                    translationScope: displayMode.translationScope,
-                    manuallyShowsChineseTranslation: viewModel.isShowingManualTranslation(for: skillID)
+                    markdownText: skill.markdownBody
                 )
             }
         }

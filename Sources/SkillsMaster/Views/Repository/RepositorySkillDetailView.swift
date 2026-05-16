@@ -64,15 +64,6 @@ struct RepositorySkillDetailView: View {
         .task(id: skill.id) {
             await onLoadContent()
         }
-        .toolbar {
-            ToolbarItemGroup {
-                ManualTranslationToolbarButton(
-                    isActive: viewModel.isShowingManualTranslation(for: skill.id)
-                ) {
-                    viewModel.toggleManualTranslation(for: skill.id)
-                }
-            }
-        }
     }
 
     // MARK: - Sections
@@ -215,9 +206,7 @@ struct RepositorySkillDetailView: View {
                 }
             } else if let markdownBody = content?.markdownBody, !markdownBody.isEmpty {
                 MarkdownContentView(
-                    markdownText: markdownBody,
-                    translationScope: .repositories,
-                    manuallyShowsChineseTranslation: viewModel.isShowingManualTranslation(for: skill.id)
+                    markdownText: markdownBody
                 )
             } else {
                 Text(appLocalized("No markdown content available in this SKILL.md."))

@@ -11,13 +11,6 @@ import Combine
 @Observable
 final class SkillManager {
 
-    enum TranslationAvailability: Equatable {
-        case unknown
-        case installed
-        case supportedButNotInstalled
-        case unavailable
-    }
-
     // MARK: - Error Types
 
     /// 手动关联 repository 时使用的错误类型。
@@ -119,22 +112,6 @@ final class SkillManager {
     /// 更新流程中的错误信息。
     var updateError: String?
 
-    /// 当前中文翻译能力状态。
-    /// 仅当系统支持且已安装英文 -> 简体中文离线翻译包时，详情页才会展示逐段中文译文。
-    var translationAvailability: TranslationAvailability = .unknown
-
-    /// 详情页手动翻译开关的会话内状态。
-    /// 以调用方提供的稳定 memory key 为索引，跨窗口共享，但不落盘。
-    private var manualTranslationStateByKey: [String: Bool] = [:]
-
-    struct TranslationPackPrompt: Identifiable {
-        let id = UUID()
-        let title: String
-        let message: String
-    }
-
-    var translationPackPrompt: TranslationPackPrompt?
-
     // MARK: - Dependencies
 
     private let scanner = SkillScanner()
@@ -152,93 +129,18 @@ final class SkillManager {
     /// 管理用户配置的 custom repositories。
     let repositoryManager = RepositoryManager()
     private let installModeStore: AgentInstallModeStore
-    private let translationService: any EnglishToChineseTranslating
-    private let translationPackAvailabilityChecker: any TranslationPackAvailabilityChecking
     private let localSkillImportService = LocalSkillImportService()
     private let legacySkillsCLIImportService = LegacySkillsCLIImportService()
-    private static let dontShowTranslationPackPromptKey = "translationPackPromptDontShowAgain"
-    private var hasShownTranslationPackPromptThisLaunch = false
     private var cancellables = Set<AnyCancellable>()
 
     // MARK: - Initialization
 
     init(
-        installModeStore: AgentInstallModeStore = AgentInstallModeStore(),
-        translationService: any EnglishToChineseTranslating = TranslationService(),
-        translationPackAvailabilityChecker: any TranslationPackAvailabilityChecking = TranslationPackAvailabilityChecker()
+        installModeStore: AgentInstallModeStore = AgentInstallModeStore()
     ) {
         self.installModeStore = installModeStore
-        self.translationService = translationService
-        self.translationPackAvailabilityChecker = translationPackAvailabilityChecker
         self.defaultInstallModes = installModeStore.loadAll()
         setupFileWatcher()
-    }
-
-    var shouldShowChineseTranslation: Bool {
-        translationAvailability == .installed
-    }
-
-    func isShowingManualTranslation(for memoryKey: String) -> Bool {
-        manualTranslationStateByKey[memoryKey] ?? false
-    }
-
-    func toggleManualTranslation(for memoryKey: String) {
-        manualTranslationStateByKey[memoryKey] = !isShowingManualTranslation(for: memoryKey)
-    }
-
-    func translateEnglishParagraphToChinese(_ text: String) async throws -> String {
-        do {
-            return try await translationService.translateEnglishToChinese(text)
-        } catch TranslationService.TranslationError.unavailable {
-            if translationAvailability != .installed {
-                translationAvailability = .supportedButNotInstalled
-                presentTranslationPackPromptIfNeeded()
-            }
-            throw TranslationService.TranslationError.unavailable
-        }
-    }
-
-    func prepareSkillContentTranslationIfNeeded(translationEnabledOnThisScreen: Bool) async {
-        guard translationEnabledOnThisScreen else { return }
-
-        if translationAvailability == .unknown || translationAvailability == .supportedButNotInstalled {
-            let availability = await translationPackAvailabilityChecker.englishToSimplifiedChinese()
-            translationAvailability = switch availability {
-            case .installed:
-                .installed
-            case .supportedButNotInstalled:
-                .supportedButNotInstalled
-            case .unavailable:
-                .unavailable
-            }
-        }
-
-        presentTranslationPackPromptIfNeeded()
-    }
-
-    func dismissTranslationPackPrompt() {
-        translationPackPrompt = nil
-    }
-
-    func dontShowTranslationPackPromptAgain() {
-        UserDefaults.standard.set(true, forKey: Self.dontShowTranslationPackPromptKey)
-        translationPackPrompt = nil
-    }
-
-    private func presentTranslationPackPromptIfNeeded() {
-        let dontShowAgain = UserDefaults.standard.bool(forKey: Self.dontShowTranslationPackPromptKey)
-        let shouldShowPrompt = TranslationPackPromptPolicy.shouldShowPrompt(
-            translationEnabledOnThisScreen: translationAvailability == .supportedButNotInstalled,
-            dontShowAgain: dontShowAgain,
-            hasShownThisLaunch: hasShownTranslationPackPromptThisLaunch
-        )
-        guard shouldShowPrompt else { return }
-
-        hasShownTranslationPackPromptThisLaunch = true
-        translationPackPrompt = TranslationPackPrompt(
-            title: "需要启用系统翻译能力",
-            message: "要显示 Skill 文档的中文译文，请先确认系统 Translate app 可用，并已安装英文到简体中文的离线翻译语言包。处理完成后重新打开详情页即可看到逐段中文翻译。"
-        )
     }
 
     /// 建立 file system 监控，在目录变化时自动触发 `refresh()`。
@@ -462,6 +364,16 @@ final class SkillManager {
 
     /// Install skill to specified Agent using that Agent's configured default mode.
     func assignSkill(_ skill: Skill, to agent: AgentType) async throws {
+        try assignSkillWithoutRefresh(skill, to: agent)
+        await refresh()
+    }
+
+    /// Same as `assignSkill` but does NOT trigger refresh.
+    /// Use this when batching multiple operations to avoid running refresh
+    /// (and its background `syncAllRepositories`) once per iteration, which
+    /// can spawn overlapping git processes and cause pipe-read crashes.
+    /// The caller is responsible for invoking `refresh()` once after the batch.
+    func assignSkillWithoutRefresh(_ skill: Skill, to agent: AgentType) throws {
         try materializeSkill(
             skill.id,
             from: skill.canonicalURL,
@@ -469,13 +381,83 @@ final class SkillManager {
             mode: installMode(for: agent),
             replaceExisting: false
         )
-        await refresh()
     }
 
     /// Uninstall skill from specified Agent (delete symbolic link or physical copy)
+    ///
+    /// IMPORTANT: If the agent's installation directory IS the skill's canonical source
+    /// (i.e. the skill was originally created in this agent's directory), we first
+    /// promote the skill content into `~/.skillsmaster/skills/` to preserve the data,
+    /// then update all other direct installs (symlinks/copies) to reference the new
+    /// canonical location, before removing the agent's directory.
     func unassignSkill(_ skill: Skill, from agent: AgentType) async throws {
-        try removeDirectInstall(skillName: skill.id, from: agent)
+        try unassignSkillWithoutRefresh(skill, from: agent)
         await refresh()
+    }
+
+    /// Same as `unassignSkill` but does NOT trigger refresh. See `assignSkillWithoutRefresh`.
+    func unassignSkillWithoutRefresh(_ skill: Skill, from agent: AgentType) throws {
+        let agentTargetURL = agent.skillsDirectoryURL.appendingPathComponent(skill.id)
+        let isCanonicalLocation = agentTargetURL.standardized.path == skill.canonicalURL.standardized.path
+
+        if isCanonicalLocation {
+            try promoteCanonicalToPrivateDirectory(for: skill, currentlyAt: agentTargetURL)
+        }
+
+        try removeDirectInstall(skillName: skill.id, from: agent)
+    }
+
+    /// Toggle assignment without triggering refresh.
+    /// File system is checked directly to determine the action; the caller must
+    /// invoke `refresh()` after the batch completes.
+    func toggleAssignmentWithoutRefresh(_ skill: Skill, agent: AgentType) throws {
+        let targetURL = agent.skillsDirectoryURL.appendingPathComponent(skill.id)
+        let hasDirectInstall = SymlinkManager.isSymlink(at: targetURL)
+            || FileManager.default.fileExists(atPath: targetURL.path)
+
+        if hasDirectInstall {
+            try unassignSkillWithoutRefresh(skill, from: agent)
+        } else {
+            try assignSkillWithoutRefresh(skill, to: agent)
+        }
+    }
+
+    /// Move the canonical skill data from an agent-owned directory into
+    /// `~/.skillsmaster/skills/`, then re-create symlinks for any other agents that
+    /// previously had a direct symlink to the old canonical location.
+    private func promoteCanonicalToPrivateDirectory(for skill: Skill, currentlyAt currentCanonical: URL) throws {
+        let fm = FileManager.default
+        let privateDir = AgentType.sharedSkillsDirectoryURL
+        let newCanonical = privateDir.appendingPathComponent(skill.id)
+
+        if !fm.fileExists(atPath: privateDir.path) {
+            try fm.createDirectory(at: privateDir, withIntermediateDirectories: true)
+        }
+
+        // If the private directory already has the skill, prefer the existing copy.
+        // Otherwise, copy the agent's directory contents into the private directory.
+        if !fm.fileExists(atPath: newCanonical.path) {
+            // Use copy (not move) so subsequent removeDirectInstall can still find the original.
+            // copyItem follows symlinks but currentCanonical here is a real directory (it's the canonical source).
+            try fm.copyItem(at: currentCanonical, to: newCanonical)
+        }
+
+        // Re-link any other direct installs (symlinks) that pointed at the old canonical
+        // to instead point at the new private canonical.
+        for installation in skill.installations where !installation.isInherited {
+            let installURL = installation.path
+            // Skip the agent we're about to remove (its directory will be deleted next).
+            guard installURL.standardized.path != currentCanonical.standardized.path else { continue }
+
+            if SymlinkManager.isSymlink(at: installURL) {
+                let resolved = SymlinkManager.resolveSymlink(at: installURL)
+                if resolved.standardized.path == currentCanonical.standardized.path {
+                    try? fm.removeItem(at: installURL)
+                    try? fm.createSymbolicLink(at: installURL, withDestinationURL: newCanonical)
+                }
+            }
+            // For physical copies, no relinking needed — they're independent files already.
+        }
     }
 
     /// Toggle skill installation status on specified Agent
@@ -1492,11 +1474,24 @@ final class SkillManager {
     ///
     /// Called automatically on startup by `refresh()`.
     /// Each repo's status is updated in `repoSyncStatuses` independently.
+    ///
+    /// IMPORTANT: Concurrent invocations are prevented via `isSyncingAllRepositories`.
+    /// `refresh()` is called frequently (after every assign/unassign), each spawning a
+    /// detached `syncAllRepositories` Task. Without this guard, multiple sync tasks
+    /// run concurrently and spawn overlapping git processes that share pipe handles,
+    /// causing `NSFileHandle.readDataOfLength` crashes.
     func syncAllRepositories() async {
+        guard !isSyncingAllRepositories else { return }
+        isSyncingAllRepositories = true
+        defer { isSyncingAllRepositories = false }
+
         for repo in repositories where repo.syncOnLaunch {
             await syncRepository(id: repo.id)
         }
     }
+
+    /// Reentrancy guard for `syncAllRepositories`. Set on entry, cleared on exit.
+    private var isSyncingAllRepositories: Bool = false
 
     // MARK: - App Update (application update flow)
 
