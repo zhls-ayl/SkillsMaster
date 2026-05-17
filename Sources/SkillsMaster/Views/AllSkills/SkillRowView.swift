@@ -27,16 +27,34 @@ struct SkillRowView: View {
 
                 // Installed Agent icon row
                 // Use installations instead of installedAgents to get isInherited information
-                // Inherited installation icons have reduced opacity, hover tooltip shows source
+                // Direct installations: full opacity
+                // Inherited installations (cross-read access only): heavily de-emphasized
+                //   - very low opacity (0.22) to clearly distinguish from direct install
+                //   - dashed circle outline as a secondary visual cue
+                //   - hover tooltip explicitly explains "readable but not installed"
                 HStack(spacing: 4) {
                     ForEach(skill.installations) { installation in
-                        AgentIconView(agentType: installation.agentType, size: 12)
-                            // Reduce opacity for inherited installation icons to visually distinguish from direct installations
-                            .opacity(installation.isInherited ? 0.4 : 1.0)
-                            // Hover tooltip: inherited installation shows "GitHub Copilot (via ~/.claude/skills)"
-                            .help(installation.isInherited
-                                ? "\(installation.agentType.displayName) (via \(installation.parentDirectoryDisplayPath))"
-                                : installation.agentType.displayName)
+                        Group {
+                            if installation.isInherited {
+                                AgentIconView(agentType: installation.agentType, size: 12)
+                                    .opacity(0.22)
+                                    .overlay(
+                                        Circle()
+                                            .strokeBorder(
+                                                Color.secondary.opacity(0.35),
+                                                style: StrokeStyle(lineWidth: 0.5, dash: [1.5, 1.5])
+                                            )
+                                    )
+                            } else {
+                                AgentIconView(agentType: installation.agentType, size: 12)
+                            }
+                        }
+                        .help(installation.isInherited
+                            ? AppLocalization.format(
+                                "%@ can read from %@ (not directly installed)",
+                                installation.agentType.displayName,
+                                installation.parentDirectoryDisplayPath)
+                            : installation.agentType.displayName)
                     }
                 }
             }
