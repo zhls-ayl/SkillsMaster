@@ -13,50 +13,23 @@ struct SkillRowView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            // First row: name + badges
-            HStack {
+            // First row: name + scope + update indicator (always single line, name has priority)
+            HStack(spacing: 6) {
                 Text(skill.displayName)
                     .font(.headline)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .layoutPriority(1)
 
                 ScopeBadge(scope: skill.scope)
+                    .layoutPriority(0)
+                    .fixedSize()
 
                 // F12: Display different indicator icons based on update check status
                 updateStatusIndicator
+                    .fixedSize()
 
-                Spacer()
-
-                // Installed Agent icon row
-                // Use installations instead of installedAgents to get isInherited information
-                // Direct installations: full opacity
-                // Inherited installations (cross-read access only): heavily de-emphasized
-                //   - very low opacity (0.22) to clearly distinguish from direct install
-                //   - dashed circle outline as a secondary visual cue
-                //   - hover tooltip explicitly explains "readable but not installed"
-                HStack(spacing: 4) {
-                    ForEach(skill.installations) { installation in
-                        Group {
-                            if installation.isInherited {
-                                AgentIconView(agentType: installation.agentType, size: 12)
-                                    .opacity(0.22)
-                                    .overlay(
-                                        Circle()
-                                            .strokeBorder(
-                                                Color.secondary.opacity(0.35),
-                                                style: StrokeStyle(lineWidth: 0.5, dash: [1.5, 1.5])
-                                            )
-                                    )
-                            } else {
-                                AgentIconView(agentType: installation.agentType, size: 12)
-                            }
-                        }
-                        .help(installation.isInherited
-                            ? AppLocalization.format(
-                                "%@ can read from %@ (not directly installed)",
-                                installation.agentType.displayName,
-                                installation.parentDirectoryDisplayPath)
-                            : installation.agentType.displayName)
-                    }
-                }
+                Spacer(minLength: 0)
             }
 
             // Second row: description (max 2 lines)
@@ -86,6 +59,15 @@ struct SkillRowView: View {
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                 }
+            }
+
+            // Fourth row: installed Agent icons.
+            // Wraps onto multiple lines when there are many installations and the
+            // available width is small, so the skill name above always stays visible.
+            // Direct installations: full opacity
+            // Inherited installations (cross-read access only): heavily de-emphasized
+            if !skill.installations.isEmpty {
+                AgentIconWrapView(installations: skill.installations)
             }
         }
         .padding(.vertical, 4)
@@ -129,6 +111,102 @@ struct SkillRowView: View {
                 .foregroundStyle(.yellow)
                 .font(.caption)
                 .help(AppLocalization.format("Check failed: %@", message))
+        }
+    }
+}
+
+/// Lays out a row of `AgentIconView`s that wraps onto multiple lines when the
+/// available width is too small to fit them all on one line. Used in
+/// `SkillRowView` so that long agent installation lists never compress the skill
+/// name above into truncation.
+private struct AgentIconWrapView: View {
+
+    let installations: [SkillInstallation]
+
+    private let iconSize: CGFloat = 12
+    private let spacing: CGFloat = 4
+
+    var body: some View {
+        WrapLayout(spacing: spacing) {
+            ForEach(installations) { installation in
+                Group {
+                    if installation.isInherited {
+                        AgentIconView(agentType: installation.agentType, size: iconSize)
+                            .opacity(0.22)
+                            .overlay(
+                                Circle()
+                                    .strokeBorder(
+                                        Color.secondary.opacity(0.35),
+                                        style: StrokeStyle(lineWidth: 0.5, dash: [1.5, 1.5])
+                                    )
+                            )
+                    } else {
+                        AgentIconView(agentType: installation.agentType, size: iconSize)
+                    }
+                }
+                .help(installation.isInherited
+                    ? AppLocalization.format(
+                        "%@ can read from %@ (not directly installed)",
+                        installation.agentType.displayName,
+                        installation.parentDirectoryDisplayPath)
+                    : installation.agentType.displayName)
+            }
+        }
+    }
+}
+
+/// A simple wrapping (flow) layout: arranges subviews left-to-right, wrapping to
+/// the next line when the proposed width is exhausted. Each subview is laid out
+/// at its ideal size.
+private struct WrapLayout: Layout {
+
+    var spacing: CGFloat
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let maxWidth = proposal.width ?? .greatestFiniteMagnitude
+        var x: CGFloat = 0
+        var y: CGFloat = 0
+        var rowHeight: CGFloat = 0
+        var totalWidth: CGFloat = 0
+
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            if x > 0, x + size.width > maxWidth {
+                // Wrap
+                totalWidth = max(totalWidth, x - spacing)
+                y += rowHeight + spacing
+                x = 0
+                rowHeight = 0
+            }
+            x += size.width + spacing
+            rowHeight = max(rowHeight, size.height)
+        }
+        totalWidth = max(totalWidth, x - spacing)
+        let totalHeight = y + rowHeight
+        return CGSize(width: max(0, totalWidth), height: max(0, totalHeight))
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let maxWidth = bounds.width
+        var x: CGFloat = bounds.minX
+        var y: CGFloat = bounds.minY
+        var rowHeight: CGFloat = 0
+
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            if x > bounds.minX, x + size.width > bounds.minX + maxWidth {
+                // Wrap to next row
+                x = bounds.minX
+                y += rowHeight + spacing
+                rowHeight = 0
+            }
+            subview.place(
+                at: CGPoint(x: x, y: y),
+                anchor: .topLeading,
+                proposal: ProposedViewSize(size)
+            )
+            x += size.width + spacing
+            rowHeight = max(rowHeight, size.height)
         }
     }
 }
