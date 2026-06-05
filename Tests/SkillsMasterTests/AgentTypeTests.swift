@@ -196,6 +196,24 @@ final class AgentTypeTests: XCTestCase {
         XCTAssertTrue(agent.additionalReadableSkillsDirectories.isEmpty)
     }
 
+    // MARK: - WorkBuddy Agent Properties
+
+    func testWorkBuddyProperties() {
+        let agent = AgentType.workBuddy
+
+        XCTAssertEqual(agent.rawValue, "workbuddy")
+        XCTAssertEqual(agent.displayName, "WorkBuddy")
+        XCTAssertEqual(agent.detectCommand, "workbuddy")
+        XCTAssertEqual(agent.skillsDirectoryPath, "~/.workbuddy/skills")
+        XCTAssertEqual(agent.configDirectoryPath, "~/.workbuddy")
+        XCTAssertEqual(agent.iconName, "w.circle")
+        XCTAssertEqual(agent.iconResourceName, "workbuddy")
+        XCTAssertEqual(agent.brandColor, "mint")
+        XCTAssertEqual(agent.appBundleName, "WorkBuddy")
+        XCTAssertEqual(agent.maxSkillScanDepth, 1)
+        XCTAssertTrue(agent.additionalReadableSkillsDirectories.isEmpty)
+    }
+
     // MARK: - Skill Scan Depth
 
     /// Verify that only Hermes uses depth 2; all other agents default to depth 1
@@ -232,8 +250,8 @@ final class AgentTypeTests: XCTestCase {
     /// Verify the total number of supported agents
     /// This test catches accidental removal of agent cases
     func testAllCasesCount() {
-        // 12 agents: claudeCode, codex, geminiCLI, githubCopilot, openCode, antigravity, cursor, kiroCLI, codeBuddy, openClaw, trae, hermes
-        XCTAssertEqual(AgentType.allCases.count, 12)
+        // 13 agents: claudeCode, codex, geminiCLI, githubCopilot, openCode, antigravity, cursor, kiroCLI, codeBuddy, openClaw, trae, hermes, workBuddy
+        XCTAssertEqual(AgentType.allCases.count, 13)
     }
 
     func testDisplayNameLengthSortedCasesOrdersByNameLengthThenAlphabetically() {
@@ -279,7 +297,8 @@ final class AgentTypeTests: XCTestCase {
             .codeBuddy: "codebuddy",
             .openClaw: "openclaw",
             .trae: "trae",
-            .hermes: "hermes"
+            .hermes: "hermes",
+            .workBuddy: "workbuddy"
         ]
 
         for agent in AgentType.allCases {
