@@ -14,6 +14,7 @@ enum AgentType: String, CaseIterable, Identifiable, Codable {
     case codeBuddy = "codebuddy"           // CodeBuddy: Tencent Cloud AI coding assistant (https://www.codebuddy.ai)
     case openClaw = "openclaw"             // OpenClaw: AI coding assistant with ClawHub registry (https://openclaw.ai)
     case trae = "trae"                       // Trae: ByteDance's AI IDE (https://trae.ai)
+    case hermes = "hermes"                   // Hermes: AI coding assistant with skills support
 
     // Identifiable protocol requirement (similar to Java's Comparable), needed for SwiftUI list rendering
     var id: String { rawValue }
@@ -31,6 +32,7 @@ enum AgentType: String, CaseIterable, Identifiable, Codable {
         case .codeBuddy: "CodeBuddy"
         case .openClaw: "OpenClaw"
         case .trae: "Trae"
+        case .hermes: "Hermes"
         }
     }
 
@@ -74,6 +76,7 @@ enum AgentType: String, CaseIterable, Identifiable, Codable {
         case .codeBuddy: "pink"
         case .openClaw: "red"
         case .trae: "brightGreen"
+        case .hermes: "orange"
         }
     }
 
@@ -93,6 +96,7 @@ enum AgentType: String, CaseIterable, Identifiable, Codable {
         case .codeBuddy: "c.circle"               // Letter C icon for CodeBuddy
         case .openClaw: "o.circle"               // Letter O icon for OpenClaw
         case .trae: "t.circle"                     // Letter T icon for Trae
+        case .hermes: "h.circle"                   // Letter H icon for Hermes
         }
     }
 
@@ -110,6 +114,7 @@ enum AgentType: String, CaseIterable, Identifiable, Codable {
         case .codeBuddy: "codebuddy"
         case .openClaw: "openclaw"
         case .trae: "trae"
+        case .hermes: "hermes"
         }
     }
 
@@ -128,6 +133,7 @@ enum AgentType: String, CaseIterable, Identifiable, Codable {
         case .codeBuddy: "~/.codebuddy/skills"             // CodeBuddy AI assistant skills directory
         case .openClaw: "~/.openclaw/skills"               // OpenClaw AI assistant skills directory
         case .trae: "~/.trae/skills"                         // Trae AI IDE skills directory
+        case .hermes: "~/.hermes/skills"                    // Hermes AI assistant skills directory
         }
     }
 
@@ -151,6 +157,7 @@ enum AgentType: String, CaseIterable, Identifiable, Codable {
         case .codeBuddy: "~/.codebuddy"
         case .openClaw: "~/.openclaw"
         case .trae: "~/.trae"
+        case .hermes: "~/.hermes"
         }
     }
 
@@ -159,6 +166,16 @@ enum AgentType: String, CaseIterable, Identifiable, Codable {
         guard let configDirectoryPath else { return nil }
         let expanded = NSString(string: configDirectoryPath).expandingTildeInPath
         return URL(fileURLWithPath: expanded)
+    }
+
+    /// Maximum directory depth to scan for SKILL.md files under the skills directory.
+    /// Most agents store skills directly at depth 1 (e.g. skills/my-skill/SKILL.md).
+    /// Hermes uses a two-level category structure (e.g. skills/github/github-issues/SKILL.md).
+    var maxSkillScanDepth: Int {
+        switch self {
+        case .hermes: 2
+        default: 1
+        }
     }
 
     /// CLI command used to detect if the Agent is installed
@@ -175,6 +192,7 @@ enum AgentType: String, CaseIterable, Identifiable, Codable {
         case .codeBuddy: "codebuddy"
         case .openClaw: "openclaw"
         case .trae: "trae"
+        case .hermes: "hermes"
         }
     }
 

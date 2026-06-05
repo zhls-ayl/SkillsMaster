@@ -90,6 +90,7 @@ For inline English-to-Chinese translation in detail pages:
 - CodeBuddy
 - OpenClaw
 - Trae
+- Hermes
 
 ## Main Navigation
 

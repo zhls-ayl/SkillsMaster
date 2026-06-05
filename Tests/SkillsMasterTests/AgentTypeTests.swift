@@ -173,6 +173,42 @@ final class AgentTypeTests: XCTestCase {
         XCTAssertTrue(agent.additionalReadableSkillsDirectories.isEmpty)
     }
 
+    // MARK: - Hermes Agent Properties
+
+    /// Verify all computed properties of the Hermes agent type
+    func testHermesProperties() {
+        let agent = AgentType.hermes
+
+        // rawValue is used as the Codable key in lock file JSON
+        XCTAssertEqual(agent.rawValue, "hermes")
+        XCTAssertEqual(agent.displayName, "Hermes")
+        XCTAssertEqual(agent.detectCommand, "hermes")
+        XCTAssertEqual(agent.skillsDirectoryPath, "~/.hermes/skills")
+        XCTAssertEqual(agent.configDirectoryPath, "~/.hermes")
+        XCTAssertEqual(agent.iconName, "h.circle")
+        XCTAssertEqual(agent.iconResourceName, "hermes")
+        XCTAssertEqual(agent.brandColor, "orange")
+
+        // Hermes uses a two-level category structure, so skills are scanned one level deeper
+        XCTAssertEqual(agent.maxSkillScanDepth, 2)
+
+        // Hermes does not read other agents' directories
+        XCTAssertTrue(agent.additionalReadableSkillsDirectories.isEmpty)
+    }
+
+    // MARK: - Skill Scan Depth
+
+    /// Verify that only Hermes uses depth 2; all other agents default to depth 1
+    func testMaxSkillScanDepth() {
+        for agent in AgentType.allCases {
+            if agent == .hermes {
+                XCTAssertEqual(agent.maxSkillScanDepth, 2, "Hermes should use scan depth 2")
+            } else {
+                XCTAssertEqual(agent.maxSkillScanDepth, 1, "\(agent.rawValue) should use scan depth 1")
+            }
+        }
+    }
+
     // MARK: - Canonical Directory Paths
 
     /// Verify new canonical directory points to ~/.skillsmaster/skills/
@@ -196,8 +232,8 @@ final class AgentTypeTests: XCTestCase {
     /// Verify the total number of supported agents
     /// This test catches accidental removal of agent cases
     func testAllCasesCount() {
-        // 11 agents: claudeCode, codex, geminiCLI, githubCopilot, openCode, antigravity, cursor, kiroCLI, codeBuddy, openClaw, trae
-        XCTAssertEqual(AgentType.allCases.count, 11)
+        // 12 agents: claudeCode, codex, geminiCLI, githubCopilot, openCode, antigravity, cursor, kiroCLI, codeBuddy, openClaw, trae, hermes
+        XCTAssertEqual(AgentType.allCases.count, 12)
     }
 
     func testDisplayNameLengthSortedCasesOrdersByNameLengthThenAlphabetically() {
@@ -210,7 +246,7 @@ final class AgentTypeTests: XCTestCase {
         XCTAssertEqual(fiveLetterNames, ["Codex"])
 
         let sixLetterNames = orderedNames.filter { $0.count == 6 }
-        XCTAssertEqual(sixLetterNames, ["Cursor"])
+        XCTAssertEqual(sixLetterNames, ["Cursor", "Hermes"])
     }
 
     func testGitHubCopilotRawValue() {
@@ -242,7 +278,8 @@ final class AgentTypeTests: XCTestCase {
             .kiroCLI: "kiro",
             .codeBuddy: "codebuddy",
             .openClaw: "openclaw",
-            .trae: "trae"
+            .trae: "trae",
+            .hermes: "hermes"
         ]
 
         for agent in AgentType.allCases {

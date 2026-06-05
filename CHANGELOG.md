@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- 新增 Hermes agent 支持（`~/.hermes/skills/`），包括检测、图标、品牌色与 skill 扫描
+- Hermes 的二级分类目录结构（`skills/<分类>/<skill>/SKILL.md`）通过新增的 `maxSkillScanDepth` 属性适配：对于扫描深度 > 1 的 agent，SkillScanner 会自动深入一层查找分类子目录下的 SKILL.md，并对扫描到的 skill 回填正确的 agent 归属
+- All Skills 列表对含分类的 skill 按分类名分组，支持可折叠展开与跨启动记忆状态；无分类 skill 保持原有平铺行为
+
 ## [0.2.15] - 2026-04-04
 ### Changed
 - 详情页内联翻译链路现在会在首次真正翻译前先预热 `TranslationSession`，并对该预热过程做单飞收敛，降低应用刚启动后首次点击 `翻译` 时因运行时尚未就绪而直接失败的问题。

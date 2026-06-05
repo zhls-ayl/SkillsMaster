@@ -52,10 +52,27 @@ actor SkillScanner {
 
             let agentSkills = scanDirectory(
                 agentType.skillsDirectoryURL,
-                scope: .agentLocal(agentType)
+                scope: .agentLocal(agentType),
+                maxDepth: agentType.maxSkillScanDepth
             )
 
             for skill in agentSkills {
+                // findInstallations assumes flat skill directories (e.g. ~/.claude/skills/<name>/).
+                // Agents with nested structures (maxSkillScanDepth > 1) place skills one level deeper
+                // (e.g. ~/.hermes/skills/<category>/<name>/), so findInstallations may miss them.
+                // Backfill: if the skill lives under this agent's skills directory but has no
+                // installation for this agent yet, add one.
+                var skill = skill
+                let agentDir = agentType.skillsDirectoryURL.path
+                if skill.canonicalURL.path.hasPrefix(agentDir),
+                   !skill.installations.contains(where: { $0.agentType == agentType }) {
+                    skill.installations.append(SkillInstallation(
+                        agentType: agentType,
+                        path: skill.canonicalURL,
+                        isSymlink: false
+                    ))
+                }
+
                 if var existingSkill = skillMap[skill.id] {
                     // Same name skill exists: merge installations (indicates same skill referenced by multiple Agents)
                     let newInstallations = skill.installations.filter { newInst in
@@ -99,8 +116,9 @@ actor SkillScanner {
     /// - Parameters:
     ///   - directory: Directory URL to scan
     ///   - scope: Corresponding scope for this directory
+    ///   - maxDepth: Maximum subdirectory depth to scan (1 = immediate children only)
     /// - Returns: Array of discovered skills
-    private func scanDirectory(_ directory: URL, scope: SkillScope) -> [Skill] {
+    private func scanDirectory(_ directory: URL, scope: SkillScope, maxDepth: Int = 1, currentDepth: Int = 1, category: String? = nil) -> [Skill] {
         let fm = FileManager.default
 
         guard fm.fileExists(atPath: directory.path) else {
@@ -115,15 +133,27 @@ actor SkillScanner {
             return []
         }
 
-        // compactMap: transform each element, filtering out nil results (similar to Java Stream map + filter)
-        return contents.compactMap { itemURL in
-            parseSkillDirectory(itemURL, scope: scope)
+        return contents.flatMap { itemURL -> [Skill] in
+            if let skill = parseSkillDirectory(itemURL, scope: scope, category: category) {
+                return [skill]
+            }
+
+            // No SKILL.md at this level — if depth budget remains, recurse into subdirectories.
+            // This supports agents like Hermes that organize skills in category/ subdirectories.
+            if currentDepth < maxDepth {
+                var isDirectory: ObjCBool = false
+                if fm.fileExists(atPath: itemURL.path, isDirectory: &isDirectory), isDirectory.boolValue {
+                    return scanDirectory(itemURL, scope: scope, maxDepth: maxDepth, currentDepth: currentDepth + 1, category: itemURL.lastPathComponent)
+                }
+            }
+
+            return []
         }
     }
 
     /// Parse individual skill directory
     /// - Returns: Skill instance, or nil if directory is not a valid skill
-    private func parseSkillDirectory(_ url: URL, scope: SkillScope) -> Skill? {
+    private func parseSkillDirectory(_ url: URL, scope: SkillScope, category: String? = nil) -> Skill? {
         let fm = FileManager.default
         let skillName = url.lastPathComponent
 
@@ -165,6 +195,7 @@ actor SkillScanner {
 
         return Skill(
             id: skillName,
+            category: category,
             canonicalURL: canonicalURL,
             metadata: metadata,
             frontmatterText: frontmatterText,

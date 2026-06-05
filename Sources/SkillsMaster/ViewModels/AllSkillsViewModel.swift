@@ -159,6 +159,42 @@ final class AllSkillsViewModel {
         showDeleteConfirmation = false
     }
 
+    /// A group of skills sharing the same category (or nil for uncategorized).
+    struct SkillCategoryGroup: Identifiable {
+        let category: String?
+        let skills: [Skill]
+        var id: String { category ?? "__uncategorized__" }
+
+        /// Display title for the group section header.
+        var title: String { category ?? AppLocalization.string("Other") }
+    }
+
+    /// Groups filtered skills by category for agents with nested skill structures.
+    ///
+    /// For flat agents (maxSkillScanDepth == 1), returns a single uncategorized group
+    /// so the list renders as before. For nested agents like Hermes, skills are grouped
+    /// by their parent category directory, with skills having no category placed in "Other".
+    func groupedSkills(agentFilter: AgentType?) -> [SkillCategoryGroup] {
+        let filtered = filteredSkills(agentFilter: agentFilter)
+        let useCategories = filtered.contains { $0.category != nil }
+
+        guard useCategories else {
+            return [SkillCategoryGroup(category: nil, skills: filtered)]
+        }
+
+        let grouped = Dictionary(grouping: filtered) { $0.category }
+        return grouped
+            .map { SkillCategoryGroup(category: $0.key, skills: $0.value) }
+            .sorted { lhs, rhs in
+                // Uncategorized (nil) sorts last; categorized groups sort alphabetically
+                switch (lhs.category, rhs.category) {
+                case (nil, _): return false
+                case (_, nil): return true
+                case let (a?, b?): return a.localizedStandardCompare(b) == .orderedAscending
+                }
+            }
+    }
+
     /// Cancels deletion
     func cancelDelete() {
         skillToDelete = nil
