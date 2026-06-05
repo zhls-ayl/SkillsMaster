@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+## [0.2.16] - 2026-06-05
 ### Added
 - 新增 Hermes agent 支持（`~/.hermes/skills/`），包括检测、图标、品牌色与 skill 扫描
 - Hermes 的二级分类目录结构（`skills/<分类>/<skill>/SKILL.md`）通过新增的 `maxSkillScanDepth` 属性适配：对于扫描深度 > 1 的 agent，SkillScanner 会自动深入一层查找分类子目录下的 SKILL.md，并对扫描到的 skill 回填正确的 agent 归属
