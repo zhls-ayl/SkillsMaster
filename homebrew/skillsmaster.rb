@@ -15,8 +15,8 @@
 #   shasum -a 256 SkillsMaster-vX.Y.Z-universal.zip
 
 cask "skillsmaster" do
-  version "0.2.16"
-  sha256 "fad248ffbf5f0ad0b347dea8ad80756b97710f2e054472d2018237e760810ea9"
+  version "0.2.17"
+  sha256 "6e7ce9dd7c53851ddeaac167852d6e9a0b127fec082a845d7b4af982a55c56ad"
 
   url "https://github.com/zhls-ayl/SkillsMaster/releases/download/v#{version}/SkillsMaster-v#{version}-universal.zip"
   name "SkillsMaster"
