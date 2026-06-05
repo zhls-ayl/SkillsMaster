@@ -66,7 +66,8 @@ SkillsMaster 是一个基于 SwiftUI 的 macOS 应用，用于管理多代理 Sk
 `AgentType` 定义了当前受支持代理、检测命令、配置根目录、主技能目录与附加可读目录。不是所有代理都只读取自己的目录：
 - Codex、Gemini CLI 仍兼容读取 `~/.agents/skills`
 - OpenCode、Copilot、Cursor 等存在跨目录读取或继承关系
-- SkillsMaster 在 UI 中区分“直接安装”和“继承安装”，避免误删或误切换
+- Hermes 使用二级分类目录结构（`~/.hermes/skills/<分类>/<skill>/SKILL.md`），通过 `maxSkillScanDepth = 2` 适配；扫描器对于没有直接 `SKILL.md` 的分类目录会自动深入一层查找，并在 All Skills 列表中按分类名分组展示
+- SkillsMaster 在 UI 中区分”直接安装”和”继承安装”，避免误删或误切换
 - Sidebar 的 `Agents` 分组先显示 `Agent Files`，再显示 `Agents Skills`
 - `Agent Files` 的根目录以 `configDirectoryPath` 为准；例如 Codex 为 `~/.codex`，Claude Code 为 `~/.claude`
 - 只有 CLI 已安装或配置目录已存在的 Agent，才会在 Sidebar 的 `Agents > Agent Files` 下显示

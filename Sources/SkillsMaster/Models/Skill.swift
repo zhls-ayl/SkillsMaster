@@ -9,6 +9,11 @@ struct Skill: Identifiable, Hashable {
     /// Unique identifier: skill directory name (e.g., "agent-notifier")
     let id: String
 
+    /// Optional parent category directory name when skill is found at depth > 1.
+    /// For agents like Hermes that organize skills in category subdirectories
+    /// (e.g. skills/github/github-issues/ → category = "github"). nil for flat agents.
+    var category: String? = nil
+
     /// Canonical path (real path after resolving symbolic link)
     /// e.g., ~/.skillsmaster/skills/agent-notifier/
     let canonicalURL: URL

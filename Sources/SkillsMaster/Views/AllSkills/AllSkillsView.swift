@@ -14,9 +14,14 @@ struct AllSkillsView: View {
     let selectedAgentFilter: AgentType?
     @Environment(SkillManager.self) private var skillManager
 
+    /// Persisted set of expanded category names. Loaded from UserDefaults on init,
+    /// saved on change. Empty by default (all categories start collapsed).
+    @State private var expandedCategories: Set<String> = []
+
     var body: some View {
         // Compute once per render pass to avoid recalculating filter/sort logic in multiple branches.
-        let filteredSkills = viewModel.filteredSkills(agentFilter: selectedAgentFilter)
+        let groups = viewModel.groupedSkills(agentFilter: selectedAgentFilter)
+        let filteredSkills = groups.flatMap(\.skills)
         Group {
             if skillManager.isLoading && skillManager.skills.isEmpty {
                 // Show progress indicator on first load
@@ -32,50 +37,29 @@ struct AllSkillsView: View {
                         : AppLocalization.string("No skills match your search")
                 )
             } else {
-                // Skill list
-                List(filteredSkills, selection: $selectedSkillID) { skill in
-                    SkillRowView(skill: skill)
-                        .tag(skill.id)
-                        // contextMenu is macOS's right-click menu
-                        .contextMenu {
-                            Button(AppLocalization.string("Open in Finder")) {
-                                ApplicationLauncher.revealInFinder(itemURL: skill.canonicalURL)
-                            }
-                            Divider()  // Menu separator
-                            Button(AppLocalization.string("Delete"), role: .destructive) {
-                                viewModel.requestDelete(skill: skill)
-                            }
-                        }
-                }
-                .listStyle(.inset(alternatesRowBackgrounds: true))
+                // ScrollView avoids NSTableView reentrant/out-of-bounds
+                // warnings that List + DisclosureGroup triggers on macOS.
+                skillListView(groups: groups)
             }
         }
         .navigationTitle(navigationTitle)
-        // Search bar (macOS standard search field, displayed in toolbar)
         .searchable(text: $viewModel.searchText, prompt: AppLocalization.string("Search skills..."))
-        // Toolbar: sorting and filtering
         .toolbar {
-            // placement: .navigation places toolbar items on the left (navigation area), default .automatic places on right
             ToolbarItemGroup(placement: .navigation) {
                 Menu {
-                    // Section creates titled groups in menus, similar to Android's menu group
                     Section(AppLocalization.string("Sort By")) {
                         ForEach(AllSkillsViewModel.SortOrder.allCases, id: \.self) { order in
                             Button {
                                 if viewModel.sortOrder == order {
-                                    // Click selected sort field → toggle ascending/descending
                                     viewModel.sortDirection = viewModel.sortDirection.toggled
                                 } else {
-                                    // Click new sort field → switch to that field, reset to ascending
                                     viewModel.sortOrder = order
                                     viewModel.sortDirection = .ascending
                                 }
                             } label: {
-                                // HStack horizontal layout: icon + text + sort direction arrow
                                 HStack {
                                     Label(order.displayName, systemImage: order.iconName)
                                     if viewModel.sortOrder == order {
-                                        // Spacer pushes arrow to the right
                                         Spacer()
                                         Image(systemName: viewModel.sortDirection.iconName)
                                     }
@@ -84,21 +68,16 @@ struct AllSkillsView: View {
                         }
                     }
                 } label: {
-                    // Toolbar button appearance: sort icon + current sort field + direction arrow
-                    // Label provides both text and icon, macOS toolbar decides which to display based on space
                     HStack(spacing: 2) {
                         Image(systemName: "line.3.horizontal.decrease")
                         Text(viewModel.sortOrder.displayName)
                         Image(systemName: viewModel.sortDirection.iconName)
                             .font(.caption2)
-                            // imageScale controls SF Symbol size
                             .imageScale(.small)
                     }
                 }
             }
         }
-        // Delete confirmation dialog
-        // .alert similar to Android's AlertDialog or Web's confirm()
         .alert(AppLocalization.string("Delete Skill"), isPresented: $viewModel.showDeleteConfirmation) {
             Button(AppLocalization.string("Cancel"), role: .cancel) {
                 viewModel.cancelDelete()
@@ -114,7 +93,6 @@ struct AllSkillsView: View {
                 ))
             }
         }
-        // Error message
         .overlay(alignment: .bottom) {
             if let error = skillManager.errorMessage {
                 HStack {
@@ -132,6 +110,9 @@ struct AllSkillsView: View {
                 .padding()
             }
         }
+        .onAppear {
+            expandedCategories = loadExpansionState()
+        }
     }
 
     private var navigationTitle: String {
@@ -140,4 +121,94 @@ struct AllSkillsView: View {
         }
         return AppLocalization.string("All Skills")
     }
+
+    /// Renders the skill list using ScrollView + LazyVStack to avoid NSTableView
+    /// reentrant/out-of-bounds warnings inherent to List + DisclosureGroup on macOS.
+    @ViewBuilder
+    private func skillListView(groups: [AllSkillsViewModel.SkillCategoryGroup]) -> some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 0) {
+                ForEach(groups) { group in
+                    if let category = group.category {
+                        DisclosureGroup(isExpanded: expansionBinding(for: category)) {
+                            ForEach(group.skills) { skill in
+                                skillRow(skill)
+                            }
+                        } label: {
+                            HStack {
+                                Text(category)
+                                    .fontWeight(.semibold)
+                                Text("(\(group.skills.count))")
+                                    .foregroundStyle(.secondary)
+                                    .font(.callout)
+                            }
+                            .padding(.vertical, 4)
+                            .padding(.horizontal, 8)
+                        }
+                        .padding(.horizontal, 8)
+                        Divider()
+                    } else {
+                        ForEach(group.skills) { skill in
+                            skillRow(skill)
+                        }
+                    }
+                }
+            }
+            .padding(.vertical, 4)
+        }
+    }
+
+    private func skillRow(_ skill: Skill) -> some View {
+        SkillRowView(skill: skill)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 2)
+            .background(selectedSkillID == skill.id
+                ? Color.accentColor.opacity(0.15) : Color.clear)
+            .clipShape(RoundedRectangle(cornerRadius: 4))
+            .padding(.horizontal, 8)
+            .onTapGesture {
+                selectedSkillID = skill.id
+            }
+            .contextMenu {
+                Button(AppLocalization.string("Open in Finder")) {
+                    ApplicationLauncher.revealInFinder(itemURL: skill.canonicalURL)
+                }
+                Divider()
+                Button(AppLocalization.string("Delete"), role: .destructive) {
+                    viewModel.requestDelete(skill: skill)
+                }
+            }
+    }
+
+    // MARK: - Expansion state with persistence
+
+    private func expansionBinding(for category: String) -> Binding<Bool> {
+        Binding(
+            get: { expandedCategories.contains(category) },
+            set: { newValue in
+                if newValue {
+                    expandedCategories.insert(category)
+                } else {
+                    expandedCategories.remove(category)
+                }
+                saveExpansionState()
+            }
+        )
+    }
+
+    private func loadExpansionState() -> Set<String> {
+        guard let data = UserDefaults.standard.data(forKey: expansionDefaultsKey),
+              let decoded = try? JSONDecoder().decode(Set<String>.self, from: data) else {
+            return []
+        }
+        return decoded
+    }
+
+    private func saveExpansionState() {
+        if let data = try? JSONEncoder().encode(expandedCategories) {
+            UserDefaults.standard.set(data, forKey: expansionDefaultsKey)
+        }
+    }
+
+    private let expansionDefaultsKey = "skillCategoryExpansion"
 }
