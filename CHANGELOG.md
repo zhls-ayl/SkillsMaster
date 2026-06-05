@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+## [0.2.17] - 2026-06-05
+### Fixed
+- 修复 All Skills 列表切换 skill 卡顿问题：回到 `List` + `DisclosureGroup` 恢复原生 NSTableView 选择性能，折叠状态变更通过异步延迟规避 NSTableView reentrant delegate 警告
+- 修复分类名与 skill 目录名同名时，选中 skill 导致分类行也高亮的问题
+
 ## [0.2.16] - 2026-06-05
 ### Added
 - 新增 Hermes agent 支持（`~/.hermes/skills/`），包括检测、图标、品牌色与 skill 扫描
