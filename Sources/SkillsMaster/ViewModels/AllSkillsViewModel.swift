@@ -163,7 +163,7 @@ final class AllSkillsViewModel {
     struct SkillCategoryGroup: Identifiable {
         let category: String?
         let skills: [Skill]
-        var id: String { category ?? "__uncategorized__" }
+        var id: String { "__group__\(category ?? "other")" }
 
         /// Display title for the group section header.
         var title: String { category ?? AppLocalization.string("Other") }
