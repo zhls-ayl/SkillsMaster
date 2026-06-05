@@ -15,6 +15,7 @@ enum AgentType: String, CaseIterable, Identifiable, Codable {
     case openClaw = "openclaw"             // OpenClaw: AI coding assistant with ClawHub registry (https://openclaw.ai)
     case trae = "trae"                       // Trae: ByteDance's AI IDE (https://trae.ai)
     case hermes = "hermes"                   // Hermes: AI coding assistant with skills support
+    case workBuddy = "workbuddy"             // WorkBuddy: AI coding assistant with skills support
 
     // Identifiable protocol requirement (similar to Java's Comparable), needed for SwiftUI list rendering
     var id: String { rawValue }
@@ -33,6 +34,7 @@ enum AgentType: String, CaseIterable, Identifiable, Codable {
         case .openClaw: "OpenClaw"
         case .trae: "Trae"
         case .hermes: "Hermes"
+        case .workBuddy: "WorkBuddy"
         }
     }
 
@@ -77,6 +79,7 @@ enum AgentType: String, CaseIterable, Identifiable, Codable {
         case .openClaw: "red"
         case .trae: "brightGreen"
         case .hermes: "orange"
+        case .workBuddy: "mint"
         }
     }
 
@@ -97,6 +100,7 @@ enum AgentType: String, CaseIterable, Identifiable, Codable {
         case .openClaw: "o.circle"               // Letter O icon for OpenClaw
         case .trae: "t.circle"                     // Letter T icon for Trae
         case .hermes: "h.circle"                   // Letter H icon for Hermes
+        case .workBuddy: "w.circle"               // Letter W icon for WorkBuddy
         }
     }
 
@@ -115,6 +119,7 @@ enum AgentType: String, CaseIterable, Identifiable, Codable {
         case .openClaw: "openclaw"
         case .trae: "trae"
         case .hermes: "hermes"
+        case .workBuddy: "workbuddy"
         }
     }
 
@@ -134,6 +139,7 @@ enum AgentType: String, CaseIterable, Identifiable, Codable {
         case .openClaw: "~/.openclaw/skills"               // OpenClaw AI assistant skills directory
         case .trae: "~/.trae/skills"                         // Trae AI IDE skills directory
         case .hermes: "~/.hermes/skills"                    // Hermes AI assistant skills directory
+        case .workBuddy: "~/.workbuddy/skills"             // WorkBuddy AI assistant skills directory
         }
     }
 
@@ -158,6 +164,7 @@ enum AgentType: String, CaseIterable, Identifiable, Codable {
         case .openClaw: "~/.openclaw"
         case .trae: "~/.trae"
         case .hermes: "~/.hermes"
+        case .workBuddy: "~/.workbuddy"
         }
     }
 
@@ -193,6 +200,16 @@ enum AgentType: String, CaseIterable, Identifiable, Codable {
         case .openClaw: "openclaw"
         case .trae: "trae"
         case .hermes: "hermes"
+        case .workBuddy: "workbuddy"
+        }
+    }
+
+    /// macOS application bundle name for app-based agents (used for installation detection).
+    /// Returns `nil` for CLI-based agents, which are detected via `detectCommand`.
+    var appBundleName: String? {
+        switch self {
+        case .workBuddy: "WorkBuddy"
+        default: nil
         }
     }
 

@@ -30,8 +30,13 @@ actor AgentDetector {
     func detect(type: AgentType) async -> Agent {
         let fm = FileManager.default
 
-        // Check if CLI command exists
-        let isInstalled = await checkCommandExists(type.detectCommand)
+        // Check if app or CLI is installed
+        let isInstalled: Bool
+        if let appBundleName = type.appBundleName {
+            isInstalled = checkAppInstalled(appBundleName)
+        } else {
+            isInstalled = await checkCommandExists(type.detectCommand)
+        }
 
         // Check config directory
         let configExists: Bool
@@ -103,6 +108,20 @@ actor AgentDetector {
         } catch {
             return false
         }
+    }
+
+    /// Check if the named macOS application bundle exists in standard locations
+    private func checkAppInstalled(_ appName: String) -> Bool {
+        let fm = FileManager.default
+        let appFileName = appName.hasSuffix(".app") ? appName : "\(appName).app"
+        let searchPaths = [
+            "/Applications/\(appFileName)",
+            NSString(string: "~/Applications/\(appFileName)").expandingTildeInPath
+        ]
+        for path in searchPaths {
+            if fm.fileExists(atPath: path) { return true }
+        }
+        return false
     }
 
     /// Count skills in directory (number of subdirectories containing SKILL.md)

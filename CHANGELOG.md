@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+## [0.2.18] - 2026-06-05
+### Added
+- 新增 WorkBuddy agent 支持（`~/.workbuddy/skills/`），包括检测、图标、品牌色与 skill 扫描
+- 新增 `AgentType.appBundleName` 属性支持 macOS 原生 app 类 Agent 的安装检测（非 CLI 方式）
+
 ## [0.2.17] - 2026-06-05
 ### Fixed
 - 修复 All Skills 列表切换 skill 卡顿问题：回到 `List` + `DisclosureGroup` 恢复原生 NSTableView 选择性能，折叠状态变更通过异步延迟规避 NSTableView reentrant delegate 警告
