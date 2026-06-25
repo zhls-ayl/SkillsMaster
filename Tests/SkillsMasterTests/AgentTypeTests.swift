@@ -214,6 +214,24 @@ final class AgentTypeTests: XCTestCase {
         XCTAssertTrue(agent.additionalReadableSkillsDirectories.isEmpty)
     }
 
+    // MARK: - ZCode Agent Properties
+
+    func testZCodeProperties() {
+        let agent = AgentType.zcode
+
+        XCTAssertEqual(agent.rawValue, "zcode")
+        XCTAssertEqual(agent.displayName, "ZCode")
+        XCTAssertEqual(agent.detectCommand, "zcode")
+        XCTAssertEqual(agent.skillsDirectoryPath, "~/.zcode/skills")
+        XCTAssertEqual(agent.configDirectoryPath, "~/.zcode")
+        XCTAssertEqual(agent.iconName, "z.circle")
+        XCTAssertEqual(agent.iconResourceName, "zcode")
+        XCTAssertEqual(agent.brandColor, "azure")
+        XCTAssertEqual(agent.appBundleName, "ZCode")
+        XCTAssertEqual(agent.maxSkillScanDepth, 1)
+        XCTAssertTrue(agent.additionalReadableSkillsDirectories.isEmpty)
+    }
+
     // MARK: - Skill Scan Depth
 
     /// Verify that only Hermes uses depth 2; all other agents default to depth 1
@@ -250,8 +268,8 @@ final class AgentTypeTests: XCTestCase {
     /// Verify the total number of supported agents
     /// This test catches accidental removal of agent cases
     func testAllCasesCount() {
-        // 13 agents: claudeCode, codex, geminiCLI, githubCopilot, openCode, antigravity, cursor, kiroCLI, codeBuddy, openClaw, trae, hermes, workBuddy
-        XCTAssertEqual(AgentType.allCases.count, 13)
+        // 14 agents: claudeCode, codex, geminiCLI, githubCopilot, openCode, antigravity, cursor, kiroCLI, codeBuddy, openClaw, trae, hermes, workBuddy, zcode
+        XCTAssertEqual(AgentType.allCases.count, 14)
     }
 
     func testDisplayNameLengthSortedCasesOrdersByNameLengthThenAlphabetically() {
@@ -261,7 +279,7 @@ final class AgentTypeTests: XCTestCase {
         XCTAssertEqual(orderedNames.last, "GitHub Copilot")
 
         let fiveLetterNames = orderedNames.filter { $0.count == 5 }
-        XCTAssertEqual(fiveLetterNames, ["Codex"])
+        XCTAssertEqual(fiveLetterNames, ["Codex", "ZCode"])
 
         let sixLetterNames = orderedNames.filter { $0.count == 6 }
         XCTAssertEqual(sixLetterNames, ["Cursor", "Hermes"])
@@ -298,7 +316,8 @@ final class AgentTypeTests: XCTestCase {
             .openClaw: "openclaw",
             .trae: "trae",
             .hermes: "hermes",
-            .workBuddy: "workbuddy"
+            .workBuddy: "workbuddy",
+            .zcode: "zcode"
         ]
 
         for agent in AgentType.allCases {

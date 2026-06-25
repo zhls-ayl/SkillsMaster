@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.2.19] - 2026-06-25
+### Added
+- 新增 ZCode agent 支持（`~/.zcode/skills/`），包括 macOS app 检测、配置根目录浏览、品牌色、skill 扫描与安装目标选择。
+- 新增自绘中性 ZCode SVG 图标，避免复用第三方 app 资源。
+
+### Changed
+- 同步更新 README / README_CN / 架构文档中的 supported agents 说明，补齐当前实现已支持的 agent 列表。
+
 ## [0.2.18] - 2026-06-05
 ### Added
 - 新增 WorkBuddy agent 支持（`~/.workbuddy/skills/`），包括检测、图标、品牌色与 skill 扫描

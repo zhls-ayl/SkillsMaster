@@ -16,6 +16,7 @@ enum AgentType: String, CaseIterable, Identifiable, Codable {
     case trae = "trae"                       // Trae: ByteDance's AI IDE (https://trae.ai)
     case hermes = "hermes"                   // Hermes: AI coding assistant with skills support
     case workBuddy = "workbuddy"             // WorkBuddy: AI coding assistant with skills support
+    case zcode = "zcode"                     // ZCode: Z.ai coding agent with skills support
 
     // Identifiable protocol requirement (similar to Java's Comparable), needed for SwiftUI list rendering
     var id: String { rawValue }
@@ -35,6 +36,7 @@ enum AgentType: String, CaseIterable, Identifiable, Codable {
         case .trae: "Trae"
         case .hermes: "Hermes"
         case .workBuddy: "WorkBuddy"
+        case .zcode: "ZCode"
         }
     }
 
@@ -80,6 +82,7 @@ enum AgentType: String, CaseIterable, Identifiable, Codable {
         case .trae: "brightGreen"
         case .hermes: "orange"
         case .workBuddy: "mint"
+        case .zcode: "azure"
         }
     }
 
@@ -101,6 +104,7 @@ enum AgentType: String, CaseIterable, Identifiable, Codable {
         case .trae: "t.circle"                     // Letter T icon for Trae
         case .hermes: "h.circle"                   // Letter H icon for Hermes
         case .workBuddy: "w.circle"               // Letter W icon for WorkBuddy
+        case .zcode: "z.circle"                   // Letter Z icon for ZCode
         }
     }
 
@@ -120,6 +124,7 @@ enum AgentType: String, CaseIterable, Identifiable, Codable {
         case .trae: "trae"
         case .hermes: "hermes"
         case .workBuddy: "workbuddy"
+        case .zcode: "zcode"
         }
     }
 
@@ -140,6 +145,7 @@ enum AgentType: String, CaseIterable, Identifiable, Codable {
         case .trae: "~/.trae/skills"                         // Trae AI IDE skills directory
         case .hermes: "~/.hermes/skills"                    // Hermes AI assistant skills directory
         case .workBuddy: "~/.workbuddy/skills"             // WorkBuddy AI assistant skills directory
+        case .zcode: "~/.zcode/skills"                     // ZCode skills directory
         }
     }
 
@@ -165,6 +171,7 @@ enum AgentType: String, CaseIterable, Identifiable, Codable {
         case .trae: "~/.trae"
         case .hermes: "~/.hermes"
         case .workBuddy: "~/.workbuddy"
+        case .zcode: "~/.zcode"
         }
     }
 
@@ -201,6 +208,7 @@ enum AgentType: String, CaseIterable, Identifiable, Codable {
         case .trae: "trae"
         case .hermes: "hermes"
         case .workBuddy: "workbuddy"
+        case .zcode: "zcode"
         }
     }
 
@@ -209,6 +217,7 @@ enum AgentType: String, CaseIterable, Identifiable, Codable {
     var appBundleName: String? {
         switch self {
         case .workBuddy: "WorkBuddy"
+        case .zcode: "ZCode"
         default: nil
         }
     }
