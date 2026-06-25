@@ -88,6 +88,9 @@ cd SkillsMaster
 - CodeBuddy
 - OpenClaw
 - Trae
+- Hermes
+- WorkBuddy
+- ZCode
 
 ## 使用方式概览
 

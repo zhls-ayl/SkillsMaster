@@ -1,0 +1,7 @@
+<svg width="56" height="56" viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg">
+  <title>ZCode</title>
+  <rect x="4" y="4" width="48" height="48" rx="12" fill="#297AEB"/>
+  <path d="M17 17H39L19 39H41" fill="none" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="17" cy="17" r="3" fill="#BFE0FF"/>
+  <circle cx="41" cy="39" r="3" fill="#BFE0FF"/>
+</svg>

@@ -91,6 +91,8 @@ For inline English-to-Chinese translation in detail pages:
 - OpenClaw
 - Trae
 - Hermes
+- WorkBuddy
+- ZCode
 
 ## Main Navigation
 

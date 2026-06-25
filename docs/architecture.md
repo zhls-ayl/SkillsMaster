@@ -69,7 +69,7 @@ SkillsMaster 是一个基于 SwiftUI 的 macOS 应用，用于管理多代理 Sk
 - Hermes 使用二级分类目录结构（`~/.hermes/skills/<分类>/<skill>/SKILL.md`），通过 `maxSkillScanDepth = 2` 适配；扫描器对于没有直接 `SKILL.md` 的分类目录会自动深入一层查找，并在 All Skills 列表中按分类名分组展示
 - SkillsMaster 在 UI 中区分”直接安装”和”继承安装”，避免误删或误切换
 - Sidebar 的 `Agents` 分组先显示 `Agent Files`，再显示 `Agents Skills`
-- `Agent Files` 的根目录以 `configDirectoryPath` 为准；例如 Codex 为 `~/.codex`，Claude Code 为 `~/.claude`
+- `Agent Files` 的根目录以 `configDirectoryPath` 为准；例如 Codex 为 `~/.codex`，Claude Code 为 `~/.claude`，ZCode 为 `~/.zcode`
 - 只有 CLI 已安装或配置目录已存在的 Agent，才会在 Sidebar 的 `Agents > Agent Files` 下显示
 - `skills/` 目录及其子树在 `Agent Files` 中视为受保护路径：允许浏览、允许只读预览、允许 Finder / Terminal 跳转，但不允许新建、重命名、删除、内置编辑或外置编辑
 - `Agent Files` 对 `.md`、`.json`、`.toml`、`.txt`、`.yaml`、`.yml`、`.log` 提供特化的内置文本预览；其他能够被判定为纯文本的文件（如脚本、dotfile、无扩展 README）也会回退到通用 plain-text 预览，其中 Markdown 走原生渲染，其他类型走等宽代码块展示，超过 10 MB 时统一回退为原始文本预览
