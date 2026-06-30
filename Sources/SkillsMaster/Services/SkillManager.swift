@@ -1357,8 +1357,10 @@ final class SkillManager {
         }
 
         // 3. Scan skills in repository, match by skill.id
+        // 当仓库目录名与本地 skill.id 不一致时，严格按 id 匹配会失败。
+        // 这里复用 findSkill 走多策略匹配（目录名 → metadata.name → folderPath 末段 → 单 skill 兜底）。
         let discoveredSkills = await gitService.scanSkillsInRepo(repoDir: repoDir)
-        guard let matched = discoveredSkills.first(where: { $0.id == skill.id }) else {
+        guard let matched = GitService.findSkill(matching: skill.id, in: discoveredSkills) else {
             throw LinkError.skillNotFoundInRepo(skill.id)
         }
 
