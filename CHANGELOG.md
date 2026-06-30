@@ -7,6 +7,11 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.2.20] - 2026-06-30
+### Fixed
+- 修复 Skills.sh marketplace 安装时部分 skill 因仓库内目录名与 registry slug / id 不完全一致而报 `not found in repository` 的问题。
+- 安装流程现在会复用仓库扫描结果中的匹配信息，优先通过 registry 元数据定位真实 skill 目录，避免只按原始 slug 拼接路径。
+
 ## [0.2.19] - 2026-06-25
 ### Added
 - 新增 ZCode agent 支持（`~/.zcode/skills/`），包括 macOS app 检测、配置根目录浏览、品牌色、skill 扫描与安装目标选择。
