@@ -474,7 +474,13 @@ final class RegistryBrowserViewModel {
 
             installingStatusMessage = AppLocalization.string("Scanning skills...")
             let discoveredSkills = await gitService.scanSkillsInRepo(repoDir: repoDir)
-            guard let discoveredSkill = discoveredSkills.first(where: { $0.id == registrySkill.skillId }) else {
+            // 当仓库目录名与 registry 返回的 skillId（SKILL.md 的 name 字段）不一致时，
+            // 严格按 id 匹配会误判为 "not found"。这里用 findSkill 走多策略匹配：
+            // 目录名 → metadata.name → folderPath 末段 → 单 skill 兜底。
+            guard let discoveredSkill = GitService.findSkill(
+                matching: registrySkill.skillId,
+                in: discoveredSkills
+            ) else {
                 throw SkillManager.ImportError.directoryNotFound(
                     "Skill '\(registrySkill.skillId)' not found in repository."
                 )

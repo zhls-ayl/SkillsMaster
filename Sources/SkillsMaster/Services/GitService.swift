@@ -81,6 +81,46 @@ actor GitService {
         folderPath.isEmpty ? repoDir : repoDir.appendingPathComponent(folderPath)
     }
 
+    /// 在已扫描的 skills 中，按"目录名 → metadata.name → folderPath 末段"的优先级查找匹配项。
+    ///
+    /// 用于解决 `RegistrySkill.skillId`（来自 `SKILL.md` 的 `name:` 字段）与
+    /// `DiscoveredSkill.id`（来自目录名，见 `scanSkillsInRepo`）不一致时的匹配失败问题。
+    ///
+    /// 匹配策略（按优先级，命中即返回）：
+    /// 1. `DiscoveredSkill.id` 精确匹配（原逻辑，标准布局下目录名 == metadata.name）
+    /// 2. `metadata.name` 匹配（直接对应 registry 的 skillId 语义）
+    /// 3. `folderPath` 末段目录名匹配（例如 `skills/MySkill` 匹配 `skillId == "MySkill"`）
+    /// 4. 单 skill 兜底：仓库只扫到一个 skill 时，认为是它（常见于 single-skill repo）
+    ///
+    /// - Parameters:
+    ///   - skillId: 目标 skill 标识（通常是 registry 返回的 `skillId`，即 `SKILL.md` 的 `name`）
+    ///   - candidates: `scanSkillsInRepo` 扫描得到的全部 `DiscoveredSkill`
+    /// - Returns: 第一个命中的 skill；全未命中返回 `nil`
+    nonisolated static func findSkill(
+        matching skillId: String,
+        in candidates: [DiscoveredSkill]
+    ) -> DiscoveredSkill? {
+        // 1. 精确匹配目录名（原逻辑，标准布局下首选）
+        if let exact = candidates.first(where: { $0.id == skillId }) {
+            return exact
+        }
+        // 2. 匹配 SKILL.md 的 metadata.name（根因直接对应）
+        if let byName = candidates.first(where: { $0.metadata.name == skillId }) {
+            return byName
+        }
+        // 3. 匹配 folderPath 末段目录名（如 skills/MySkill 匹配 skillId="MySkill"）
+        if let byPath = candidates.first(where: {
+            $0.folderPath.split(separator: "/").last.map(String.init) == skillId
+        }) {
+            return byPath
+        }
+        // 4. 单 skill 兜底：仓库只扫到一个 skill 时，认为是它
+        if candidates.count == 1 {
+            return candidates.first
+        }
+        return nil
+    }
+
     // MARK: - Public Methods
 
     /// 检查系统中是否可用 Git。

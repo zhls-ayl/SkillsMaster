@@ -108,6 +108,84 @@ final class GitServiceTests: XCTestCase {
         XCTAssertEqual(resolved.path, repoDir.path)
     }
 
+    // MARK: - findSkill Tests
+
+    /// 辅助：构造一个 `DiscoveredSkill`，省去每个测试重复写完整字段。
+    private func makeDiscoveredSkill(
+        id: String,
+        folderPath: String,
+        metadataName: String
+    ) -> GitService.DiscoveredSkill {
+        GitService.DiscoveredSkill(
+            id: id,
+            folderPath: folderPath,
+            skillMDPath: folderPath.isEmpty ? "SKILL.md" : "\(folderPath)/SKILL.md",
+            metadata: SkillMetadata(name: metadataName, description: ""),
+            markdownBody: ""
+        )
+    }
+
+    /// 验证：当目录名与 `metadata.name` 一致时（标准布局），策略 1 精确命中 `id`。
+    func testFindSkillMatchesByExactID() {
+        let candidate = makeDiscoveredSkill(id: "caveman", folderPath: "skills/caveman", metadataName: "caveman")
+        let result = GitService.findSkill(matching: "caveman", in: [candidate])
+
+        XCTAssertEqual(result?.id, "caveman")
+    }
+
+    /// 验证核心 bug 场景：目录名 ≠ `metadata.name` 时，严格 `id` 匹配会失败，
+    /// 但 `findSkill` 应通过策略 2（`metadata.name`）命中。
+    /// 这正是 caveman 类仓库报 "not found in repository" 的根因。
+    func testFindSkillMatchesByMetadataNameWhenDirectoryNameDiffers() {
+        // 目录名是 caveman，但 SKILL.md 的 name 字段是 caveman-skill
+        let candidate = makeDiscoveredSkill(
+            id: "caveman",
+            folderPath: "skills/caveman",
+            metadataName: "caveman-skill"
+        )
+        // registry 传入的 skillId = SKILL.md 的 name = "caveman-skill"
+        let result = GitService.findSkill(matching: "caveman-skill", in: [candidate])
+
+        // 应通过 metadata.name 策略命中，而不是报 not found
+        XCTAssertEqual(result?.id, "caveman")
+        XCTAssertEqual(result?.metadata.name, "caveman-skill")
+    }
+
+    /// 验证策略 3：当 `id` 与 `metadata.name` 都不匹配时，回退到 `folderPath` 末段目录名匹配。
+    func testFindSkillMatchesByFolderPathLastSegment() {
+        // 目录名 MySkill 与 id 不同，metadata.name 也是另一个值
+        let candidate = makeDiscoveredSkill(
+            id: "some-id",
+            folderPath: "skills/MySkill",
+            metadataName: "totally-different"
+        )
+        // registry 传入的 skillId 恰好是 folderPath 的末段 "MySkill"
+        let result = GitService.findSkill(matching: "MySkill", in: [candidate])
+
+        XCTAssertEqual(result?.folderPath, "skills/MySkill")
+    }
+
+    /// 验证策略 4：仓库只扫到一个 skill，且 `skillId` 完全不匹配时，兜底返回该 skill。
+    /// 这是 single-skill repo 的常见场景。
+    func testFindSkillFallsBackToSingleSkillWhenNoMatch() {
+        let candidate = makeDiscoveredSkill(id: "foo", folderPath: "skills/foo", metadataName: "bar")
+
+        // 单 skill 且完全不匹配 → 兜底返回它
+        let singleResult = GitService.findSkill(matching: "nonexistent", in: [candidate])
+        XCTAssertEqual(singleResult?.id, "foo")
+
+        // 多 skill 且都不匹配 → 不兜底，返回 nil
+        let another = makeDiscoveredSkill(id: "baz", folderPath: "skills/baz", metadataName: "qux")
+        let multiResult = GitService.findSkill(matching: "nonexistent", in: [candidate, another])
+        XCTAssertNil(multiResult)
+    }
+
+    /// 验证空 candidates 列表时返回 nil（边界条件）。
+    func testFindSkillReturnsNilForEmptyCandidates() {
+        let result = GitService.findSkill(matching: "anything", in: [])
+        XCTAssertNil(result)
+    }
+
     // MARK: - scanSkillsInRepo Tests
 
     /// 验证 root-level `SKILL.md` 会把 metadata.name 作为 skill id，
